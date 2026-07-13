@@ -37,6 +37,7 @@ import { randomUUID } from 'node:crypto';
 // ============================================================================
 
 import { initializePlugins, getPluginTools } from '../plugins/index.js';
+import { extractArticleText } from './articleText.js';
 
 // ============================================================================
 // Configuration
@@ -779,6 +780,7 @@ const TOOLS = [
       type: 'object',
       properties: {
         url: { type: 'string', description: 'Tweet URL (x.com/user/status/ID) or article URL (x.com/user/article/ID)' },
+        saveTo: { type: 'string', description: 'Optional ABSOLUTE file path. When set, writes the verbatim article body text to this file (only when non-empty) and returns a small {saved,chars,title,truncated} confirmation instead of the full text. Relative paths are rejected (they would resolve to the server cwd, not the caller).' },
       },
       required: ['url'],
     },
@@ -2559,38 +2561,51 @@ async function executeXeepyTool(name, args) {
         await page.evaluate(() => window.scrollBy(0, 800));
         await new Promise(r => setTimeout(r, 500));
       }
-      const article = await page.evaluate(() => {
+      // Extract RAW fields in the browser; do the header/footer boundary
+      // stripping in Node (extractArticleText) so it stays pure + unit-testable.
+      const raw = await page.evaluate(() => {
         const title = document.querySelector('[data-testid="twitter-article-title"]')?.textContent?.trim() || '';
         const readView = document.querySelector('[data-testid="twitterArticleReadView"]');
-        if (!readView) return { error: 'Article content not found' };
+        // Did the final scroll reach the bottom? If the page is still taller than
+        // what we scrolled to, the 25-iteration cap cut content off => truncated.
+        const scrollExhausted = (window.scrollY + window.innerHeight) >= document.scrollingElement.scrollHeight;
+        if (!readView) return { hasReadView: false, scrollExhausted, url: location.href };
         // Get author from User-Name
         const userNameEl = document.querySelector('[data-testid="User-Name"]');
         const authorName = userNameEl?.querySelector('span')?.textContent?.trim() || '';
         const authorHandle = userNameEl?.querySelector('a[href^="/"]')?.getAttribute('href')?.replace('/', '') || '';
-        // Get clean article text — innerText includes header/footer noise
-        const fullText = readView.innerText;
-        // Strip header: title, author, @handle, timestamp, engagement numbers
-        // The header pattern is: title\nauthor\n@handle\n·\ntimestamp\nengagement...
-        const lines = fullText.split('\n');
-        let startIdx = 0;
-        // Skip past the header — find first line that's actual content (long paragraph)
-        for (let i = 0; i < Math.min(lines.length, 15); i++) {
-          if (lines[i].length > 100) { startIdx = i; break; }
-        }
-        // Strip footer: author name, @handle, "Following", bio at the end
-        let endIdx = lines.length;
-        for (let i = lines.length - 1; i > Math.max(0, lines.length - 10); i--) {
-          if (lines[i] === authorName || lines[i] === '@' + authorHandle || lines[i] === 'Following') {
-            endIdx = Math.min(endIdx, i);
-          }
-        }
-        const cleanText = lines.slice(startIdx, endIdx).join('\n').trim();
+        // innerText includes header/footer noise — stripped in Node via extractArticleText
+        const rawText = readView.innerText;
         // Filter images — exclude profile pics (small thumbnails)
         const images = [...readView.querySelectorAll('img')]
           .map(i => i.src)
           .filter(s => s.includes('twimg') && !s.includes('_normal.') && !s.includes('_bigger.') && !s.includes('profile_images'));
-        return { title, author: authorName, handle: authorHandle, text: cleanText, images, url: location.href };
+        return { title, authorName, authorHandle, rawText, images, url: location.href, hasReadView: true, scrollExhausted };
       });
+      // readView absent → surface an error, write nothing (never a placeholder)
+      if (!raw.hasReadView) {
+        return { content: [{ type: 'text', text: JSON.stringify({ error: 'no readView', url: raw.url }) }] };
+      }
+      const text = extractArticleText(raw.rawText, raw.authorName, raw.authorHandle);
+      // The scroll loop never breaks, so it always hits its 25-iteration cap;
+      // truncation therefore reduces to whether the page still had more height.
+      const truncated = !raw.scrollExhausted;
+      if (args.saveTo) {
+        const path = await import('node:path');
+        if (!path.isAbsolute(args.saveTo)) {
+          return { content: [{ type: 'text', text: JSON.stringify({ error: 'saveTo must be an absolute path', saveTo: args.saveTo }) }] };
+        }
+        // Write ONLY on non-empty text — never a "undefined"/empty placeholder
+        if (typeof text === 'string' && text.length > 0) {
+          const { promises: fs } = await import('fs');
+          await fs.mkdir(path.dirname(args.saveTo), { recursive: true });
+          await fs.writeFile(args.saveTo, text);
+          return { content: [{ type: 'text', text: JSON.stringify({ saved: args.saveTo, chars: text.length, title: raw.title, truncated }) }] };
+        }
+        return { content: [{ type: 'text', text: JSON.stringify({ error: 'no article text extracted — nothing written', url: raw.url }) }] };
+      }
+      // No saveTo → unchanged backward-compatible inline JSON (author/handle/text keys)
+      const article = { title: raw.title, author: raw.authorName, handle: raw.authorHandle, text, images: raw.images, url: raw.url };
       return { content: [{ type: 'text', text: JSON.stringify(article, null, 2) }] };
     }
 

@@ -1,0 +1,18 @@
+The Future of On-Device AI
+Ada Lovelace
+@adalovelace
+·
+Dec 12, 2025
+1,204
+89
+2.1M
+Views
+On-device inference has quietly crossed a threshold that changes the calculus for every mobile product team shipping machine learning today.
+The old assumption was that anything interesting had to run in the cloud. That assumption is now wrong for a large and growing class of models.
+## Why latency wins
+When the model runs locally, the round-trip to a datacenter disappears, and with it the tail-latency spikes that wreck perceived quality.
+This is the whole game for interactive experiences: predictable sub-100ms responses that never depend on a flaky network connection.
+Ada Lovelace
+@adalovelace
+Following
+Writing about compute, latency, and the edge.
