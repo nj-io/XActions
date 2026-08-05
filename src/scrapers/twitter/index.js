@@ -22,6 +22,32 @@ import fs from 'fs/promises';
 
 puppeteer.use(StealthPlugin());
 
+// UserByScreenName resolution. X rotates the GraphQL queryId periodically; the
+// first id that returns a rest_id wins, the later ones are fallbacks. Keep the
+// current id first (mirror src/scrapers/twitter/http/endpoints.js when it moves).
+const USER_BY_SCREEN_NAME_QUERY_IDS = [
+  'NimuplG1OB7Fd2btCLdBOw', // current (matches the HTTP-path resolver)
+  'IGgvgiOx4QZndDHuD3x9TQ', // legacy fallback
+];
+
+// Full feature set X requires for UserByScreenName. A missing required flag makes
+// X reject the whole call ("features cannot be null: …"); extra flags are ignored.
+// Mirrors DEFAULT_FEATURES in the HTTP-path endpoints so the two paths stay in sync.
+const USER_BY_SCREEN_NAME_FEATURES = {
+  hidden_profile_subscriptions_enabled: true,
+  rweb_tipjar_consumption_enabled: false,
+  responsive_web_graphql_exclude_directive_enabled: true,
+  verified_phone_label_enabled: false,
+  subscriptions_verification_info_is_identity_verified_enabled: true,
+  subscriptions_verification_info_verified_since_enabled: true,
+  highlights_tweets_tab_ui_enabled: true,
+  responsive_web_twitter_article_notes_tab_enabled: true,
+  subscriptions_feature_can_gift_premium: true,
+  creator_subscriptions_tweet_preview_api_enabled: true,
+  responsive_web_graphql_skip_user_profile_image_extensions_enabled: false,
+  responsive_web_graphql_timeline_navigation_enabled: true,
+};
+
 // ============================================================================
 // Core Utilities
 // ============================================================================
@@ -797,24 +823,36 @@ export async function scrapeLikedTweets(page, username, options = {}) {
     await randomDelay(2000, 3000);
   }
 
-  // Resolve numeric userId from username
-  const userId = await page.evaluate(async (screenName) => {
+  // Resolve numeric userId from username. See USER_BY_SCREEN_NAME_* above: try the
+  // current queryId then the legacy one with the full feature set, and throw X's
+  // raw response if neither resolves so a future drift is diagnosable, not null.
+  const resolution = await page.evaluate(async (screenName, FEATURES, QUERY_IDS) => {
     const ct0 = document.cookie.match(/ct0=([^;]+)/)?.[1];
-    if (!ct0) return null;
+    if (!ct0) return { ok: false, reason: 'no ct0 cookie in page' };
     const variables = JSON.stringify({ screen_name: screenName, withSafetyModeUserFields: true });
-    const features = JSON.stringify({ hidden_profile_subscriptions_enabled: true, responsive_web_graphql_skip_user_profile_image_extensions_enabled: false, responsive_web_graphql_timeline_navigation_enabled: true });
-    const url = `https://x.com/i/api/graphql/IGgvgiOx4QZndDHuD3x9TQ/UserByScreenName?variables=${encodeURIComponent(variables)}&features=${encodeURIComponent(features)}`;
-    try {
-      const resp = await fetch(url, {
-        headers: { 'authorization': 'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA', 'x-csrf-token': ct0, 'x-twitter-active-user': 'yes', 'x-twitter-auth-type': 'OAuth2Session' },
-        credentials: 'include',
-      });
-      const data = await resp.json();
-      return data?.data?.user?.result?.rest_id || null;
-    } catch { return null; }
-  }, username);
+    const features = JSON.stringify(FEATURES);
+    let last = null;
+    for (const qid of QUERY_IDS) {
+      const url = `https://x.com/i/api/graphql/${qid}/UserByScreenName?variables=${encodeURIComponent(variables)}&features=${encodeURIComponent(features)}`;
+      try {
+        const resp = await fetch(url, {
+          headers: { 'authorization': 'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA', 'x-csrf-token': ct0, 'x-twitter-active-user': 'yes', 'x-twitter-auth-type': 'OAuth2Session' },
+          credentials: 'include',
+        });
+        const text = await resp.text();
+        let data = null; try { data = JSON.parse(text); } catch { /* non-JSON */ }
+        const rid = data?.data?.user?.result?.rest_id;
+        if (rid) return { ok: true, rest_id: rid, queryId: qid };
+        last = { queryId: qid, status: resp.status, body: text.slice(0, 300) };
+      } catch (e) { last = { queryId: qid, error: String(e) }; }
+    }
+    return { ok: false, last };
+  }, username, USER_BY_SCREEN_NAME_FEATURES, USER_BY_SCREEN_NAME_QUERY_IDS);
 
-  if (!userId) throw new Error(`Could not resolve userId for @${username}`);
+  if (!resolution.ok) {
+    throw new Error(`Could not resolve userId for @${username}: ${JSON.stringify(resolution.last || resolution)}`);
+  }
+  const userId = resolution.rest_id;
 
   // Set up JSONL output file
   const exportDir = `${process.env.HOME || '/tmp'}/.xactions/exports`;
@@ -949,24 +987,37 @@ export async function discoverLikes(page, username, options = {}) {
     await randomDelay(2000, 3000);
   }
 
-  // Resolve userId
-  const userId = await page.evaluate(async (screenName) => {
+  // Resolve the user's numeric rest_id via UserByScreenName. X rotates both the
+  // GraphQL queryId and the required feature flags, so try the current id then the
+  // legacy one with the full feature set, and throw X's raw response if neither
+  // resolves — a future drift must be diagnosable, not swallowed to a bare null.
+  const resolution = await page.evaluate(async (screenName, FEATURES, QUERY_IDS) => {
     const ct0 = document.cookie.match(/ct0=([^;]+)/)?.[1];
-    if (!ct0) return null;
+    if (!ct0) return { ok: false, reason: 'no ct0 cookie in page' };
     const variables = JSON.stringify({ screen_name: screenName, withSafetyModeUserFields: true });
-    const features = JSON.stringify({ hidden_profile_subscriptions_enabled: true, responsive_web_graphql_skip_user_profile_image_extensions_enabled: false, responsive_web_graphql_timeline_navigation_enabled: true });
-    const url = `https://x.com/i/api/graphql/IGgvgiOx4QZndDHuD3x9TQ/UserByScreenName?variables=${encodeURIComponent(variables)}&features=${encodeURIComponent(features)}`;
-    try {
-      const resp = await fetch(url, {
-        headers: { 'authorization': 'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA', 'x-csrf-token': ct0, 'x-twitter-active-user': 'yes', 'x-twitter-auth-type': 'OAuth2Session' },
-        credentials: 'include',
-      });
-      const data = await resp.json();
-      return data?.data?.user?.result?.rest_id || null;
-    } catch { return null; }
-  }, username);
+    const features = JSON.stringify(FEATURES);
+    let last = null;
+    for (const qid of QUERY_IDS) {
+      const url = `https://x.com/i/api/graphql/${qid}/UserByScreenName?variables=${encodeURIComponent(variables)}&features=${encodeURIComponent(features)}`;
+      try {
+        const resp = await fetch(url, {
+          headers: { 'authorization': 'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA', 'x-csrf-token': ct0, 'x-twitter-active-user': 'yes', 'x-twitter-auth-type': 'OAuth2Session' },
+          credentials: 'include',
+        });
+        const text = await resp.text();
+        let data = null; try { data = JSON.parse(text); } catch { /* non-JSON */ }
+        const rid = data?.data?.user?.result?.rest_id;
+        if (rid) return { ok: true, rest_id: rid, queryId: qid };
+        last = { queryId: qid, status: resp.status, body: text.slice(0, 300) };
+      } catch (e) { last = { queryId: qid, error: String(e) }; }
+    }
+    return { ok: false, last };
+  }, username, USER_BY_SCREEN_NAME_FEATURES, USER_BY_SCREEN_NAME_QUERY_IDS);
 
-  if (!userId) throw new Error(`Could not resolve userId for @${username}`);
+  if (!resolution.ok) {
+    throw new Error(`Could not resolve userId for @${username}: ${JSON.stringify(resolution.last || resolution)}`);
+  }
+  const userId = resolution.rest_id;
 
   // Set up output files
   const exportDir = `${process.env.HOME || '/tmp'}/.xactions/exports`;
