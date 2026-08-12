@@ -38,6 +38,7 @@ import { randomUUID } from 'node:crypto';
 
 import { initializePlugins, getPluginTools } from '../plugins/index.js';
 import { extractArticleText } from './articleText.js';
+import { articleToMarkdown } from './articleMarkdown.js';
 
 // ============================================================================
 // Configuration
@@ -2554,6 +2555,11 @@ async function executeXeepyTool(name, args) {
         if (!articleUrl) return { content: [{ type: 'text', text: JSON.stringify({ error: 'No article found on this tweet' }) }] };
         url = articleUrl;
       }
+      // Opt-in fixture capture, off by default: the markup is large and is only wanted
+      // when refreshing tests/fixtures/article-readview.html.
+      if (process.env.XACTIONS_DUMP_ARTICLE_HTML) {
+        await page.evaluateOnNewDocument(() => { window.__xactionsDumpHtml = true; });
+      }
       await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
       await new Promise(r => setTimeout(r, 4000));
       // Scroll through to load lazy content
@@ -2580,8 +2586,18 @@ async function executeXeepyTool(name, args) {
         const images = [...readView.querySelectorAll('img')]
           .map(i => i.src)
           .filter(s => s.includes('twimg') && !s.includes('_normal.') && !s.includes('_bigger.') && !s.includes('profile_images'));
-        return { title, authorName, authorHandle, rawText, images, url: location.href, hasReadView: true, scrollExhausted };
+        // Kept only when asked for: the read view's markup, so a real article can be
+        // saved as a test fixture. `articleToMarkdown` is unit-tested against captured
+        // markup rather than markup we imagined X emits.
+        const rawHtml = window.__xactionsDumpHtml ? readView.outerHTML : '';
+        return { title, authorName, authorHandle, rawText, rawHtml, images, url: location.href, hasReadView: true, scrollExhausted };
       });
+      // The structural read, in the page where the DOM is. innerText above returns the
+      // article's rendered TEXT and discards the elements that produced it — a heading,
+      // a list item and a line of code all arrive as bare lines, and nothing downstream
+      // can recover the difference because by then it is genuinely gone. Puppeteer
+      // serialises this function over CDP, which is why it has no imports.
+      const markdown = await page.evaluate(articleToMarkdown);
       // readView absent → surface an error, write nothing (never a placeholder)
       if (!raw.hasReadView) {
         return { content: [{ type: 'text', text: JSON.stringify({ error: 'no readView', url: raw.url }) }] };
@@ -2599,13 +2615,22 @@ async function executeXeepyTool(name, args) {
         if (typeof text === 'string' && text.length > 0) {
           const { promises: fs } = await import('fs');
           await fs.mkdir(path.dirname(args.saveTo), { recursive: true });
-          await fs.writeFile(args.saveTo, text);
-          return { content: [{ type: 'text', text: JSON.stringify({ saved: args.saveTo, chars: text.length, title: raw.title, truncated }) }] };
+          // Markdown when the walk produced any, the flat text otherwise. Never a
+          // silent downgrade: `format` in the response says which was written, so a
+          // caller expecting structure can tell it did not get it.
+          const useMd = typeof markdown === 'string' && markdown.length > 0;
+          await fs.writeFile(args.saveTo, useMd ? markdown : text);
+          if (raw.rawHtml) {
+            await fs.writeFile(args.saveTo.replace(/\.[^.]*$/, '') + '.readview.html', raw.rawHtml);
+          }
+          return { content: [{ type: 'text', text: JSON.stringify({ saved: args.saveTo, chars: (useMd ? markdown : text).length, format: useMd ? 'markdown' : 'text', title: raw.title, truncated }) }] };
         }
         return { content: [{ type: 'text', text: JSON.stringify({ error: 'no article text extracted — nothing written', url: raw.url }) }] };
       }
       // No saveTo → unchanged backward-compatible inline JSON (author/handle/text keys)
-      const article = { title: raw.title, author: raw.authorName, handle: raw.authorHandle, text, images: raw.images, url: raw.url };
+      // `text` stays exactly what it was — existing callers are unaffected — and
+      // `markdown` is added beside it.
+      const article = { title: raw.title, author: raw.authorName, handle: raw.authorHandle, text, markdown, images: raw.images, url: raw.url };
       return { content: [{ type: 'text', text: JSON.stringify(article, null, 2) }] };
     }
 
