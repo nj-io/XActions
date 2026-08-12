@@ -90,7 +90,15 @@ describe('inline', () => {
   });
 
   it('escapes markup characters in prose so a re-render is faithful', () => {
-    expect(md('<p>a_b_c and *stars*</p>')).toBe('a\\_b\\_c and \\*stars\\*');
+    expect(md('<p>see *stars* and [brackets]</p>'))
+      .toBe('see \\*stars\\* and \\[brackets\\]');
+  });
+
+  it('leaves underscores alone — they are not emphasis inside a word', () => {
+    // These articles are full of tool_use and auth_token. The escape is not free:
+    // the stored page is read by graders and greps as plain text, where `tool\_use`
+    // no longer matches the phrase it came from.
+    expect(md('<p>pass tool_use to auth_token</p>')).toBe('pass tool_use to auth_token');
   });
 
   it('turns <br> into a line break inside a paragraph', () => {
@@ -100,6 +108,56 @@ describe('inline', () => {
   it('keeps images with their alt text', () => {
     expect(md('<p><img src="https://i/x.jpg" alt="a chart"></p>'))
       .toBe('![a chart](https://i/x.jpg)');
+  });
+
+  it('unwraps an image from the media permalink X wraps it in', () => {
+    // The link target is an X-internal path, worth nothing to a reader, and the
+    // nested `[![alt](src)](href)` form is what renderers choke on.
+    expect(md('<a href="/who/article/1/media/2"><img src="https://i/x.jpg" alt="Image">'
+      + '</a>')).toBe('![Image](https://i/x.jpg)');
+  });
+});
+
+describe('emphasis carried as inline style (DraftJS)', () => {
+  // The read view is a DraftJS document: bold and italic are a style attribute on a
+  // span, never <strong>/<em>. A tag-only rule dropped 41 bold runs and 6 italic ones
+  // from a single captured article without any signal that it had.
+  it('reads bold from font-weight', () => {
+    expect(md('<p><span style="font-weight: bold;">Agent SDK</span> matters</p>'))
+      .toBe('**Agent SDK** matters');
+  });
+
+  it('reads bold from a numeric weight', () => {
+    expect(md('<p><span style="font-weight: 700">heavy</span></p>')).toBe('**heavy**');
+    expect(md('<p><span style="font-weight: 400">normal</span></p>')).toBe('normal');
+  });
+
+  it('reads italic from font-style', () => {
+    expect(md('<p><span style="font-style: italic;">emphasis</span></p>'))
+      .toBe('_emphasis_');
+  });
+
+  it('applies both when a span carries both', () => {
+    expect(md('<p><span style="font-weight:bold;font-style:italic">x</span></p>'))
+      .toBe('**_x_**');
+  });
+
+  it('does not double-wrap a tag that also carries the style', () => {
+    expect(md('<p><strong style="font-weight: bold;">once</strong></p>'))
+      .toBe('**once**');
+  });
+
+  it('does not double-wrap nested spans of the same style', () => {
+    expect(md('<p><span style="font-weight:bold"><span style="font-weight:bold">'
+      + 'x</span></span></p>')).toBe('**x**');
+  });
+
+  it('keeps the markers hugging the text through the DraftJS span nesting', () => {
+    // The real shape: styled span wrapping a data-text span.
+    const html = '<p><span style="font-weight: bold;"><span data-text="true">'
+      + 'Customer Support Resolution Agent</span></span>'
+      + '<span><span data-text="true"> (Agent SDK + MCP)</span></span></p>';
+    expect(md(html)).toBe('**Customer Support Resolution Agent** (Agent SDK + MCP)');
   });
 });
 
@@ -199,6 +257,30 @@ describe('a real captured read view', () => {
     for (const n of [1, 2, 3, 4, 5]) {
       expect(out).toMatch(new RegExp(`^## DOMAIN ${n}: `, 'm'));
     }
+  });
+
+  it('recovers the emphasis the fixture carries as inline style', () => {
+    const styled = readFileSync(fixture, 'utf-8');
+    const bold = (styled.match(/font-weight:\s*bold/gi) || []).length;
+    expect(bold).toBeGreaterThanOrEqual(40);          // 41 in this capture
+
+    // Every list item in this section leads with a bold term; innerText has none.
+    expect(out).toContain('**Customer Support Resolution Agent** (Agent SDK');
+    expect(out).toContain('**Code Generation with Claude Code** (CLAUDE.md');
+    expect((out.match(/\*\*/g) || []).length).toBeGreaterThanOrEqual(60);
+    // innerText's only `**` are glob patterns the author typed (`**/*.test.tsx`) —
+    // literal content, not emphasis. It marks none of the 41 bold runs.
+    expect(innerText).not.toContain('**Customer Support Resolution Agent');
+  });
+
+  it('leaves no stray escape in the prose a grader will grep', () => {
+    expect(out).not.toContain('\\_');
+    expect(out).toContain('tool_use');
+  });
+
+  it('unwraps both article images out of their media permalinks', () => {
+    expect(out).toMatch(/^!\[Image\]\(https:\/\/pbs\.twimg\.com\//m);
+    expect(out).not.toMatch(/\[!\[/);
   });
 
   it('loses no words to the conversion', () => {

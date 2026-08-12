@@ -64,14 +64,28 @@ export function articleToMarkdown(root) {
   // pairs with the next one and italicises half a paragraph.
   const wrap = (marker, inner) => {
     const m = inner.match(/^(\s*)([\s\S]*?)(\s*)$/);
-    return m && m[2] ? m[1] + marker + m[2] + marker + m[3] : inner;
+    if (!m || !m[2]) return inner;
+    // Nested spans can carry the same style twice; wrapping again would emit
+    // ****text****, which renders as literal asterisks rather than emphasis.
+    if (m[2].startsWith(marker) && m[2].endsWith(marker)) return inner;
+    return m[1] + marker + m[2] + marker + m[3];
   };
 
-  // Backslash-escape the characters that would otherwise be read as markup when the
-  // text is rendered back. Deliberately narrow: escaping more than this turns ordinary
-  // prose into a thicket of backslashes, and the article is meant to stay readable as
-  // plain text too.
-  const escapeText = (text) => text.replace(/([\\`*_[\]])/g, '\\$1');
+  // Backslash-escape what would otherwise be read as markup. Deliberately narrow, and
+  // `_` is deliberately NOT in it: identifiers like tool_use and auth_token are common
+  // in these articles, intraword underscores are not emphasis in CommonMark, and the
+  // escape is not free — the stored page is read by graders and greps as plain text,
+  // where a phrase carrying `\_` no longer matches the phrase it came from.
+  const escapeText = (text) => text.replace(/([\\`*[\]])/g, '\\$1');
+
+  // DraftJS — which is what the read view is — carries bold and italic as inline
+  // STYLE on a span, not as <strong>/<em>. 41 bold spans and 6 italic in one captured
+  // article, all of which a tag-only rule silently drops. Read from the style
+  // attribute rather than getComputedStyle so the same code works under jsdom, where
+  // X's stylesheets are not loaded.
+  const styleOf = (el) => (el.getAttribute && el.getAttribute('style')) || '';
+  const isBold = (el) => /font-weight:\s*(bold|[6-9]00)/i.test(styleOf(el));
+  const isItalic = (el) => /font-style:\s*italic/i.test(styleOf(el));
 
   const inline = (node) => {
     if (node.nodeType === 3) return escapeText(node.nodeValue);
@@ -90,18 +104,29 @@ export function articleToMarkdown(root) {
       const raw = node.textContent || '';
       return raw ? '`' + raw.replace(/`/g, '') + '`' : '';
     }
-    const inner = [...node.childNodes].map(inline).join('');
-    if (tag === 'STRONG' || tag === 'B') return wrap('**', inner);
-    if (tag === 'EM' || tag === 'I') return wrap('_', inner);
-    if (tag === 'DEL' || tag === 'S') return wrap('~~', inner);
+    let inner = [...node.childNodes].map(inline).join('');
     if (tag === 'A') {
       const href = node.getAttribute('href') || '';
       const text = inner.trim();
       if (!text) return '';
+      // X wraps an article image in a link to its own media permalink. Nesting the
+      // image inside that link gains a reader nothing — the target is an X-internal
+      // path — and costs the image, since the nested form is what renderers choke on.
+      if (/^!\[[^\]]*\]\([^)]*\)$/.test(text)) return text;
       // A link whose text already IS its target reads as noise when doubled up.
       if (!href || href === text) return text;
       return `[${text}](${href})`;
     }
+    // Style-carried emphasis is applied before the tag rules so a <strong> that also
+    // carries `font-style: italic` gets both, and a plain span carrying either gets it
+    // at all.
+    if (isItalic(node)) inner = wrap('_', inner);
+    if (isBold(node)) inner = wrap('**', inner);
+    // `&& !isBold` so a <strong> that ALSO carries font-weight:bold — DraftJS emits
+    // both — is not wrapped twice into ****text****.
+    if ((tag === 'STRONG' || tag === 'B') && !isBold(node)) return wrap('**', inner);
+    if ((tag === 'EM' || tag === 'I') && !isItalic(node)) return wrap('_', inner);
+    if (tag === 'DEL' || tag === 'S') return wrap('~~', inner);
     return inner;
   };
 
