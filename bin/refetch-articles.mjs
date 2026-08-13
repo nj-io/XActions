@@ -121,7 +121,15 @@ for (const job of todo.slice(0, limit)) {
       if (!view || !view.querySelector('[data-offset-key]')) return '';
       const clone = view.cloneNode(true);
       clone.querySelectorAll('[data-offset-key]').forEach((n) => n.remove());
-      return clone.textContent || '';
+      // Joined with spaces, NOT `clone.textContent`: that concatenates with no
+      // separator, so text fuses across element boundaries — a bio ending "leverage."
+      // followed by a sibling starting "helping" yields the single token
+      // "leverage.helping", and a consumer looking for "helping" never finds it. The
+      // clone is detached, so innerText is unavailable and the walk is done by hand.
+      const parts = [];
+      const it = document.createTreeWalker(clone, NodeFilter.SHOW_TEXT);
+      while (it.nextNode()) parts.push(it.currentNode.nodeValue);
+      return parts.join(' ');
     });
     const exhausted = await page.evaluate(() =>
       (window.scrollY + window.innerHeight) >= document.scrollingElement.scrollHeight);
