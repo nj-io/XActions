@@ -108,6 +108,21 @@ for (const job of todo.slice(0, limit)) {
     if (title && !markdown.startsWith('#')) markdown = `# ${title}\n\n${markdown}`;
     const innerText = await page.evaluate(() =>
       document.querySelector('[data-testid="twitterArticleReadView"]').innerText);
+    // Exactly what the walk dropped: the read view with the article's own DraftJS
+    // blocks removed, leaving X's chrome — title, byline, Follow, counts, the author's
+    // footer bio. A consumer comparing old text against new needs this, because the
+    // walk removes chrome BY DESIGN and a plain token-superset therefore reads every
+    // one of those removals as lost content. textContent, not innerText, so the hidden
+    // accessibility labels are included: they are in the old capture too.
+    // Empty when the view has no DraftJS content — there the walk scoped nothing, so
+    // claiming it dropped chrome would exempt the entire article.
+    const chromeText = await page.evaluate(() => {
+      const view = document.querySelector('[data-testid="twitterArticleReadView"]');
+      if (!view || !view.querySelector('[data-offset-key]')) return '';
+      const clone = view.cloneNode(true);
+      clone.querySelectorAll('[data-offset-key]').forEach((n) => n.remove());
+      return clone.textContent || '';
+    });
     const exhausted = await page.evaluate(() =>
       (window.scrollY + window.innerHeight) >= document.scrollingElement.scrollHeight);
     if (!markdown) {
@@ -123,6 +138,7 @@ for (const job of todo.slice(0, limit)) {
       title: job.title,
       chars: markdown.length,
       innerTextChars: innerText.length,
+      chromeText,
       // Truncation is the scroll loop hitting its cap with page left — recorded so a
       // short article is never mistaken for a complete one downstream.
       truncated: !exhausted,
