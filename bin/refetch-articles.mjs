@@ -97,7 +97,15 @@ for (const job of todo.slice(0, limit)) {
       failed += 1;
       continue;
     }
-    const markdown = await page.evaluate(articleToMarkdown);
+    let markdown = await page.evaluate(articleToMarkdown);
+    // The title lives in the read view's HEADER, beside the byline, so scoping the
+    // walk to the article's own DraftJS content correctly drops it along with the
+    // author row. It is real content though, so it is put back explicitly from its
+    // own element — not left to whatever the header happened to render.
+    const title = await page.evaluate(() =>
+      document.querySelector('[data-testid="twitter-article-title"]')
+        ?.textContent?.trim() || '');
+    if (title && !markdown.startsWith('#')) markdown = `# ${title}\n\n${markdown}`;
     const innerText = await page.evaluate(() =>
       document.querySelector('[data-testid="twitterArticleReadView"]').innerText);
     const exhausted = await page.evaluate(() =>

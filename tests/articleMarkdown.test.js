@@ -203,6 +203,52 @@ describe('chrome inside the read view', () => {
   });
 });
 
+describe('chrome the read view renders around the article', () => {
+  /** A read view whose article content is DraftJS, with X's own UI around it. */
+  function withHeader(headerHtml, bodyHtml) {
+    const dom = new JSDOM('<div data-testid="twitterArticleReadView">'
+      + headerHtml
+      + `<div data-offset-key="abc-0-0">${bodyHtml}</div></div>`);
+    return articleToMarkdown(
+      dom.window.document.querySelector('[data-testid="twitterArticleReadView"]'));
+  }
+
+  it('drops the byline, which carries no testid to match on', () => {
+    const header = '<a href="/hooeem"><span>hoeem</span></a>'
+      + '<a href="/hooeem"><span>@hooeem</span></a><span>Mar 15</span>';
+    expect(withHeader(header, '<p>The article body.</p>')).toBe('The article body.');
+  });
+
+  it('drops a hidden element', () => {
+    // innerText excludes these by definition — it returns RENDERED text. A DOM walk
+    // does not, which is how the Follow button's a11y label became a paragraph.
+    const header = '<div style="display: none;">Click to Follow hooeem</div>'
+      + '<div aria-hidden="true">·</div><div hidden>1.2K</div>';
+    expect(withHeader(header, '<p>Body.</p>')).toBe('Body.');
+  });
+
+  it('drops a hidden element INSIDE the article too', () => {
+    expect(withHeader('', '<p>Body.</p><p style="visibility:hidden">ghost</p>'))
+      .toBe('Body.');
+  });
+
+  it('drops the author avatar but keeps article media', () => {
+    const header = '<img src="https://pbs.twimg.com/profile_images/1/x_normal.jpg">';
+    expect(withHeader(header, '<p><img src="https://pbs.twimg.com/media/a.jpg" '
+      + 'alt="chart"></p>')).toBe('![chart](https://pbs.twimg.com/media/a.jpg)');
+  });
+
+  it('falls back to the whole view when there is no DraftJS content', () => {
+    // Not every read view need be an editor document, and emitting nothing would be a
+    // far worse failure than keeping a byline.
+    const dom = new JSDOM('<div data-testid="twitterArticleReadView">'
+      + '<p>Plain article.</p></div>');
+    expect(articleToMarkdown(
+      dom.window.document.querySelector('[data-testid="twitterArticleReadView"]')))
+      .toBe('Plain article.');
+  });
+});
+
 describe('shape', () => {
   it('returns empty string when there is no read view', () => {
     const dom = new JSDOM('<div>no article here</div>');
@@ -278,19 +324,43 @@ describe('a real captured read view', () => {
     expect(out).toContain('tool_use');
   });
 
-  it('unwraps both article images out of their media permalinks', () => {
+  it('unwraps an article image out of the media permalink', () => {
     expect(out).toMatch(/^!\[Image\]\(https:\/\/pbs\.twimg\.com\//m);
     expect(out).not.toMatch(/\[!\[/);
   });
 
-  it('loses no words to the conversion', () => {
-    // The guard the re-fetch is gated on: markdown ADDS markers, it never drops text.
-    // Anything in the flat capture that is missing here is content the walk destroyed.
+  it('carries none of the byline the read view renders above the article', () => {
+    // This fixture is a capture WITH the header present — the same article gave
+    // markup without one on an earlier fetch, which is why the first batch shipped
+    // the byline onto all 44 pages before anyone saw it rendered.
+    for (const chrome of ['Click to Follow', 'profile_images', '@hooeem', 'Mar 15']) {
+      expect(out).not.toContain(chrome);
+    }
+    // ...and innerText never had the hidden one, because it returns rendered text.
+    expect(innerText).not.toContain('Click to Follow');
+  });
+
+  it('loses no word of the article BODY, only the chrome at its two ends', () => {
+    // The property the corpus re-fetch is gated on, stated correctly. Markdown adds
+    // markers and never drops text — but the walk also drops X's chrome by design, so
+    // "loses nothing" is false and was the wrong invariant to assert. What must hold
+    // is that every dropped word comes from the header or the footer: the title and
+    // byline above the article, the author's bio below it. A word missing from the
+    // MIDDLE is content the walk destroyed, and there must be none.
     const words = (s) => new Set(
       s.replace(/[\\`*_[\]()#>~-]/g, ' ').toLowerCase().match(/[a-z0-9]{4,}/g) || []);
     const lost = [...words(innerText)].filter((w) => !words(out).has(w));
+    const EDGE = 300;
 
-    expect(lost).toEqual([]);
+    expect(lost.length).toBeGreaterThan(0);      // there IS chrome in this fixture
+    const interior = lost.filter((w) => {
+      const lower = innerText.toLowerCase();
+      for (let i = lower.indexOf(w); i !== -1; i = lower.indexOf(w, i + 1)) {
+        if (i > EDGE && i < innerText.length - EDGE) return true;
+      }
+      return false;
+    });
+    expect(interior).toEqual([]);
   });
 });
 

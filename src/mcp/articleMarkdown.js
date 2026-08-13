@@ -52,8 +52,37 @@ export function articleToMarkdown(root) {
     'bookmark', 'app-text-transition-container'];
   const SKIP_TAG = ['SCRIPT', 'STYLE', 'NOSCRIPT', 'SVG', 'BUTTON', 'INPUT', 'NAV'];
 
+  // The article's own content is a DraftJS document and carries `data-offset-key`
+  // throughout; X's UI around it does not. That one attribute separates them exactly,
+  // where element identity does not: the read view's contents VARY between loads — the
+  // same article gave markup with no byline on one fetch and a full byline on the next
+  // — and when the byline IS present it carries no `data-testid` to match, so a rule
+  // listing testids passes it straight through. Before the first block sit the title
+  // (captured separately as `raw.title`), the author's name, handle and date, the
+  // Follow button and the engagement counts. All of it reached the corpus as article
+  // text, on all 44 pages of the first batch.
+  const hasDraft = !!view.querySelector('[data-offset-key]');
+  const inArticle = (el) => !hasDraft
+    || !!el.closest('[data-offset-key]') || !!el.querySelector('[data-offset-key]');
+
+  // innerText returns RENDERED text and excludes these by definition; a DOM walk does
+  // not, which is how `<div style="display: none">Click to Follow hooeem</div>` — the
+  // Follow button's accessibility label — became a paragraph of the article.
+  const isHidden = (el) => {
+    const style = (el.getAttribute && el.getAttribute('style')) || '';
+    return /display:\s*none|visibility:\s*hidden/i.test(style)
+      || (el.hasAttribute && el.hasAttribute('hidden'))
+      || el.getAttribute('aria-hidden') === 'true';
+  };
+
+  // An avatar is not article media — the same exclusions the tool's own image list
+  // applies, and the reason the author's profile picture appeared mid-article.
+  const isAvatar = (src) => /profile_images|_normal\.|_bigger\./.test(src);
+
   const isSkipped = (el) => {
     if (SKIP_TAG.includes(el.tagName)) return true;
+    if (isHidden(el)) return true;
+    if (!inArticle(el)) return true;
     const testid = el.getAttribute && el.getAttribute('data-testid');
     return !!testid && SKIP_TESTID.includes(testid);
   };
@@ -96,7 +125,7 @@ export function articleToMarkdown(root) {
     if (tag === 'IMG') {
       const src = node.getAttribute('src') || '';
       const alt = node.getAttribute('alt') || '';
-      return src ? `![${alt}](${src})` : '';
+      return src && !isAvatar(src) ? `![${alt}](${src})` : '';
     }
     // Code is escaped by its own fence, so its text is taken raw — escaping inside a
     // span of code would put backslashes into the code itself.
