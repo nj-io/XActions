@@ -19,6 +19,17 @@
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import fs from 'fs/promises';
+import path from 'path';
+import {
+  BEARER_TOKEN,
+  buildGraphQLUrl,
+  operationFeatures,
+  operationFieldToggles,
+  resolveGraphQL,
+  UPSTREAM_OPERATIONS,
+} from './http/endpoints.js';
+import { loadCache as loadQueryIdCache } from './http/queryIds.js';
+import { sessionDir } from '../../utils/savedSession.js';
 
 puppeteer.use(StealthPlugin());
 
@@ -54,8 +65,15 @@ const USER_BY_SCREEN_NAME_FEATURES = {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * Test seam: when set, `onDelay(label, min, max)` is called for every
+ * randomDelay, so a test can tell which pauses ran. Unset in production.
+ */
+export const __delayHooks = { onDelay: null };
+
 /** Human-like delay using log-normal distribution with occasional distraction spikes. */
-const randomDelay = (min = 2000, max = 7000) => {
+const randomDelay = (min = 2000, max = 7000, label = null) => {
+  __delayHooks.onDelay?.(label, min, max);
   const u1 = Math.random();
   const u2 = Math.random();
   const z = Math.sqrt(-2 * Math.log(u1 || 1e-10)) * Math.cos(2 * Math.PI * u2);
@@ -880,36 +898,8 @@ export async function scrapeLikedTweets(page, username, options = {}) {
     await randomDelay(2000, 3000);
   }
 
-  // Resolve numeric userId from username. See USER_BY_SCREEN_NAME_* above: try the
-  // current queryId then the legacy one with the full feature set, and throw X's
-  // raw response if neither resolves so a future drift is diagnosable, not null.
-  const resolution = await page.evaluate(async (screenName, FEATURES, QUERY_IDS) => {
-    const ct0 = document.cookie.match(/ct0=([^;]+)/)?.[1];
-    if (!ct0) return { ok: false, reason: 'no ct0 cookie in page' };
-    const variables = JSON.stringify({ screen_name: screenName, withSafetyModeUserFields: true });
-    const features = JSON.stringify(FEATURES);
-    let last = null;
-    for (const qid of QUERY_IDS) {
-      const url = `https://x.com/i/api/graphql/${qid}/UserByScreenName?variables=${encodeURIComponent(variables)}&features=${encodeURIComponent(features)}`;
-      try {
-        const resp = await fetch(url, {
-          headers: { 'authorization': 'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA', 'x-csrf-token': ct0, 'x-twitter-active-user': 'yes', 'x-twitter-auth-type': 'OAuth2Session' },
-          credentials: 'include',
-        });
-        const text = await resp.text();
-        let data = null; try { data = JSON.parse(text); } catch { /* non-JSON */ }
-        const rid = data?.data?.user?.result?.rest_id;
-        if (rid) return { ok: true, rest_id: rid, queryId: qid };
-        last = { queryId: qid, status: resp.status, body: text.slice(0, 300) };
-      } catch (e) { last = { queryId: qid, error: String(e) }; }
-    }
-    return { ok: false, last };
-  }, username, USER_BY_SCREEN_NAME_FEATURES, USER_BY_SCREEN_NAME_QUERY_IDS);
-
-  if (!resolution.ok) {
-    throw new Error(`Could not resolve userId for @${username}: ${JSON.stringify(resolution.last || resolution)}`);
-  }
-  const userId = resolution.rest_id;
+  // Resolve numeric userId from username (see USER_BY_SCREEN_NAME_* above).
+  const userId = await resolveUserId(page, username);
 
   // Set up JSONL output file
   const exportDir = `${process.env.HOME || '/tmp'}/.xactions/exports`;
@@ -1008,46 +998,230 @@ export async function scrapeLikedTweets(page, username, options = {}) {
 }
 
 // ============================================================================
-// Discover Likes (interleaved fetch + deep read with human-like pacing)
+// Timeline discovery: likes, all bookmarks, one bookmark folder
 // ============================================================================
+//
+// One loop lists a timeline page by page, then deep-reads the listed posts.
+// Each operation's queryId, feature switches and field toggles come from
+// upstream's resolver (./http/endpoints.js: the discovery cache, then the
+// generated table). The URL is built in Node and fetched inside the logged-in
+// page, so the session cookie and the headers are the ones likes always used.
+
+/** The likes queryId this path used before the resolver: the last fallback. */
+const LIKES_LEGACY_QUERY_ID = 'KPuet6dGbC8LB2sOLx7tZQ';
+
+/** The feature set sent with the legacy likes queryId. */
+const LIKES_LEGACY_FEATURES = Object.freeze({
+  rweb_video_screen_enabled: false, responsive_web_graphql_timeline_navigation_enabled: true,
+  responsive_web_graphql_skip_user_profile_image_extensions_enabled: false,
+  creator_subscriptions_tweet_preview_api_enabled: true,
+  longform_notetweets_consumption_enabled: true,
+  responsive_web_twitter_article_tweet_consumption_enabled: true,
+  responsive_web_edit_tweet_api_enabled: true,
+  graphql_is_translatable_rweb_tweet_is_translatable_enabled: true,
+  view_counts_everywhere_api_enabled: true,
+  freedom_of_speech_not_reach_fetch_enabled: true,
+  tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled: true,
+  longform_notetweets_rich_text_read_enabled: true,
+});
 
 /**
- * Fetch liked tweets and deep-read each one, interleaved with human-like
- * timing. Produces two JSONL files:
- *   - likes index (summary per tweet from the Likes API)
- *   - deep reads (full scrapePost output per tweet)
- *
- * The pacing mimics a human browsing their likes: scroll through a page,
- * pause, tap into a post, read it, go back, scroll more.
- *
- * @param {import('puppeteer').Page} page
- * @param {string} username
- * @param {object} options
- * @param {number} [options.limit=50] - Max tweets
- * @param {string} [options.from] - Only likes from this date onward
- * @param {string} [options.to] - Only likes up to this date
+ * Upstream keys this path resolves. `Likes` is deliberately absent: upstream
+ * maps that key to `Favoriters`, the users who liked one post, so it would
+ * silently fetch the wrong timeline. The user's likes are `UserLikes`.
  */
-export async function discoverLikes(page, username, options = {}) {
-  const { limit = 50, from, to } = options;
+const TIMELINE_KEYS = Object.freeze(['UserLikes', 'BookmarkTimeline', 'BookmarkFolderTimeline', 'BookmarkFoldersSlice']);
 
-  if (!username) throw new Error('Username is required');
+/** An HTTP error, or a 200 whose body has none of the data the operation returns. */
+export class TimelineRequestError extends Error {
+  constructor(operationName, status, body) {
+    const head = String(body ?? '').slice(0, 300);
+    super(`${operationName}: X answered ${status}: ${head}`);
+    this.name = 'TimelineRequestError';
+    this.operationName = operationName;
+    this.status = status;
+    this.bodyHead = head;
+  }
+}
 
-  const fromDate = from ? new Date(from) : null;
-  const toDate = to ? new Date(to) : null;
-  if (fromDate && isNaN(fromDate.getTime())) throw new Error(`Invalid "from" date: ${from}`);
-  if (toDate && isNaN(toDate.getTime())) throw new Error(`Invalid "to" date: ${to}`);
+/**
+ * The request shapes to try for one timeline operation, best first.
+ *
+ * Resolution never touches the network. Candidates, in order: the queryId in
+ * the discovery cache, the generated (pinned) table's, and for likes the
+ * legacy queryId with its feature set. A discovery that failed or never ran
+ * leaves the pinned table first. A candidate is tried only while the
+ * operation has not yet answered (see requestOperation).
+ *
+ * @param {'UserLikes'|'BookmarkTimeline'|'BookmarkFolderTimeline'|'BookmarkFoldersSlice'} key
+ * @returns {{queryId: string, operationName: string, source: string, features: object, fieldToggles?: object}[]}
+ */
+export function resolveTimelineOperation(key) {
+  if (!TIMELINE_KEYS.includes(key)) {
+    const hint = key === 'Likes' ? " ('Likes' resolves to Favoriters, the users who liked one post; use 'UserLikes')" : '';
+    throw new Error(`resolveTimelineOperation: unsupported key ${key}${hint}`);
+  }
+  const candidates = [];
+  let failure = null;
+  try {
+    // resolveGraphQL supplies the operation name. Its queryId is not used:
+    // it looks the operation name up again through the key table, where the
+    // name `Likes` is the key for Favoriters, so for UserLikes it returns the
+    // Favoriters queryId. The name is looked up directly instead: the
+    // discovery cache first, then the generated table.
+    const { operationName } = resolveGraphQL(key);
+    const cached = loadQueryIdCache()?.operations?.[operationName]?.queryId;
+    const pinned = UPSTREAM_OPERATIONS[operationName]?.queryId;
+    const toggles = operationFieldToggles(operationName);
+    for (const [queryId, source] of [[cached, 'cache'], [pinned, 'hardcoded']]) {
+      if (!queryId || candidates.some((c) => c.queryId === queryId)) continue;
+      candidates.push({
+        queryId,
+        operationName,
+        source,
+        features: operationFeatures(operationName),
+        fieldToggles: Object.keys(toggles).length ? toggles : undefined,
+      });
+    }
+  } catch (e) {
+    failure = e;
+  }
+  if (key === 'UserLikes' && !candidates.some((c) => c.queryId === LIKES_LEGACY_QUERY_ID)) {
+    candidates.push({
+      queryId: LIKES_LEGACY_QUERY_ID,
+      operationName: 'Likes',
+      source: 'legacy',
+      features: { ...LIKES_LEGACY_FEATURES },
+      fieldToggles: undefined,
+    });
+  }
+  if (candidates.length === 0) throw failure || new Error(`No queryId for ${key}`);
+  return candidates;
+}
 
-  // Ensure we're on x.com
+/** GET a GraphQL URL from inside the logged-in page, with the likes headers. */
+async function fetchInPage(page, url) {
+  return page.evaluate(async ({ url, bearer }) => {
+    const ct0 = document.cookie.match(/ct0=([^;]+)/)?.[1];
+    if (!ct0) return { error: 'no_ct0' };
+    try {
+      const resp = await fetch(url, {
+        headers: { 'authorization': `Bearer ${bearer}`, 'x-csrf-token': ct0, 'x-twitter-active-user': 'yes', 'x-twitter-auth-type': 'OAuth2Session' },
+        credentials: 'include',
+      });
+      return { status: resp.status, text: await resp.text() };
+    } catch (e) { return { error: 'fetch_failed', message: String(e) }; }
+  }, { url, bearer: BEARER_TOKEN });
+}
+
+/**
+ * One request of a timeline operation.
+ *
+ * Returns `{data, extracted}` on success and null on a transport failure (no
+ * ct0 cookie, fetch threw). A 429 is retried twice with backoff. An HTTP error,
+ * or a body `extract` finds nothing in, throws TimelineRequestError — unless
+ * the operation has not answered yet and a later candidate queryId remains,
+ * in which case that candidate is tried.
+ *
+ * @param {object} page
+ * @param {{candidates: object[], index: number, locked: boolean}} op
+ * @param {object} variables
+ * @param {(data: object) => any} extract
+ */
+async function requestOperation(page, op, variables, extract) {
+  for (;;) {
+    const c = op.candidates[op.index];
+    const url = buildGraphQLUrl(c.queryId, c.operationName, variables, c.features, c.fieldToggles);
+    let res = null;
+    for (let attempt = 0; ; attempt++) {
+      res = await fetchInPage(page, url);
+      if (res?.status === 429 && attempt < 2) {
+        await randomDelay(10000 + attempt * 15000, 20000 + attempt * 20000);
+        continue;
+      }
+      break;
+    }
+    if (!res || res.error) return null;
+    let data = null;
+    try { data = JSON.parse(res.text); } catch { /* non-JSON body */ }
+    const extracted = res.status === 200 && data ? extract(data) : null;
+    if (extracted != null) {
+      op.locked = true;
+      return { data, extracted };
+    }
+    if (!op.locked && op.index < op.candidates.length - 1) {
+      op.index++;
+      continue;
+    }
+    throw new TimelineRequestError(c.operationName, res.status, res.text);
+  }
+}
+
+/** Likes: `data.user.result.timeline…instructions`, either container name. */
+function likesInstructions(data) {
+  const result = data?.data?.user?.result;
+  return result?.timeline?.timeline?.instructions ??
+    result?.timeline_v2?.timeline?.instructions ??
+    result?.timeline?.instructions ?? null;
+}
+
+/** All bookmarks: `bookmark_timeline_v2`, else `bookmark_timeline`. */
+function bookmarkInstructions(data) {
+  return data?.data?.bookmark_timeline_v2?.timeline?.instructions ??
+    data?.data?.bookmark_timeline?.timeline?.instructions ?? null;
+}
+
+/** The first `timeline.instructions` array anywhere in a response. */
+function findTimelineInstructions(node, depth = 0) {
+  if (!node || typeof node !== 'object' || depth > 8) return null;
+  if (Array.isArray(node.timeline?.instructions)) return node.timeline.instructions;
+  for (const v of Object.values(node)) {
+    const found = findTimelineInstructions(v, depth + 1);
+    if (found) return found;
+  }
+  return null;
+}
+
+/** One folder: `bookmark_collection_timeline`, else the first instructions array. */
+function folderInstructions(data) {
+  return data?.data?.bookmark_collection_timeline?.timeline?.instructions ??
+    findTimelineInstructions(data?.data);
+}
+
+/** The folder slice: `data.viewer.user_results.result.bookmark_collections_slice`. */
+function folderSlice(data) {
+  const slice = data?.data?.viewer?.user_results?.result?.bookmark_collections_slice;
+  return Array.isArray(slice?.items) ? slice : null;
+}
+
+/** Tweet ids in a skip file: digit tokens separated by whitespace or commas. */
+async function readSkipIds(file) {
+  const text = await fs.readFile(file, 'utf8');
+  return new Set(text.split(/[\s,]+/).filter((t) => /^\d+$/.test(t)));
+}
+
+function parseDateOption(value, name) {
+  if (!value) return null;
+  const d = new Date(value);
+  if (isNaN(d.getTime())) throw new Error(`Invalid "${name}" date: ${value}`);
+  return d;
+}
+
+async function ensureOnX(page) {
   if (!page.url().includes('x.com')) {
     await page.goto('https://x.com', { waitUntil: 'networkidle2', timeout: 30000 });
     checkAuth(page);
     await randomDelay(2000, 3000);
   }
+}
 
-  // Resolve the user's numeric rest_id via UserByScreenName. X rotates both the
-  // GraphQL queryId and the required feature flags, so try the current id then the
-  // legacy one with the full feature set, and throw X's raw response if neither
-  // resolves — a future drift must be diagnosable, not swallowed to a bare null.
+/**
+ * Resolve a user's numeric rest_id via UserByScreenName. X rotates both the
+ * GraphQL queryId and the required feature flags, so try the current id then
+ * the legacy one with the full feature set, and throw X's raw response if
+ * neither resolves — a future drift must be diagnosable, not a bare null.
+ */
+async function resolveUserId(page, username) {
   const resolution = await page.evaluate(async (screenName, FEATURES, QUERY_IDS) => {
     const ct0 = document.cookie.match(/ct0=([^;]+)/)?.[1];
     if (!ct0) return { ok: false, reason: 'no ct0 cookie in page' };
@@ -1074,68 +1248,94 @@ export async function discoverLikes(page, username, options = {}) {
   if (!resolution.ok) {
     throw new Error(`Could not resolve userId for @${username}: ${JSON.stringify(resolution.last || resolution)}`);
   }
-  const userId = resolution.rest_id;
+  return resolution.rest_id;
+}
 
-  // Set up output files
-  const exportDir = `${process.env.HOME || '/tmp'}/.xactions/exports`;
-  await fs.mkdir(exportDir, { recursive: true });
+/**
+ * List a timeline, then deep-read the listed posts.
+ *
+ * Listing runs to the end first (up to `limit`), so a run cut short during
+ * the deep reads still leaves a complete listing. `listingComplete` is true
+ * when the limit was reached, the `from` date was passed, or the timeline
+ * ended (no new bottom cursor, or three pages in a row with no posts); it is
+ * false when listing stopped on three transport failures in a row. X ignores
+ * the requested `count`, so the listing is capped by `limit` alone.
+ *
+ * Deep reads go newest first. A listed post whose id is in `skipIds` stays in
+ * the shallow file but is neither read nor paused for. At most `maxDeep`
+ * posts are read; the rest are counted in `deferredDeep`.
+ *
+ * Files: `<stem>-<ts>.jsonl` (shallow) and `<stem>-<ts>-deep.jsonl` (deep).
+ * The deep file is created with its first line. The shallow file is appended
+ * page by page (created with its first line), or with `shallowAtEnd` written
+ * once when listing ends, even when empty.
+ *
+ * @param {object} page logged-in Puppeteer page
+ * @param {object} cfg
+ * @param {'like'|'bookmark'} cfg.kind
+ * @param {string|null} cfg.scope `all` or a folder id for bookmarks; null for likes
+ * @param {string} cfg.username
+ * @param {string} cfg.stem file-name stem, e.g. `likes-<user>`
+ * @param {number} [cfg.limit=50]
+ * @param {string} cfg.operation key for resolveTimelineOperation
+ * @param {(cursor: string|null, remaining: number) => object} cfg.variables
+ * @param {(data: object) => object[]|null} cfg.instructionsOf
+ * @param {string} [cfg.exportDir] default `$XACTIONS_HOME/exports` (`~/.xactions/exports`)
+ * @param {string} [cfg.skipIds] path to a file of tweet ids not to deep-read
+ * @param {number} [cfg.maxDeep] most deep reads this call makes
+ * @param {string} [cfg.from] only posts from this date onward (stops listing)
+ * @param {string} [cfg.to] only posts up to this date
+ * @param {boolean} [cfg.shallowAtEnd=false]
+ * @param {(listed: object[]) => Promise<void>} [cfg.verifyListing] may throw before the shallow file is written
+ */
+export async function discoverTimeline(page, cfg) {
+  const {
+    kind, scope = null, username, stem, limit = 50, operation, variables, instructionsOf,
+    exportDir, skipIds, maxDeep, from, to, shallowAtEnd = false, verifyListing,
+  } = cfg;
+
+  const fromDate = parseDateOption(from, 'from');
+  const toDate = parseDateOption(to, 'to');
+  await ensureOnX(page);
+
+  const op = { candidates: resolveTimelineOperation(operation), index: 0, locked: false };
+  const skip = skipIds ? await readSkipIds(skipIds) : new Set();
+  const deepCap = maxDeep == null ? Infinity : Math.max(0, Number(maxDeep));
+
+  const dir = exportDir || path.join(sessionDir(), 'exports');
+  await fs.mkdir(dir, { recursive: true });
   const ts = new Date().toISOString().replace(/[:.]/g, '-');
-  const likesFile = `${exportDir}/likes-${username}-${ts}.jsonl`;
-  const deepFile = `${exportDir}/likes-${username}-${ts}-deep.jsonl`;
+  const shallowFile = path.join(dir, `${stem}-${ts}.jsonl`);
+  const deepFile = path.join(dir, `${stem}-${ts}-deep.jsonl`);
 
-  let count = 0;
-  let deepCount = 0;
+  // ---- Listing ----
+  const listed = [];
   let cursor = null;
   let firstTimestamp = null;
   let lastTimestamp = null;
   let emptyPages = 0;
+  let transportFailures = 0;
   let passedFromDate = false;
+  let ended = false;
 
-  while (count < limit && emptyPages < 3 && !passedFromDate) {
+  while (listed.length < limit && !passedFromDate) {
     // Pause between pages — like scrolling through the feed
     await randomDelay(3000, 8000);
 
-    // Fetch a page of likes
-    const pageData = await page.evaluate(async ({ userId, cursor, pageSize }) => {
-      const ct0 = document.cookie.match(/ct0=([^;]+)/)?.[1];
-      if (!ct0) return null;
-      const variables = { userId, count: pageSize, includePromotedContent: false, withClientEventToken: false, withBirdwatchNotes: false, withVoice: true };
-      if (cursor) variables.cursor = cursor;
-      const features = {
-        rweb_video_screen_enabled: false, responsive_web_graphql_timeline_navigation_enabled: true,
-        responsive_web_graphql_skip_user_profile_image_extensions_enabled: false,
-        creator_subscriptions_tweet_preview_api_enabled: true,
-        longform_notetweets_consumption_enabled: true,
-        responsive_web_twitter_article_tweet_consumption_enabled: true,
-        responsive_web_edit_tweet_api_enabled: true,
-        graphql_is_translatable_rweb_tweet_is_translatable_enabled: true,
-        view_counts_everywhere_api_enabled: true,
-        freedom_of_speech_not_reach_fetch_enabled: true,
-        tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled: true,
-        longform_notetweets_rich_text_read_enabled: true,
-      };
-      const url = `https://x.com/i/api/graphql/KPuet6dGbC8LB2sOLx7tZQ/Likes?variables=${encodeURIComponent(JSON.stringify(variables))}&features=${encodeURIComponent(JSON.stringify(features))}`;
-      try {
-        const resp = await fetch(url, {
-          headers: { 'authorization': 'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA', 'x-csrf-token': ct0, 'x-twitter-active-user': 'yes', 'x-twitter-auth-type': 'OAuth2Session' },
-          credentials: 'include',
-        });
-        return await resp.json();
-      } catch { return null; }
-    }, { userId, cursor, pageSize: Math.min(20, limit - count) });
-
-    if (!pageData) { emptyPages++; continue; }
-
-    const instructions = pageData?.data?.user?.result?.timeline?.timeline?.instructions || [];
-    const entries = [];
-    for (const inst of instructions) {
-      if (inst.entries) entries.push(...inst.entries);
+    const res = await requestOperation(page, op, variables(cursor, limit - listed.length), instructionsOf);
+    if (!res) {
+      if (++transportFailures >= 3) break;
+      continue;
     }
+    transportFailures = 0;
 
-    const cursorEntry = entries.find(e => e.entryId?.startsWith('cursor-bottom'));
-    cursor = cursorEntry?.content?.value || null;
+    const entries = [];
+    for (const inst of res.extracted) {
+      if (inst.entries) entries.push(...inst.entries);
+      else if (inst.entry) entries.push(inst.entry);
+    }
+    const nextCursor = entries.find((e) => e.entryId?.startsWith('cursor-bottom'))?.content?.value || null;
 
-    // Process each tweet in the page
     const batch = [];
     for (const entry of entries) {
       const result = entry.content?.itemContent?.tweet_results?.result;
@@ -1155,53 +1355,255 @@ export async function discoverLikes(page, username, options = {}) {
       if (!firstTimestamp && parsed.timestamp) firstTimestamp = parsed.timestamp;
       if (parsed.timestamp) lastTimestamp = parsed.timestamp;
       batch.push(parsed);
-      count++;
-      if (count >= limit) break;
+      if (listed.length + batch.length >= limit) break;
     }
 
-    // Write likes batch
+    listed.push(...batch);
     if (batch.length > 0) {
-      const lines = batch.map(t => JSON.stringify(t)).join('\n') + '\n';
-      await fs.appendFile(likesFile, lines);
+      if (!shallowAtEnd) await fs.appendFile(shallowFile, batch.map((t) => JSON.stringify(t)).join('\n') + '\n');
       emptyPages = 0;
     } else {
       emptyPages++;
     }
 
-    // Deep read each tweet — interleaved with human-like pauses
-    for (const tweet of batch) {
-      // Pause before tapping in — decision time
-      await randomDelay(2000, 5000);
+    if (!nextCursor || nextCursor === cursor || emptyPages >= 3) { ended = true; break; }
+    cursor = nextCursor;
+  }
 
-      try {
-        const tweetUrl = tweet.url;
-        if (!tweetUrl) continue;
-        const author = new URL(tweetUrl).pathname.split('/').filter(Boolean)[0];
-        const tweetId = new URL(tweetUrl).pathname.match(/status\/(\d+)/)?.[1];
-        if (!tweetId || !author) continue;
+  const listingComplete = listed.length >= limit || passedFromDate || ended;
+  if (verifyListing) await verifyListing(listed);
+  if (shallowAtEnd) {
+    await fs.writeFile(shallowFile, listed.length ? listed.map((t) => JSON.stringify(t)).join('\n') + '\n' : '');
+  }
 
-        const deepData = await _scrapePostRecursive(page, tweetId, author, 5, 0);
-        if (deepData.thread.length > 0) {
-          await fs.appendFile(deepFile, JSON.stringify(deepData) + '\n');
-          deepCount++;
-        }
-      } catch {}
+  // ---- Deep reads, newest first ----
+  let deepCount = 0;
+  let attempted = 0;
+  let skippedDeep = 0;
+  let deferredDeep = 0;
+  for (const tweet of listed) {
+    if (skip.has(String(tweet.id))) { skippedDeep++; continue; }
+    if (attempted >= deepCap) { deferredDeep++; continue; }
+    attempted++;
 
-      // Pause after reading — absorbing the content
-      await randomDelay(5000, 15000);
-    }
+    // Pause before tapping in — decision time
+    await randomDelay(2000, 5000, 'pre-read');
 
-    if (!cursor) break;
+    try {
+      const tweetUrl = tweet.url;
+      if (!tweetUrl) continue;
+      const author = new URL(tweetUrl).pathname.split('/').filter(Boolean)[0];
+      const tweetId = new URL(tweetUrl).pathname.match(/status\/(\d+)/)?.[1];
+      if (!tweetId || !author) continue;
+
+      const deepData = await _scrapePostRecursive(page, tweetId, author, 5, 0);
+      if (deepData.thread.length > 0) {
+        await fs.appendFile(deepFile, JSON.stringify(deepData) + '\n');
+        deepCount++;
+      }
+    } catch {}
+
+    // Pause after reading — absorbing the content
+    await randomDelay(5000, 15000, 'post-read');
+  }
+
+  const used = op.candidates[op.index];
+  return {
+    kind,
+    scope,
+    username,
+    file: shallowFile,
+    deepFile,
+    count: listed.length,
+    deepCount,
+    skippedDeep,
+    deferredDeep,
+    listingComplete,
+    queryId: used.queryId,
+    queryIdSource: used.source,
+    dateRange: { from: firstTimestamp, to: lastTimestamp },
+  };
+}
+
+/**
+ * Fetch liked tweets and deep-read each one with human-like pacing.
+ * Produces two JSONL files:
+ *   - likes index (summary per tweet from the Likes API)
+ *   - deep reads (full scrapePost output per tweet)
+ *
+ * @param {import('puppeteer').Page} page
+ * @param {string} username
+ * @param {object} options
+ * @param {number} [options.limit=50] - Max tweets
+ * @param {string} [options.from] - Only likes from this date onward
+ * @param {string} [options.to] - Only likes up to this date
+ * @param {string} [options.skipIds] - File of tweet ids to list but not deep-read
+ * @param {number} [options.maxDeep] - Most deep reads this call makes
+ * @param {string} [options.exportDir] - Default `$XACTIONS_HOME/exports`
+ */
+export async function discoverLikes(page, username, options = {}) {
+  const { limit = 50, from, to, skipIds, maxDeep, exportDir } = options;
+
+  if (!username) throw new Error('Username is required');
+  parseDateOption(from, 'from');
+  parseDateOption(to, 'to');
+
+  await ensureOnX(page);
+  const userId = await resolveUserId(page, username);
+
+  const r = await discoverTimeline(page, {
+    kind: 'like',
+    scope: null,
+    username,
+    stem: `likes-${username}`,
+    limit, from, to, skipIds, maxDeep, exportDir,
+    operation: 'UserLikes',
+    variables: (cursor, remaining) => {
+      const v = { userId, count: Math.min(20, remaining), includePromotedContent: false, withClientEventToken: false, withBirdwatchNotes: false, withVoice: true };
+      if (cursor) v.cursor = cursor;
+      return v;
+    },
+    instructionsOf: likesInstructions,
+  });
+
+  return {
+    likesFile: r.file,
+    deepReadsFile: r.deepFile,
+    likesCount: r.count,
+    deepReadsCount: r.deepCount,
+    username,
+    dateRange: r.dateRange,
+    kind: r.kind,
+    scope: r.scope,
+    skippedDeep: r.skippedDeep,
+    deferredDeep: r.deferredDeep,
+    listingComplete: r.listingComplete,
+    queryId: r.queryId,
+    queryIdSource: r.queryIdSource,
+  };
+}
+
+function folderNotFound(folderId, cause) {
+  const detail = cause ? ` (X answered ${cause.status}: ${cause.bodyHead})` : '';
+  return Object.assign(
+    new Error(`FOLDER_NOT_FOUND: bookmark folder ${folderId} is not among this account's folders${detail}`),
+    { code: 'FOLDER_NOT_FOUND', folderId, status: cause?.status ?? null },
+  );
+}
+
+/**
+ * Throw FOLDER_NOT_FOUND when the account's folder list lacks `folderId`.
+ * Returns quietly when the list itself cannot be read: the caller then
+ * reports its own outcome rather than a guess.
+ */
+async function assertFolderExists(page, folderId, cause) {
+  let folders;
+  try { folders = await listBookmarkFolders(page); } catch { return; }
+  if (!folders.some((f) => f.id === folderId)) throw folderNotFound(folderId, cause);
+}
+
+/**
+ * Fetch bookmarks — all of them, or one folder — and deep-read each one.
+ *
+ * Files: `bookmarks-<user>-<scope>-<ts>.jsonl` and `…-deep.jsonl`, where
+ * `<scope>` is `all` or the folder id. The shallow file is written when
+ * listing ends, even when it is empty; the deep file appears with its first
+ * line. A folder id the account does not have throws with
+ * `code: 'FOLDER_NOT_FOUND'`, whether X answered with an error or with an
+ * empty timeline.
+ *
+ * @param {import('puppeteer').Page} page
+ * @param {string} username used in the file names
+ * @param {object} [options]
+ * @param {string} [options.scope='all'] `all` or a bookmark folder id
+ * @param {number} [options.limit=50]
+ * @param {string} [options.skipIds]
+ * @param {number} [options.maxDeep]
+ * @param {string} [options.exportDir]
+ */
+export async function discoverBookmarks(page, username, options = {}) {
+  const { scope = 'all', limit = 50, skipIds, maxDeep, exportDir } = options;
+  if (!username) throw new Error('Username is required');
+  const folderId = String(scope);
+  if (folderId !== 'all' && !/^\d+$/.test(folderId)) {
+    throw new Error(`Invalid bookmark scope "${scope}": use "all" or a numeric folder id`);
+  }
+  const isFolder = folderId !== 'all';
+
+  let r;
+  try {
+    r = await discoverTimeline(page, {
+      kind: 'bookmark',
+      scope: folderId,
+      username,
+      stem: `bookmarks-${username}-${folderId}`,
+      limit, skipIds, maxDeep, exportDir,
+      shallowAtEnd: true,
+      operation: isFolder ? 'BookmarkFolderTimeline' : 'BookmarkTimeline',
+      variables: (cursor) => {
+        const v = isFolder ? { bookmark_collection_id: folderId, count: 20 } : { count: 20 };
+        if (cursor) v.cursor = cursor;
+        v.includePromotedContent = false;
+        return v;
+      },
+      instructionsOf: isFolder ? folderInstructions : bookmarkInstructions,
+      verifyListing: isFolder
+        ? async (listed) => { if (listed.length === 0) await assertFolderExists(page, folderId, null); }
+        : undefined,
+    });
+  } catch (e) {
+    if (isFolder && e instanceof TimelineRequestError) await assertFolderExists(page, folderId, e);
+    throw e;
   }
 
   return {
-    likesFile,
-    deepReadsFile: deepFile,
-    likesCount: count,
-    deepReadsCount: deepCount,
+    bookmarksFile: r.file,
+    deepReadsFile: r.deepFile,
+    bookmarksCount: r.count,
+    deepReadsCount: r.deepCount,
     username,
-    dateRange: { from: firstTimestamp, to: lastTimestamp },
+    dateRange: r.dateRange,
+    kind: r.kind,
+    scope: r.scope,
+    skippedDeep: r.skippedDeep,
+    deferredDeep: r.deferredDeep,
+    listingComplete: r.listingComplete,
+    queryId: r.queryId,
+    queryIdSource: r.queryIdSource,
   };
+}
+
+/**
+ * The account's bookmark folders, `[{id, name}]`, in X's order.
+ *
+ * Pages through `slice_info.next_cursor` when X sends one. Names are returned
+ * as X sends them, trailing spaces included; ids are the identity.
+ *
+ * @param {import('puppeteer').Page} page
+ * @returns {Promise<{id: string, name: string}[]>}
+ */
+export async function listBookmarkFolders(page) {
+  await ensureOnX(page);
+  const op = { candidates: resolveTimelineOperation('BookmarkFoldersSlice'), index: 0, locked: false };
+  const folders = [];
+  const seen = new Set();
+  let cursor = null;
+  for (let pageNo = 0; pageNo < 50; pageNo++) {
+    let res = null;
+    for (let attempt = 0; attempt < 3 && !res; attempt++) {
+      res = await requestOperation(page, op, cursor ? { cursor } : {}, folderSlice);
+    }
+    if (!res) throw new Error('BookmarkFoldersSlice: the request failed inside the page (no ct0 cookie, or fetch threw)');
+    for (const item of res.extracted.items) {
+      if (item?.id != null) folders.push({ id: String(item.id), name: item.name ?? '' });
+    }
+    const next = res.extracted.slice_info?.next_cursor || null;
+    if (!next || seen.has(next)) break;
+    seen.add(next);
+    cursor = next;
+    await randomDelay(1000, 2500);
+  }
+  return folders;
 }
 
 // ============================================================================
@@ -1690,6 +2092,9 @@ export default {
   scrapePost,
   scrapeLikedTweets,
   discoverLikes,
+  discoverTimeline,
+  discoverBookmarks,
+  listBookmarkFolders,
   scrapeLikes,
   scrapeHashtag,
   scrapeMedia,
