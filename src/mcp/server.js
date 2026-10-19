@@ -2099,8 +2099,35 @@ const TOOLS = [
         limit: { type: 'number', description: 'Maximum liked tweets (default: 50)' },
         from: { type: 'string', description: 'Only include likes from this date onward' },
         to: { type: 'string', description: 'Only include likes up to this date' },
+        skipIds: { type: 'string', description: 'Absolute path to a file of tweet ids (whitespace- or comma-separated). Listed tweets in it go into the likes index but are not deep-read.' },
+        maxDeep: { type: 'number', description: 'Most deep reads this call makes, newest first. The rest are counted in deferredDeep.' },
+        exportDir: { type: 'string', description: 'Directory for the JSONL files (default: $XACTIONS_HOME/exports, i.e. ~/.xactions/exports)' },
       },
       required: ['username'],
+    },
+  },
+  {
+    name: 'x_discover_bookmarks',
+    description: 'Fetch the authenticated account\'s bookmarks — all of them, or one bookmark folder — and deep-read each one, like x_discover_likes. Lists every page first, then reads. Writes bookmarks-<user>-<scope>-<ts>.jsonl (written when listing ends, even if empty) and a -deep.jsonl beside it. A folder id the account does not have fails with code FOLDER_NOT_FOUND.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        username: { type: 'string', description: 'Username (without @); names the export files' },
+        scope: { type: 'string', description: '"all" (default) or a bookmark folder id from x_list_bookmark_folders' },
+        limit: { type: 'number', description: 'Maximum bookmarks to list (default: 50)' },
+        skipIds: { type: 'string', description: 'Absolute path to a file of tweet ids (whitespace- or comma-separated). Listed tweets in it go into the index but are not deep-read.' },
+        maxDeep: { type: 'number', description: 'Most deep reads this call makes, newest first. The rest are counted in deferredDeep.' },
+        exportDir: { type: 'string', description: 'Directory for the JSONL files (default: $XACTIONS_HOME/exports, i.e. ~/.xactions/exports)' },
+      },
+      required: ['username'],
+    },
+  },
+  {
+    name: 'x_list_bookmark_folders',
+    description: 'List the authenticated account\'s bookmark folders as {folders: [{id, name}]}. Names are returned as X stores them, trailing spaces included; the id is the identity.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
     },
   },
 
@@ -4736,6 +4763,9 @@ function createMcpServer(overrides = {}) {
             type: 'text',
             text: JSON.stringify({
               error: error.message,
+              // A string code names the failure for callers that branch on
+              // it (FOLDER_NOT_FOUND from x_discover_bookmarks).
+              ...(typeof error.code === 'string' ? { code: error.code } : {}),
               ...(process.env.DEBUG ? { stack: error.stack } : {}),
             }, null, 2),
           },

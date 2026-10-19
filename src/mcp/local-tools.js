@@ -23,6 +23,8 @@ import {
   scrapePost,
   scrapeLikedTweets,
   discoverLikes,
+  discoverBookmarks,
+  listBookmarkFolders,
   scrapeLikes,
   scrapeMedia,
   scrapeListMembers,
@@ -1006,9 +1008,26 @@ export async function x_get_likes({ username, limit = 50, from, to }) {
   finally { await tab.close().catch(() => {}); }
 }
 
-export async function x_discover_likes({ username, limit = 50, from, to }) {
+export async function x_discover_likes({ username, limit = 50, from, to, skipIds, maxDeep, exportDir }) {
   const tab = await newTab();
-  try { return await discoverLikes(tab, username, { limit, from, to }); }
+  try { return await discoverLikes(tab, username, { limit, from, to, skipIds, maxDeep, exportDir }); }
+  finally { await tab.close().catch(() => {}); }
+}
+
+/**
+ * Bookmarks (all, or one folder) listed then deep-read. A folder the account
+ * does not have rejects with `code: 'FOLDER_NOT_FOUND'`, which the server
+ * returns as an error payload carrying that code.
+ */
+export async function x_discover_bookmarks({ username, scope = 'all', limit = 50, skipIds, maxDeep, exportDir }) {
+  const tab = await newTab();
+  try { return await discoverBookmarks(tab, username, { scope, limit, skipIds, maxDeep, exportDir }); }
+  finally { await tab.close().catch(() => {}); }
+}
+
+export async function x_list_bookmark_folders() {
+  const tab = await newTab();
+  try { return { folders: await listBookmarkFolders(tab) }; }
   finally { await tab.close().catch(() => {}); }
 }
 
@@ -1851,6 +1870,8 @@ export const toolMap = {
   x_get_bookmarks,
   x_get_likes,
   x_discover_likes,
+  x_discover_bookmarks,
+  x_list_bookmark_folders,
   x_clear_bookmarks,
   x_auto_like,
   x_engage,
