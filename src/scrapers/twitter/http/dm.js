@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * Twitter/X Direct Message Operations via HTTP
  *
@@ -11,10 +11,12 @@
  * Depends on: client.js (TwitterHttpClient), endpoints.js, errors.js
  *
  * @author nich (@nichxbt)
- * @license MIT
+ * @license Apache-2.0
  */
 
+import { randomUUID } from 'node:crypto';
 import { GRAPHQL, REST, REST_BASE } from './endpoints.js';
+import { parseGroupMetadata, parseParticipants } from '../../../client/api/dmConversation.js';
 import {
   AuthError,
   NotFoundError,
@@ -71,33 +73,51 @@ async function resolveUserId(client, username) {
   return userId;
 }
 
+/** Snowflake ids exceed Number precision, so compare them as digit strings. */
+function compareIds(a, b) {
+  return a.length - b.length || (a < b ? -1 : a > b ? 1 : 0);
+}
+
+const viewerIds = new WeakMap();
+
+/** The logged-in account's id, read once per client. */
+async function viewerId(client) {
+  if (!viewerIds.has(client)) {
+    const lookup = client
+      .request(`${REST_BASE}/1.1/account/verify_credentials.json`, { method: 'GET' })
+      .then((me) => {
+        if (!me?.id_str) throw new AuthError('Could not identify the logged-in account to send from');
+        return me.id_str;
+      });
+    viewerIds.set(client, lookup);
+    lookup.catch(() => viewerIds.delete(client));
+  }
+  return viewerIds.get(client);
+}
+
 /**
- * Build the JSON body for the DM send endpoint.
+ * Build the JSON body for dm/new2.json, the endpoint x.com's web client uses.
+ * A one-to-one conversation's id is the two account ids, lower first.
  *
+ * @param {string} senderId
  * @param {string} recipientId
  * @param {string} text
  * @param {object} [options]
  * @param {string} [options.mediaId] — media ID for image/video attachment
+ * @param {string} [options.requestId] idempotency key; X drops a repeat
  * @returns {object}
  */
-function buildDMBody(recipientId, text, options = {}) {
-  const messageData = { text };
-
-  if (options.mediaId) {
-    messageData.attachment = {
-      type: 'media',
-      media: { id: options.mediaId },
-    };
-  }
-
+function buildDMBody(senderId, recipientId, text, options = {}) {
   return {
-    event: {
-      type: 'message_create',
-      message_create: {
-        target: { recipient_id: String(recipientId) },
-        message_data: messageData,
-      },
-    },
+    conversation_id: [String(senderId), String(recipientId)].sort(compareIds).join('-'),
+    recipient_ids: false,
+    request_id: options.requestId || randomUUID(),
+    text,
+    cards_platform: 'Web-12',
+    include_cards: 1,
+    include_quote_count: true,
+    dm_users: false,
+    ...(options.mediaId ? { media_id: String(options.mediaId) } : {}),
   };
 }
 
@@ -153,9 +173,7 @@ function parseInboxState(inboxState, options = {}) {
     if (result.length >= limit) break;
 
     // Participants
-    const participantIds = (conv.participants ?? []).map(
-      (p) => p.user_id || p,
-    );
+    const participantIds = parseParticipants(conv.participants);
     const participants = participantIds.map((uid) => {
       const u = users[uid] ?? {};
       return {
@@ -188,6 +206,7 @@ function parseInboxState(inboxState, options = {}) {
       },
       unreadCount: Number(conv.unread_count ?? 0),
       type: conv.type === 'GROUP_DM' ? 'group' : 'one_to_one',
+      ...parseGroupMetadata(conv),
     });
   }
 
@@ -273,7 +292,9 @@ function parseReactions(reactions) {
  * @param {string} text — message text
  * @param {object} [options]
  * @param {string} [options.mediaId] — media ID for image/video attachment
- * @returns {Promise<{ messageId: string, createdAt: string }>}
+ * @param {string} [options.senderId] the logged-in account's id, if known (saves a lookup)
+ * @param {string} [options.requestId] idempotency key, so a retry cannot send twice
+ * @returns {Promise<{ messageId: string, conversationId: string, createdAt: string }>}
  */
 export async function sendDM(client, recipientId, text, options = {}) {
   requireAuth(client);
@@ -285,7 +306,11 @@ export async function sendDM(client, recipientId, text, options = {}) {
     throw new TwitterApiError('DM text must be a non-empty string');
   }
 
-  const body = buildDMBody(recipientId, text, options);
+  const senderId = String(options.senderId || (await viewerId(client)));
+  if (String(recipientId) === senderId) {
+    throw new TwitterApiError('An account cannot send a direct message to itself');
+  }
+  const body = buildDMBody(senderId, recipientId, text, options);
   const url = `${REST_BASE}${REST.dmNew}`;
 
   const response = await client.request(url, {
@@ -293,13 +318,18 @@ export async function sendDM(client, recipientId, text, options = {}) {
     body,
   });
 
-  // Parse the created event
-  const event = response?.event ?? {};
+  const message = (response?.entries || []).map((e) => e.message).find((m) => m?.id);
+  if (!message) {
+    const reason = (response?.errors || []).map((e) => e.message).filter(Boolean).join('; ');
+    throw new TwitterApiError(reason ? `X did not send the message: ${reason}` : 'X did not confirm the message was sent', {
+      status: 200,
+      data: response,
+    });
+  }
   return {
-    messageId: event.id || '',
-    createdAt: event.created_timestamp
-      ? new Date(Number(event.created_timestamp)).toISOString()
-      : new Date().toISOString(),
+    messageId: String(message.id),
+    conversationId: message.conversation_id || body.conversation_id,
+    createdAt: message.time ? new Date(Number(message.time)).toISOString() : new Date().toISOString(),
   };
 }
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * License Key Management
  * 
@@ -6,6 +6,7 @@
  */
 
 import crypto from 'crypto';
+import { requireJwtSecret } from '../utils/secrets.js';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -71,7 +72,7 @@ function generateLicenseKey(tier) {
   
   // Create signature from tier + segments
   const signature = crypto.createHash('sha256')
-    .update(`${tierCode}${segment1}${segment2}${process.env.JWT_SECRET || 'xactions'}`)
+    .update(`${tierCode}${segment1}${segment2}${requireJwtSecret()}`)
     .digest('hex')
     .substring(0, 4)
     .toUpperCase();
@@ -89,7 +90,7 @@ function verifyKeySignature(key) {
   const [, tierCode, segment1, segment2, signature] = parts;
   
   const expectedSignature = crypto.createHash('sha256')
-    .update(`${tierCode}${segment1}${segment2}${process.env.JWT_SECRET || 'xactions'}`)
+    .update(`${tierCode}${segment1}${segment2}${requireJwtSecret()}`)
     .digest('hex')
     .substring(0, 4)
     .toUpperCase();

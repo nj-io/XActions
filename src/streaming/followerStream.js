@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Follower Stream
  * Watches follower count changes and emits follow/unfollow events.
@@ -10,7 +10,7 @@
  * - Handles follower count string parsing (1.2K, 100M, etc.)
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 import { scrapeProfile, scrapeFollowers } from '../scrapers/index.js';

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "XActions — X/Twitter Automation Toolkit",
   "version": "1.0.0",
-  "description": "Run XActions automation scripts on X/Twitter without browser console. Auto-like, smart unfollow, keyword follow, growth suite, and more.",
+  "description": "Run XActions automation scripts on X/Twitter without browser console. Auto-like, smart unfollow, keyword follow, growth suite, profile sweeps with AI comments, and more.",
   "author": "nichxbt",
   "homepage_url": "https://github.com/nirholas/XActions",
 
@@ -17,7 +17,13 @@
 
   "host_permissions": [
     "https://x.com/*",
-    "https://twitter.com/*"
+    "https://twitter.com/*",
+    "https://openrouter.ai/*",
+    "https://api.openai.com/*",
+    "https://api.anthropic.com/*",
+    "https://api.x.ai/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
   ],
 
   "action": {

@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). MIT License.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 // Download Account Data from X - by nichxbt
 // https://github.com/nirholas/xactions
 // Trigger Twitter's built-in data download and monitor progress

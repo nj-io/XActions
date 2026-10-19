@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * x402 Micropayment Configuration (Optional)
  * 
@@ -10,19 +10,50 @@
  * @see https://x402.org for protocol documentation
  */
 
-// Determine environment
-const isProduction = process.env.NODE_ENV === 'production';
+// Determine environment.
+//
+// Bracket access is deliberate: bundlers (esbuild, and therefore wrangler)
+// substitute a literal for `process.env.NODE_ENV` at build time, which would
+// freeze this to whatever the build machine had and silently put a deployed
+// edge worker on testnet. `process.env['NODE_ENV']` is left alone and read at
+// runtime, after the Worker env has been copied across.
+const isProduction = process.env['NODE_ENV'] === 'production';
 
-// Payment receiving address (override with X402_PAY_TO_ADDRESS env var)
-export const PAY_TO_ADDRESS = process.env.X402_PAY_TO_ADDRESS || '0x4027FdaC1a5216e264A00a5928b8366aE59cE888';
+// Payment receiving address. No default: x402 stays disabled until the operator
+// sets X402_PAY_TO_ADDRESS, and in production a missing value is a startup error
+// (see validateConfig) rather than silently routing funds to someone else's wallet.
+export const PAY_TO_ADDRESS = (process.env.X402_PAY_TO_ADDRESS || '').trim();
 
-// Facilitator URL (testnet for development, mainnet for production)
-export const FACILITATOR_URL = process.env.X402_FACILITATOR_URL || 'https://x402.org/facilitator';
+// Solana receiving address. x402 settles on Solana with the same `exact` scheme
+// as on EVM, but the curve and address format differ, so it needs its own
+// address. Either chain alone is enough to run a paid API: an operator can take
+// payment on Solana only, on Base only, or on both.
+export const PAY_TO_ADDRESS_SOLANA = (process.env.X402_PAY_TO_ADDRESS_SOLANA || '').trim();
+
+// CAIP-2 identifiers for Solana. Mainnet is the genesis hash of the main
+// cluster; devnet is used when NODE_ENV is not production.
+export const SOLANA_MAINNET = 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp';
+export const SOLANA_DEVNET = 'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1';
+
+// Facilitator that verifies and broadcasts payments.
+//
+// The default is PayAI's, which needs no key and settles Base and Solana
+// mainnet. The reference facilitator at x402.org is deliberately not the
+// default: it only supports testnets, so a server pointed at it advertises
+// mainnet terms that no caller can actually pay, and the failure only shows up
+// when real money is on the line.
+export const FACILITATOR_URL =
+  process.env.X402_FACILITATOR_URL || 'https://facilitator.payai.network';
 
 // Network configuration (legacy - for backwards compatibility)
 // Development: eip155:84532 (Base Sepolia testnet)
 // Production: eip155:8453 (Base mainnet)
 export const NETWORK = process.env.X402_NETWORK || (isProduction ? 'eip155:8453' : 'eip155:84532');
+
+// Solana cluster used for payment. Mainnet in production, devnet elsewhere, so
+// a local run cannot accidentally ask an agent for real money.
+export const SOLANA_NETWORK =
+  process.env.X402_SOLANA_NETWORK || (isProduction ? SOLANA_MAINNET : SOLANA_DEVNET);
 
 // Track if config has been validated
 let configValidated = false;
@@ -105,11 +136,33 @@ export const SUPPORTED_NETWORKS = {
     gasCost: 'low',
     usdc: '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d',
   },
+  // Solana. Sub-second finality and fees around $0.00025, which is what makes
+  // a $0.001 API call viable without the fee swallowing the payment.
+  [SOLANA_MAINNET]: {
+    name: 'Solana',
+    recommended: true,
+    gasCost: 'lowest',
+    usdc: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+  },
+  [SOLANA_DEVNET]: {
+    name: 'Solana Devnet',
+    testnet: true,
+    gasCost: 'lowest',
+    usdc: '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU',
+  },
 };
 
 // Token contract addresses per network
 // Each entry maps a token symbol to its contract address on that chain.
 export const SUPPORTED_TOKENS = {
+  // ── Solana ────────────────────────────────────────────────────
+  [SOLANA_MAINNET]: {
+    USDC: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+    USDT: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+  },
+  [SOLANA_DEVNET]: {
+    USDC: '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU',
+  },
   // ── Base ──────────────────────────────────────────────────────
   'eip155:8453': {
     USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
@@ -279,7 +332,6 @@ export const AI_OPERATION_PRICES = {
   'unroll:thread': '$0.002',         // Thread unroller
   
   // Profile operations
-  'profile:get': '$0.001',           // Get profile info
   'profile:update': '$0.01',         // Update profile fields
   
   // Posting operations
@@ -290,22 +342,12 @@ export const AI_OPERATION_PRICES = {
   'posting:delete': '$0.002',        // Delete a tweet
   
   // Engagement operations
-  'engagement:like': '$0.002',       // Like a tweet
-  'engagement:unlike': '$0.002',     // Unlike a tweet
-  'engagement:reply': '$0.005',      // Reply to a tweet
-  'engagement:bookmark': '$0.002',   // Bookmark a tweet
-  'engagement:auto-like': '$0.02',   // Auto-like by keywords
-  'engagement:analytics': '$0.01',   // Engagement analytics
   
   // Discovery operations
   'discovery:search': '$0.01',       // Search tweets
-  'discovery:trends': '$0.005',      // Get trending topics
   'discovery:explore': '$0.005',     // Explore feed
   
   // Notification operations
-  'notifications:get': '$0.005',     // Get notifications
-  'notifications:mute': '$0.002',    // Mute a user
-  'notifications:unmute': '$0.002',  // Unmute a user
   
   // DM operations
   'messages:send': '$0.01',          // Send a DM
@@ -313,8 +355,6 @@ export const AI_OPERATION_PRICES = {
   'messages:export': '$0.02',        // Export DMs
   
   // Bookmark operations
-  'bookmarks:get': '$0.01',          // Get bookmarks
-  'bookmarks:folder': '$0.005',      // Create folder
   'bookmarks:clear': '$0.01',        // Clear all bookmarks
   
   // Creator operations
@@ -323,8 +363,6 @@ export const AI_OPERATION_PRICES = {
   'creator:subscribers': '$0.01',    // Subscriber list
   
   // Spaces operations
-  'spaces:live': '$0.005',           // Live Spaces
-  'spaces:scheduled': '$0.005',      // Scheduled Spaces
   'spaces:scrape': '$0.01',          // Scrape a Space
   
   // Settings operations
@@ -332,22 +370,17 @@ export const AI_OPERATION_PRICES = {
   'settings:protected': '$0.005',    // Toggle protected
   'settings:blocked': '$0.01',       // Get blocked accounts
   'settings:muted': '$0.01',         // Get muted accounts
-  'settings:download-data': '$0.02', // Request data download
   
   // Grok AI operations
   'grok:query': '$0.02',             // Query Grok
   'grok:summarize': '$0.02',         // Summarize topic
   
   // Business operations
-  'business:brand-monitor': '$0.03', // Brand monitoring
-  'business:competitor': '$0.03',    // Competitor analysis
   
   // Premium operations
   'premium:check': '$0.001',         // Check premium status
   
   // Article operations
-  'article:publish': '$0.05',        // Publish article
-  'article:analytics': '$0.01',      // Article analytics
 
   // Writer operations
   'writer:analyze-voice': '$0.02',   // Analyze writing voice
@@ -355,31 +388,18 @@ export const AI_OPERATION_PRICES = {
   'writer:rewrite': '$0.005',        // Rewrite/improve tweet
   'writer:calendar': '$0.02',        // Generate content calendar
   'writer:reply': '$0.005',          // Generate reply
+  'writer:comment': '$0.005',        // Generate a reply from a plain-language brief
 
   // Analytics operations (browser scripts: viewAnalytics, engagementAnalytics, etc.)
-  'analytics:health-score': '$0.01',       // Account health monitor
-  'analytics:audience-demographics': '$0.02', // Audience demographics analysis
   'analytics:audience-overlap': '$0.02',   // Audience overlap comparison
   'analytics:best-time': '$0.01',          // Best time to post analysis
   'analytics:competitor': '$0.02',         // Competitor analysis
-  'analytics:leaderboard': '$0.01',        // Engagement leaderboard
-  'analytics:hashtags': '$0.01',           // Hashtag analytics
-  'analytics:sentiment': '$0.02',          // Sentiment analysis
-  'analytics:tweet-performance': '$0.01',  // Tweet performance comparison
-  'analytics:schedule-optimizer': '$0.01', // Tweet schedule optimizer
-  'analytics:overview': '$0.01',           // Analytics overview/dashboard
-  'analytics:viral-detector': '$0.01',     // Viral tweet detector
-  'analytics:follower-growth': '$0.01',    // Follower growth tracker
-  'analytics:follow-ratio': '$0.005',      // Follow ratio manager
-  'analytics:ab-test': '$0.02',            // Tweet A/B testing
 
   // Automation operations (browser scripts: autoReply, autoRepost, etc.)
   'automation:auto-reply': '$0.03',        // Auto-reply to tweets
   'automation:auto-repost': '$0.03',       // Auto-repost matching tweets
   'automation:plug-replies': '$0.02',      // Auto-plug replies on viral tweets
   'automation:engagement-booster': '$0.03', // Systematic engagement booster
-  'automation:quote-tweet': '$0.03',       // Auto quote-tweet automation
-  'automation:repurpose': '$0.02',         // Content repurposer
   'automation:content-calendar': '$0.02',  // Content calendar planner
   'automation:welcome-followers': '$0.02', // Welcome new followers via DM
   'automation:continuous-monitor': '$0.02', // Continuous follower monitoring
@@ -395,9 +415,6 @@ export const AI_OPERATION_PRICES = {
   'community:notes': '$0.005',       // View/contribute community notes
 
   // Lists operations (browser scripts: listManager, advancedLists, etc.)
-  'lists:manage': '$0.01',           // Create/manage lists
-  'lists:advanced': '$0.01',         // Advanced list operations
-  'lists:follow': '$0.005',          // Follow/unfollow lists
 
   // Moderation operations (browser scripts: blockBots, massBlock, etc.)
   'moderation:block-bots': '$0.02',  // Detect and block bots
@@ -413,45 +430,24 @@ export const AI_OPERATION_PRICES = {
 
   // Account operations (browser scripts: backupAccount, auditFollowers, etc.)
   'account:backup': '$0.05',         // Full account backup
-  'account:download-data': '$0.02',  // Request data download
   'account:audit-followers': '$0.02', // Audit followers for bots/fakes
   'account:delegate-access': '$0.01', // Manage delegate access
   'account:verify-identity': '$0.005', // ID verification flow
-  'account:upload-contacts': '$0.005', // Upload/sync contacts
-  'account:multi': '$0.01',          // Multi-account management
 
   // Ads operations (browser scripts: adCampaignManager, adsManager, etc.)
-  'ads:manage': '$0.03',             // Manage ad campaigns
   'ads:dashboard': '$0.01',          // Ads dashboard/analytics
   'ads:media-studio': '$0.02',       // Media Studio management
 
   // X Pro operations (browser scripts: xPro, xProManager)
   'xpro:dashboard': '$0.01',         // X Pro/TweetDeck dashboard
-  'xpro:manage': '$0.01',            // X Pro column management
 
   // Additional posting operations (browser scripts not yet covered)
-  'posting:edit': '$0.005',          // Edit existing post
-  'posting:pin': '$0.005',           // Pin/unpin/rotate tweets
-  'posting:advanced': '$0.005',      // Advanced post options (undo, formatting)
-  'posting:bulk-delete': '$0.05',    // Bulk delete tweets
-  'posting:clear-reposts': '$0.03',  // Clear all reposts
-  'posting:unlike-all': '$0.03',     // Unlike all posts
-  'posting:format': '$0.002',        // Text formatting (bold, italic, etc.)
-  'posting:captions': '$0.005',      // Add video captions
-  'posting:mention': '$0.005',       // Compose mention post
-  'posting:compose-thread': '$0.01', // Thread composer with preview
 
   // Additional engagement operations
-  'engagement:repost': '$0.002',     // Repost a tweet
-  'engagement:auto-repost': '$0.02', // Auto-repost by keyword
-  'engagement:interactions': '$0.005', // View who liked/reposted/quoted
 
   // Additional scraping operations
-  'scrape:timeline': '$0.005',       // Scrape timeline content
   'scrape:likes': '$0.005',          // Scrape tweet likes
   'scrape:retweets': '$0.005',       // Scrape tweet retweets
-  'scrape:bookmarks': '$0.01',       // Scrape bookmarks
-  'scrape:tweet-details': '$0.002',  // Scrape single tweet details
 
   // Additional discovery operations
   'discovery:trending-monitor': '$0.01', // Trending topic monitor
@@ -460,20 +456,10 @@ export const AI_OPERATION_PRICES = {
   'discovery:topics': '$0.005',      // Manage followed topics
 
   // Additional messages operations
-  'messages:advanced': '$0.01',      // Advanced DM features
-  'messages:encrypted': '$0.01',     // Encrypted DMs
-  'messages:group': '$0.01',         // Group DM management
-  'messages:call': '$0.005',         // DM audio/video calls
 
   // Additional spaces operations
-  'spaces:host': '$0.02',            // Host a new Space
-  'spaces:join': '$0.005',           // Join a live Space
-  'spaces:advanced': '$0.01',        // Advanced Spaces features
 
   // Additional premium operations
-  'premium:gift': '$0.02',           // Gift Premium subscription
-  'premium:subscribe': '$0.005',     // Premium subscription management
-  'premium:advanced': '$0.01',       // Advanced Premium features
 
   // Additional settings operations
   'settings:advanced': '$0.005',     // Advanced settings
@@ -485,12 +471,8 @@ export const AI_OPERATION_PRICES = {
 
   // Additional monitor operations
   'monitor:following': '$0.01',      // Monitor following changes
-  'monitor:continuous': '$0.02',     // Continuous monitoring
 
   // Utility operations (additional browser scripts)
-  'utility:embed': '$0.002',         // Get embed code/share link
-  'utility:qr-code': '$0.002',       // Generate QR code for profile
-  'utility:follow-account': '$0.005', // Follow specific accounts
 
   // ── New route-level pricing (added for full MCP parity) ──────────────────
 
@@ -550,7 +532,7 @@ export const AI_OPERATION_PRICES = {
 
   // Spaces routes (/api/ai/spaces/*)
   'spaces:list': '$0.005',            // Discover spaces
-  'spaces:join': '$0.05',             // Join a space
+  'spaces:join': '$0.005',            // Join a space
   'spaces:leave': '$0.002',           // Leave a space
   'spaces:status': '$0.001',          // Space status
   'spaces:transcript': '$0.01',       // Space transcript
@@ -574,6 +556,9 @@ export const AI_OPERATION_PRICES = {
   'sentiment:monitor': '$0.03',       // Monitor reputation
   'sentiment:report': '$0.05',        // Reputation report
 
+  // Reputation routes (/api/ai/reputation/*)
+  'reputation:score': '$0.01',        // Risk-score a batch of posts and build the report
+
   // Streams routes (/api/ai/streams/*)
   'streams:start': '$0.01',           // Start stream
   'streams:stop': '$0.002',           // Stop stream
@@ -593,7 +578,6 @@ export const AI_OPERATION_PRICES = {
   'portability:export-account': '$0.10', // Export account
   'portability:migrate': '$0.10',     // Migrate account
   'portability:diff': '$0.02',        // Diff exports
-  'portability:best-time': '$0.01',   // Best time to post
   'portability:platforms': '$0.001',  // List platforms
   'portability:import': '$0.02',      // Import data
   'portability:convert': '$0.002',    // Convert format
@@ -665,6 +649,157 @@ export const AI_OPERATION_PRICES = {
   // Analyze utility routes (/api/ai/analyze/*)
   'analyze:profile': '$0.01',         // Deep profile analysis
   'analyze:tweet': '$0.005',          // Analyze a single tweet
+
+  // Account tools
+  'account:connected-accounts': '$0.005',
+  'account:join-date': '$0.005',
+  'account:login-history': '$0.005',
+  'account:multi-account': '$0.005',
+  'account:qr-code': '$0.002',
+
+  // Ads
+  'ads:analytics': '$0.02',
+  'ads:campaigns': '$0.02',
+
+  // Articles
+  'articles:analytics': '$0.01',
+  'articles:compose': '$0.02',
+  'articles:draft': '$0.01',
+  'articles:list': '$0.005',
+  'articles:publish': '$0.05',
+
+  // Automation
+  'automation:content-repurpose': '$0.02',
+  'automation:quote-tweet-auto': '$0.03',
+
+  // Bookmarks
+  'bookmarks:export': '$0.01',
+  'bookmarks:folders': '$0.005',
+  'bookmarks:import': '$0.01',
+  'bookmarks:organize': '$0.01',
+  'bookmarks:search': '$0.01',
+
+  // Content cleanup
+  'cleanup:archive': '$0.02',
+  'cleanup:bulk-delete': '$0.05',
+  'cleanup:clear-history': '$0.02',
+  'cleanup:clear-reposts': '$0.02',
+  'cleanup:delete-tweets': '$0.02',
+  'cleanup:unlike-all': '$0.02',
+
+  // Communities
+  'community:leave': '$0.01',
+  'community:list': '$0.005',
+  'community:members': '$0.01',
+  'community:search': '$0.01',
+
+  // Discovery
+  'discovery:for-you': '$0.005',
+  'discovery:trending': '$0.005',
+
+  // Lead generation
+  'leads:enrich': '$0.03',
+  'leads:export': '$0.02',
+  'leads:find': '$0.03',
+  'leads:monitor': '$0.02',
+  'leads:qualify': '$0.02',
+  'leads:score': '$0.02',
+
+  // Media studio
+  'media:analytics': '$0.01',
+  'media:captions': '$0.005',
+  'media:download-batch': '$0.02',
+  'media:library': '$0.01',
+  'media:studio': '$0.01',
+  'media:upload': '$0.01',
+
+  // Moderation
+  'moderation:blocked-list': '$0.01',
+  'moderation:muted-list': '$0.01',
+
+  // Monitoring and alerts
+  'alert:account': '$0.01',
+  'alert:alert:new-followers': '$0.01',
+  'alert:compare': '$0.01',
+  'alert:follower-alerts': '$0.01',
+  'alert:followers': '$0.01',
+  'alert:following': '$0.01',
+  'alert:keyword': '$0.01',
+  'alert:track-engagement': '$0.01',
+  'monitor:alert:new-followers': '$0.01',
+  'monitor:new-followers': '$0.01',
+
+  // Premium
+  'premium:features': '$0.001',
+
+  // Settings
+  'settings:update': '$0.005',
+
+  // Timeline
+  'timeline:collect': '$0.01',
+  'timeline:export': '$0.01',
+  'timeline:scroll': '$0.002',
+  'timeline:switch-feed': '$0.002',
+  'timeline:view': '$0.005',
+
+  // Topics
+  'topics:discover': '$0.005',
+  'topics:follow': '$0.002',
+  'topics:list': '$0.005',
+  'topics:unfollow': '$0.002',
+
+  // Download, export, unroll, analyze
+  'analyze:bookmarks': '$0.01',
+  'analyze:thread': '$0.005',
+  'analyze:video': '$0.005',
+  'download:bookmarks': '$0.01',
+  'download:profile': '$0.005',
+  'download:thread': '$0.005',
+  'download:tweet': '$0.005',
+  'export:profile': '$0.005',
+  'export:thread': '$0.005',
+  'export:tweet': '$0.005',
+  'export:video': '$0.005',
+  'unroll:bookmarks': '$0.01',
+  'unroll:profile': '$0.005',
+  'unroll:tweet': '$0.005',
+  'unroll:video': '$0.005',
+
+  // Viral threads
+  'viral:analyze': '$0.02',
+  'viral:generate': '$0.03',
+  'viral:headlines': '$0.02',
+  'viral:research': '$0.03',
+  'viral:trending-hooks': '$0.02',
+
+  // X Pro
+  'xpro:columns': '$0.005',
+};
+
+/**
+ * Endpoints that are deliberately free, and why.
+ *
+ * The rule this API follows: it charges for X data and X actions, and it does
+ * not charge you to manage your relationship with the API itself. An endpoint
+ * that is neither priced above nor listed here fails `npm run check:x402`,
+ * which is what stops a new route from shipping without either decision being
+ * made. A hundred of them had, before that check existed.
+ *
+ * @type {Record<string, string>} operation -> the reason it is free
+ */
+export const FREE_OPERATIONS = {
+  'action:validate-session': 'Checks whether the session cookie you supplied still works. Charging to find out you cannot be charged for anything else is absurd.',
+  'billing:checkout': 'Your billing relationship with us, not data from X.',
+  'billing:portal': 'Your billing relationship with us, not data from X.',
+  'billing:plans': 'This endpoint is the price list itself; charging for it would be circular.',
+  'billing:usage': 'Your own record of what you have already spent here.',
+  'billing:invoices': 'Your own invoices from us, which cost nothing to look at.',
+  'schedule:rss-remove': 'Stopping a feed you added; charging to stop a charge would trap callers.',
+  'webhooks:create': 'Configuring where we deliver your events.',
+  'webhooks:list': 'Configuring where we deliver your events.',
+  'webhooks:delete': 'Configuring where we deliver your events.',
+  'webhooks:test': 'Configuring where we deliver your events.',
+  'webhooks:events': 'The list of event names this API can deliver, which is documentation.',
 };
 
 // Pricing for browser script downloads (GET /api/scripts/src/:name, GET /api/scripts/automation/:name)
@@ -874,19 +1009,29 @@ export function validateConfig(throwOnError = false) {
   const errors = [];
   const warnings = [];
   
-  // Check payment address
-  if (!PAY_TO_ADDRESS) {
+  // Check payment addresses. Either chain is enough: an operator can take
+  // payment on Solana only, on Base only, or on both.
+  if (!PAY_TO_ADDRESS && !PAY_TO_ADDRESS_SOLANA) {
     if (isProduction) {
       errors.push(
-        'X402_PAY_TO_ADDRESS is REQUIRED in production. ' +
-        'Set your wallet address to receive USDC payments.'
+        'X402_PAY_TO_ADDRESS or X402_PAY_TO_ADDRESS_SOLANA is REQUIRED in production. ' +
+        'Set at least one wallet address to receive USDC payments.'
       );
     } else {
       warnings.push(
-        'X402_PAY_TO_ADDRESS not set - x402 payments will be disabled in development. ' +
-        'Set this environment variable to test payments.'
+        'No x402 receiving address set - payments will be disabled in development. ' +
+        'Set X402_PAY_TO_ADDRESS (Base) or X402_PAY_TO_ADDRESS_SOLANA (Solana) to test payments.'
       );
     }
+  } else if (PAY_TO_ADDRESS_SOLANA && !isSolanaPayToConfigured()) {
+    errors.push(
+      `X402_PAY_TO_ADDRESS_SOLANA "${PAY_TO_ADDRESS_SOLANA}" is not a valid Solana address. ` +
+      'Must be a base58 ed25519 public key.'
+    );
+  }
+
+  if (!PAY_TO_ADDRESS) {
+    // Solana-only deployment: nothing more to check on the EVM side.
   } else if (PAY_TO_ADDRESS === '0xYourWalletAddress' || PAY_TO_ADDRESS === '0xYourEthereumAddress') {
     errors.push(
       'X402_PAY_TO_ADDRESS is set to a placeholder value. ' +
@@ -949,23 +1094,177 @@ export function ensureConfigValidated() {
     }
   }
   
-  // Return whether x402 can operate
-  return PAY_TO_ADDRESS && 
-         PAY_TO_ADDRESS !== '0xYourWalletAddress' && 
-         PAY_TO_ADDRESS !== '0xYourEthereumAddress';
+  // Return whether x402 can operate on at least one chain
+  return isX402Configured();
 }
 
 /**
  * Check if x402 is properly configured
  */
 export function isX402Configured() {
-  return PAY_TO_ADDRESS && 
-         PAY_TO_ADDRESS.match(/^0x[a-fA-F0-9]{40}$/) &&
-         PAY_TO_ADDRESS !== '0xYourWalletAddress' &&
-         PAY_TO_ADDRESS !== '0xYourEthereumAddress';
+  return isEvmPayToConfigured() || isSolanaPayToConfigured();
+}
+
+/** Placeholder values that have shipped in .env.example over the years. */
+const PLACEHOLDER_ADDRESSES = new Set([
+  '0xYourWalletAddress',
+  '0xYourEthereumAddress',
+  'YourSolanaAddress',
+]);
+
+/** Whether a usable Base/EVM receiving address is configured. */
+export function isEvmPayToConfigured() {
+  return Boolean(
+    PAY_TO_ADDRESS &&
+      /^0x[a-fA-F0-9]{40}$/.test(PAY_TO_ADDRESS) &&
+      !PLACEHOLDER_ADDRESSES.has(PAY_TO_ADDRESS),
+  );
+}
+
+/**
+ * Whether a usable Solana receiving address is configured.
+ * A Solana address is a base58 ed25519 public key, 32 bytes, which renders as
+ * 32 to 44 base58 characters.
+ */
+export function isSolanaPayToConfigured() {
+  return Boolean(
+    PAY_TO_ADDRESS_SOLANA &&
+      /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(PAY_TO_ADDRESS_SOLANA) &&
+      !PLACEHOLDER_ADDRESSES.has(PAY_TO_ADDRESS_SOLANA),
+  );
+}
+
+/**
+ * The receiving address for a network, or null when that chain is not enabled.
+ * @param {string} network - CAIP-2 network id.
+ * @returns {string|null}
+ */
+export function getPayTo(network) {
+  if (String(network).startsWith('solana:')) {
+    return isSolanaPayToConfigured() ? PAY_TO_ADDRESS_SOLANA : null;
+  }
+  return isEvmPayToConfigured() ? PAY_TO_ADDRESS : null;
+}
+
+/**
+ * x402 v1 network names, keyed by CAIP-2 id.
+ *
+ * v1 identifies a chain by a short name (`base`, `solana`); CAIP-2 arrived with
+ * v2. Clients and indexers built against v1 do not recognise `eip155:8453` and
+ * reject the challenge as unparseable, so the v1 body is rendered with these
+ * names while the v2 header keeps the CAIP-2 ids.
+ * @type {Record<string, string>}
+ */
+export const V1_NETWORK_NAMES = {
+  'eip155:8453': 'base',
+  'eip155:84532': 'base-sepolia',
+  'eip155:42161': 'arbitrum',
+  'eip155:10': 'optimism',
+  'eip155:137': 'polygon',
+  'eip155:1': 'ethereum',
+  'eip155:43114': 'avalanche',
+  'eip155:421614': 'arbitrum-sepolia',
+  [SOLANA_MAINNET]: 'solana',
+  [SOLANA_DEVNET]: 'solana-devnet',
+};
+
+/**
+ * The v1 spelling of a network id, falling back to the id itself for a chain
+ * with no v1 name.
+ * @param {string} network - CAIP-2 network id.
+ * @returns {string}
+ */
+export function toV1Network(network) {
+  return V1_NETWORK_NAMES[network] || network;
+}
+
+/**
+ * Whether two network identifiers name the same chain, in either spelling.
+ * @param {string} a
+ * @param {string} b
+ * @returns {boolean}
+ */
+export function sameNetwork(a, b) {
+  if (!a || !b) return false;
+  return a === b || toV1Network(a) === toV1Network(b);
+}
+
+/**
+ * Build the `accepts` array for a 402 challenge: one entry per chain that has a
+ * receiving address, Solana first.
+ *
+ * Amounts are integer strings in the token's smallest unit. USDC is 6 decimals
+ * on both Solana and Base, so a `$0.001` price is `1000`.
+ *
+ * @param {object} options
+ * @param {string} options.price - Price as a dollar string, e.g. '$0.001'.
+ * @param {string} options.resource - Absolute URL of the paid resource.
+ * @param {string} options.description - Human-readable description.
+ * @param {number} [options.maxTimeoutSeconds] - Settlement window.
+ * @returns {object[]} Spec-shaped payment requirements.
+ */
+export function buildAccepts({ price, resource, description, maxTimeoutSeconds = 300 }) {
+  const dollars = Number.parseFloat(String(price).replace('$', ''));
+  if (!Number.isFinite(dollars) || dollars <= 0) return [];
+  const amount = String(Math.round(dollars * 1_000_000));
+
+  const accepts = [];
+  for (const network of [SOLANA_NETWORK, NETWORK]) {
+    const payTo = getPayTo(network);
+    if (!payTo) continue;
+    const config = SUPPORTED_NETWORKS[network];
+    if (!config) continue;
+    accepts.push({
+      scheme: 'exact',
+      network,
+      amount,
+      asset: config.usdc,
+      payTo,
+      maxTimeoutSeconds,
+      resource,
+      description,
+      mimeType: 'application/json',
+      // On EVM this is the EIP-712 domain the wallet signs USDC's
+      // transferWithAuthorization against. Solana has no such domain: what it
+      // needs instead is the facilitator's fee payer, which only the
+      // facilitator can supply, so it is merged in later from /supported.
+      ...(network.startsWith('solana:') ? {} : { extra: { name: 'USD Coin', version: '2' } }),
+    });
+  }
+  return accepts;
 }
 
 // Get human-readable operation name
+/**
+ * The operation key for a request path, and the path for an operation key.
+ *
+ * Every gate used to derive this itself with `path.split('/')` taking the first
+ * two segments, which silently could not express a three-segment route:
+ * `/api/ai/monitor/alert/new-followers` resolved to the operation
+ * `monitor:alert`, which has no price, so the endpoint was served free no matter
+ * what the price table said. Deriving it in one place from the whole path is
+ * what keeps the price table, the middleware, and the edge gates agreeing.
+ *
+ * @param {string} path - Absolute request path, e.g. /api/ai/scrape/profile
+ * @returns {string|null} operation key, or null when the path is not an AI route
+ */
+export function operationForPath(path) {
+  const match = String(path).match(/^\/api\/ai\/(.+)$/);
+  if (!match) return null;
+  const segments = match[1].split('?')[0].replace(/\/+$/, '').split('/').filter(Boolean);
+  if (segments.length < 2) return null;
+  return segments.join(':');
+}
+
+/**
+ * Inverse of {@link operationForPath}.
+ * @param {string} operation - e.g. "scrape:profile"
+ * @returns {string} absolute path
+ */
+export function pathForOperation(operation) {
+  return `/api/ai/${String(operation).split(':').join('/')}`;
+}
+
 export function getOperationName(operation) {
   const names = {
     'scrape:profile': 'Scrape Profile',

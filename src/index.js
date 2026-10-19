@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). MIT License.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions - The Complete X/Twitter Automation Toolkit
  * 
@@ -16,7 +16,7 @@
  * 
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @see https://xactions.app
- * @license MIT
+ * @license Apache-2.0
  * @towel Always know where yours is
  */
 
@@ -33,6 +33,43 @@ export { scrapers };
 // ============================================================================
 
 export { Scraper, SearchMode, Tweet, Profile, ScraperError } from './client/index.js';
+export {
+  Message,
+  AuthenticationError,
+  RateLimitError,
+  NotFoundError,
+  TwitterApiError,
+  GRAPHQL_ENDPOINTS,
+  BEARER_TOKEN,
+  DEFAULT_FEATURES,
+  buildGraphQLUrl,
+} from './client/index.js';
+
+// ============================================================================
+// AI: prompt-driven comment generator
+// ============================================================================
+
+export { createCommentGenerator, sanitizeComment, isGenericComment } from './ai/commentGenerator.js';
+
+// ============================================================================
+// AI: post reputation / risk scorer
+// ============================================================================
+
+export { scorePost, scorePosts, summarizeReport, scoreToGrade, DIMENSIONS } from './ai/reputationScorer.js';
+
+// ============================================================================
+// Cookie Import (painless login)
+// ============================================================================
+// Parse cookie exports (Netscape cookies.txt, Cookie-Editor / EditThisCookie
+// JSON, Playwright / Puppeteer storageState, or a raw header string) and read
+// x.com cookies straight out of a locally installed browser.
+
+export {
+  parseCookieInput,
+  detectCookieFormat,
+  readBrowserCookies,
+  SUPPORTED_BROWSERS,
+} from './client/auth/cookieImport.js';
 
 // ============================================================================
 // Plugin System
@@ -64,6 +101,13 @@ export { default as dmManager } from './dmManager.js';
 export { default as engagementManager } from './engagementManager.js';
 export { default as grokIntegration } from './grokIntegration.js';
 export { default as notificationManager } from './notificationManager.js';
+export {
+  verifyWebhookSignature,
+  signWebhookBody,
+  deliverWebhook,
+  replayDelivery as replayWebhookDelivery,
+  listDeliveries as listWebhookDeliveries,
+} from './notifications/webhook.js';
 export { default as pollCreator } from './pollCreator.js';
 export { default as postComposer } from './postComposer.js';
 export { default as premiumManager } from './premiumManager.js';

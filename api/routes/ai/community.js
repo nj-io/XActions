@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * AI Community Endpoints
  *
@@ -9,11 +9,12 @@
 
 import express from 'express';
 import crypto from 'crypto';
+import { queueFailure } from '../../utils/queueResponse.js';
 
 const router = express.Router();
 
 const generateOperationId = () =>
-  `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+  `ai-${Date.now()}-${crypto.randomBytes(16).toString('hex')}`;
 
 /** @param {import('express').Request} req @param {import('express').Response} res @returns {string | null} */
 const requireSession = (req, res) => {
@@ -27,9 +28,12 @@ const requireSession = (req, res) => {
 
 /** @param {import('express').Response} res @param {string} operationId @param {string} type @param {Record<string, unknown>} config */
 const queueOperation = async (res, operationId, type, config) => {
-  try { const { queueJob } = await import('../../services/jobQueue.js'); await queueJob({ id: operationId, type, config, status: 'queued' }); } catch { /* queue unavailable */ }
+  try { const { queueJob } = await import('../../services/jobQueue.js'); await queueJob({ id: operationId, type, config, status: 'queued' }); } catch (err) { return queueFailure(res, err); }
   return res.json({ success: true, operationId, status: 'queued', statusUrl: `/api/ai/action/status/${operationId}` });
 };
+
+/** Actions POST /manage accepts (see communityManage in api/services/processors/community.processors.js). */
+const MANAGE_ACTIONS = ['view', 'info', 'invite', 'promote', 'make-moderator', 'add-moderator', 'demote', 'remove-moderator'];
 
 /** POST /api/ai/community/join */
 router.post('/join', async (req, res) => {
@@ -64,8 +68,10 @@ router.post('/create', async (req, res) => {
 /** POST /api/ai/community/manage */
 router.post('/manage', async (req, res) => {
   const session = requireSession(req, res); if (!session) return;
-  const { communityId, action, targetUsername } = req.body;
+  const { communityId, action = 'view', targetUsername } = req.body;
   if (!communityId) return res.status(400).json({ error: 'INVALID_INPUT', message: 'communityId required' });
+  if (!MANAGE_ACTIONS.includes(action)) return res.status(400).json({ error: 'INVALID_INPUT', message: `action must be one of ${MANAGE_ACTIONS.join(', ')}` });
+  if (!['view', 'info'].includes(action) && !targetUsername) return res.status(400).json({ error: 'INVALID_INPUT', message: `targetUsername required for ${action}` });
   return queueOperation(res, generateOperationId(), 'communityManage', { session, communityId, action, targetUsername });
 });
 
@@ -73,6 +79,8 @@ router.post('/manage', async (req, res) => {
 router.post('/notes', async (req, res) => {
   const session = requireSession(req, res); if (!session) return;
   const { tweetId, action = 'view' } = req.body;
+  if (!tweetId) return res.status(400).json({ error: 'INVALID_INPUT', message: 'tweetId required' });
+  if (!['view', 'request'].includes(action)) return res.status(400).json({ error: 'INVALID_INPUT', message: 'action must be view or request' });
   return queueOperation(res, generateOperationId(), 'communityNotes', { session, tweetId, action });
 });
 

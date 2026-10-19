@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * AI Optimizer Endpoints
  *
@@ -13,7 +13,7 @@ import crypto from 'crypto';
 const router = express.Router();
 
 const generateOperationId = () =>
-  `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+  `ai-${Date.now()}-${crypto.randomBytes(16).toString('hex')}`;
 
 const errorResponse = (res, statusCode, error, message, extras = {}) =>
   res.status(statusCode).json({
@@ -165,10 +165,10 @@ router.post('/predict', async (req, res) => {
       suggestions: [
         !text.includes('?') && 'Add a question to invite replies',
         !/#\w+/.test(text) && 'Add 1-2 relevant hashtags',
-        charLen < 100 && 'Expand the tweet — sweet spot is 100-200 characters',
+        charLen < 100 && 'Expand the tweet: the sweet spot is 100-200 characters',
         charLen > 240 && 'Shorten the tweet for better performance',
       ].filter(Boolean),
-    }, { durationMs: Date.now() - startTime, note: 'Heuristic prediction — actual performance may vary' });
+    }, { durationMs: Date.now() - startTime, note: 'Heuristic prediction: actual performance may vary' });
   } catch (error) {
     return errorResponse(res, 500, 'ANALYSIS_FAILED', error.message);
   }

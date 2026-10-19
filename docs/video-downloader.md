@@ -1,16 +1,16 @@
 # Video Downloader
 
-> XActions v3.1.0 — Download videos from X/Twitter tweets.
+> XActions v3.5.0 — Download videos from X/Twitter tweets.
 
 ## Overview
 
-Extract and download videos from any public X/Twitter tweet. Supports multiple quality levels (360p to 1080p) with automatic best-quality selection.
+Extract and download videos from any public X/Twitter tweet. Supports every quality X publishes (360p through 4K) with automatic best-quality selection.
 
 Available via: **Dashboard**, **API**, **CLI**, **MCP**, **Browser Script**
 
 ## Dashboard (Web UI)
 
-Visit `http://localhost:3001/video` and paste a tweet URL.
+Visit [xactions.app/video](https://xactions.app/video) (or `http://localhost:3001/video` when running the API locally) and paste a tweet URL.
 
 The dashboard provides:
 - Paste-and-go URL input
@@ -122,19 +122,43 @@ Paste into DevTools console on x.com:
 
 The browser script (`src/scrapers/videoDownloader.js`) intercepts network requests for `video.twimg.com` URLs.
 
+## Where It Runs
+
+The three endpoints above exist twice, on purpose, and both copies share one
+extraction module (`src/video/edgeExtractor.js`):
+
+| Surface | Code | Needs |
+|---|---|---|
+| xactions.app | `functions/api/video/*` (Cloudflare Pages Functions) | nothing: no database, no browser, no origin server |
+| Self-hosted API | `api/routes/video.js` + `api/services/videoExtractor.js` | Node, and Puppeteer only for the last-resort lane |
+
+See [functions/README.md](../functions/README.md) for the edge deployment.
+
 ## How It Works
 
-1. **Puppeteer** navigates to the tweet URL with stealth mode
-2. **GraphQL Interception** — listens for `TweetDetail` API responses containing `video_info.variants`
-3. **Network Interception** — captures direct `video.twimg.com` MP4 requests
-4. **DOM Scanning** — fallback: scans page HTML for video URLs and `<video>` elements
-5. **Play Button** — clicks play if the video hasn't auto-played
-6. **Deduplication** — merges all sources, removes duplicates, sorts by quality
+Lanes run in order and the first success wins:
+
+1. **Syndication endpoint**: `cdn.syndication.twimg.com/tweet-result`, the API
+   the official embed widget calls. No credentials, and it returns the complete
+   mp4 variant ladder.
+2. **fxtwitter**: `api.fxtwitter.com`, an independent open-source reader. Picks
+   up when X rate-limits the first lane.
+3. **Guest token + GraphQL**: `TweetResultByRestId` with a freshly minted guest
+   token. Skipped unless `TWITTER_BEARER_TOKEN` is set.
+4. **Puppeteer**: self-hosted API only. Navigates the tweet with the stealth
+   plugin, intercepts `TweetDetail` GraphQL responses and direct
+   `video.twimg.com` requests, scans the DOM, and clicks play if needed.
+
+Every lane returns the same shape, deduplicated by URL and sorted best-first.
+HLS playlists (`.m3u8`) are filtered out, since a playlist cannot be saved as a
+video file.
 
 ### Quality Labels
 
 | Resolution | Label |
 |-----------|-------|
+| ≥3840px | 4K |
+| ≥2560px | 1440p |
 | ≥1920px | 1080p |
 | ≥1280px | 720p |
 | ≥640px | 480p |
@@ -142,19 +166,31 @@ The browser script (`src/scrapers/videoDownloader.js`) intercepts network reques
 
 ## Caching
 
-Results are cached in-memory for 1 hour (keyed by tweet ID). Cache max size: 500 entries.
+On xactions.app, successful extractions are held in the Cloudflare edge cache
+for one hour, keyed by tweet ID, and the downloaded mp4 is cached for an hour
+too. The self-hosted API caches extractions in memory for one hour, max 500
+entries.
 
 ## Rate Limiting
 
-30 requests per minute per IP address.
+The self-hosted API allows 30 requests per minute per IP address. On
+xactions.app the edge cache absorbs repeat lookups of the same tweet, and
+Cloudflare's platform protections cover the rest.
 
 ## Troubleshooting
+
+### 503: "This endpoint needs the XActions Node backend"
+
+You called an `/api/*` route on xactions.app that is not one of the edge
+endpoints. Only `/api/health` and the three video routes run at the edge; every
+other route needs a self-hosted API. Set `XACTIONS_API_ORIGIN` on the Pages
+project to forward them to one.
 
 ### 500 Error — "Failed to extract video"
 
 **Common causes:**
 
-1. **Missing Chrome dependencies** — In Codespaces/CI, Puppeteer needs system libraries:
+1. **Missing Chrome dependencies**: self-hosted only. In Codespaces/CI, Puppeteer needs system libraries:
    ```bash
    sudo apt-get install -y libatk1.0-0 libatk-bridge2.0-0 libcups2 \
      libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 \
@@ -185,8 +221,8 @@ This is a harmless Codespaces tunnel message. It does not affect functionality.
 
 ## Technical Details
 
-- Browser pool: max 2 Puppeteer instances
-- Extraction timeout: 15 seconds per request
+- Browser pool: max 2 Puppeteer instances (self-hosted API only)
+- Network lane timeout: 10 seconds per lane; Puppeteer timeout: 15 seconds
 - Stealth plugin prevents bot detection
 - User-Agent: Chrome 131 on Windows
 - Supported URL formats:
@@ -196,4 +232,4 @@ This is a harmless Codespaces tunnel message. It does not affect functionality.
 
 ---
 
-*XActions v3.1.0 — by nichxbt*
+*XActions v3.5.0 — by nichxbt*

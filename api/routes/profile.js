@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth.js';
@@ -28,7 +28,7 @@ router.get('/:username', async (req, res) => {
       operationId: operation.id,
       userId: req.user.id,
       authMethod: req.user.authMethod || 'oauth',
-      config: { username, sessionCookie: req.user.sessionCookie },
+      config: { username },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Profile fetch queued' });
@@ -64,7 +64,7 @@ router.put('/update', async (req, res) => {
       operationId: operation.id,
       userId: req.user.id,
       authMethod: req.user.authMethod || 'oauth',
-      config: { name, bio, location, website, sessionCookie: req.user.sessionCookie },
+      config: { name, bio, location, website },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Profile update queued' });

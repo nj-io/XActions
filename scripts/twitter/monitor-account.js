@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
  * 👁️ Monitor Account
@@ -27,7 +27,9 @@
  * ============================================================
  */
 
-const CONFIG = {
+// `var` (not `const`): a repeated top-level `const` paste in the same
+// DevTools tab throws "already been declared" instead of re-running.
+var CONFIG = {
   // Delay between scrolls
   scrollDelay: 2000,
   
@@ -241,13 +243,15 @@ const CONFIG = {
     }
     
     const blob = new Blob([report], { type: 'text/plain' });
+    const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
+    a.href = blobUrl;
     a.download = `${username}_${pageType}_changes_${timestamp.split('T')[0]}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    
+    URL.revokeObjectURL(blobUrl);
+
     console.log('💾 Report downloaded!');
   }
   

@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
  * 🗑️ Clear All Bookmarks
@@ -27,7 +27,9 @@
  * ============================================================
  */
 
-const CONFIG = {
+// `var` (not `const`): a repeated top-level `const` paste in the same
+// DevTools tab throws "already been declared" instead of re-running.
+var CONFIG = {
   // Maximum bookmarks to remove (0 = unlimited)
   maxRemove: 0,
   
@@ -92,36 +94,6 @@ const CONFIG = {
   let totalRemoved = 0;
   let retries = 0;
   
-  // Method 1: Try direct bookmark buttons on tweets
-  const removeViaBookmarkBtn = async () => {
-    // Look for filled bookmark icons (indicating bookmarked)
-    const tweets = document.querySelectorAll($tweet);
-    
-    for (const tweet of tweets) {
-      if (CONFIG.maxRemove > 0 && totalRemoved >= CONFIG.maxRemove) {
-        return true; // Limit reached
-      }
-      
-      // Look for bookmark button that indicates "already bookmarked"
-      const bookmarkBtn = tweet.querySelector($removeBookmarkBtn) || 
-                          tweet.querySelector('[aria-label*="Remove"]');
-      
-      if (bookmarkBtn) {
-        try {
-          bookmarkBtn.click();
-          totalRemoved++;
-          console.log(`🗑️ Removed bookmark ${totalRemoved}${CONFIG.maxRemove > 0 ? '/' + CONFIG.maxRemove : ''}`);
-          await sleep(CONFIG.removeDelay);
-          return false; // Continue
-        } catch (e) {
-          console.warn('⚠️ Error removing bookmark:', e.message);
-        }
-      }
-    }
-    
-    return null; // No bookmarks found
-  };
-  
   // Method 2: Use the share menu
   const removeViaMenu = async (tweet) => {
     const moreBtn = tweet.querySelector($moreBtn);
@@ -130,9 +102,10 @@ const CONFIG = {
     moreBtn.click();
     await sleep(500);
     
-    const removeBtn = document.querySelector($removeFromBookmarks) ||
-                      document.querySelector('[data-testid="Dropdown"]')?.querySelector('[role="menuitem"]');
-    
+    // Only click an actual remove-bookmark item; clicking the first menu item
+    // blindly would trigger an unrelated action (Not interested, Mute, etc.)
+    const removeBtn = document.querySelector($removeFromBookmarks);
+
     if (removeBtn) {
       removeBtn.click();
       await sleep(300);

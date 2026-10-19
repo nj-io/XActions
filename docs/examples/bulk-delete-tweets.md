@@ -59,11 +59,11 @@ This script provides the following capabilities:
  * ============================================================
  * 📋 USAGE:
  *
- * 1. Go to: https://x.com/YOUR_USERNAME
+ * 1. Go to: https://x.com/YOUR_USERNAME (its tabs work too, e.g. /with_replies)
  * 2. Open DevTools Console (F12)
- * 3. Configure the filters below
- * 4. Set dryRun = false when you're sure
- * 5. Paste this script and press Enter
+ * 3. Configure the filters below. This deletes for real: set dryRun = true
+ *    for a preview run that removes nothing.
+ * 4. Paste this script and press Enter
  *
  * ⚠️ DELETION IS PERMANENT. There is no undo. Export first!
  *    Use src/backupAccount.js to save your tweets before deleting.
@@ -98,13 +98,15 @@ This script provides the following capabilities:
     scrollCycles: 100,              // Maximum scroll attempts
 
     // ── Timing ──────────────────────────────────────────────
-    minDelay: 1500,
-    maxDelay: 3500,
-    scrollDelay: 2000,
-    menuDelay: 800,
+    // X throttles bursts of deletions and starts failing them silently, so
+    // these are deliberately unhurried.
+    minDelay: 3000,
+    maxDelay: 7000,
+    scrollDelay: 4000,
+    menuDelay: 1200,
 
     // ── Safety ──────────────────────────────────────────────
-    dryRun: true,                   // START WITH TRUE! Preview before deleting.
+    dryRun: false,                  // false = PERMANENT deletion. true = preview only.
     confirmEvery: 50,               // Pause for user confirmation every N deletes (0 = never)
 
     // ── Recovery ────────────────────────────────────────────
@@ -175,6 +177,11 @@ This script provides the following capabilities:
     };
   })();
 
+  // Expose the fallback so the documented XActionsUtils.pause() / .abort()
+  // work when core.js was never pasted. Without this, confirmEvery announces a
+  // pause that never happens and the run keeps deleting.
+  window.XActionsUtils = window.XActionsUtils || U;
+
   // ══════════════════════════════════════════════════════════
   // 🚀 Main
   // ══════════════════════════════════════════════════════════
@@ -187,13 +194,40 @@ This script provides the following capabilities:
     console.log('║  by nichxbt — v1.0' + ' '.repeat(W - 21) + '║');
     console.log('╚' + '═'.repeat(W) + '╝');
 
-    // Detect profile
-    const pathMatch = window.location.pathname.match(/^\/([A-Za-z0-9_]+)/);
-    if (!pathMatch || ['home', 'explore', 'notifications', 'messages', 'i', 'search', 'settings'].includes(pathMatch[1])) {
-      console.error('❌ Navigate to your profile page first! (x.com/YOUR_USERNAME)');
+    // Live mode deletes for real, so give the run a stoppable head start.
+    if (!CONFIG.dryRun) {
+      for (let i = 5; i > 0; i--) {
+        console.warn(`⚠️  Starting in ${i}s. Call XActionsUtils.abort() now to stop.`);
+        await U.sleep(1000);
+      }
+      if (!(await U.shouldContinue())) { console.log('🛑 Aborted before deleting anything.'); return; }
+    }
+
+    // Detect profile. X serves it at /<handle> and its tabs at /<handle>/<tab>,
+    // so accept both; a feed, a single status, or a reserved section is not a
+    // profile timeline. The signed-in handle comes from the left nav.
+    const PROFILE_TABS = ['with_replies', 'media', 'likes', 'highlights', 'articles', 'superfollows', 'affiliates'];
+    const RESERVED = ['home', 'explore', 'notifications', 'messages', 'i', 'search', 'settings', 'compose',
+      'hashtag', 'bookmarks', 'lists', 'topics', 'communities', 'jobs'];
+    const pathMatch = window.location.pathname.match(/^\/([A-Za-z0-9_]{1,15})(?:\/([A-Za-z0-9_]+))?\/?$/);
+    const pathUser = pathMatch && !RESERVED.includes(pathMatch[1].toLowerCase()) ? pathMatch[1] : null;
+    const onProfile = Boolean(pathUser) && (!pathMatch[2] || PROFILE_TABS.includes(pathMatch[2].toLowerCase()));
+
+    const navHref = document.querySelector('a[data-testid="AppTabBar_Profile_Link"]')?.getAttribute('href') || '';
+    const switcher = document.querySelector('[data-testid="SideNav_AccountSwitcher_Button"]')?.textContent || '';
+    const ownHandle = (navHref.match(/^\/([A-Za-z0-9_]{1,15})$/) || switcher.match(/@([A-Za-z0-9_]{1,15})/) || [])[1] || null;
+
+    if (!onProfile) {
+      console.error(ownHandle
+        ? `❌ Run this on your profile timeline: https://x.com/${ownHandle}`
+        : '❌ Run this on your profile timeline (x.com/YOUR_USERNAME)');
       return;
     }
-    const profileUser = pathMatch[1];
+    if (ownHandle && pathUser.toLowerCase() !== ownHandle.toLowerCase()) {
+      console.error(`❌ This is @${pathUser}'s profile. You can only delete your own posts: https://x.com/${ownHandle}`);
+      return;
+    }
+    const profileUser = ownHandle || pathUser;
     console.log(`\n👤 Profile: @${profileUser}`);
 
     // Log active filters

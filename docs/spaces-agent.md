@@ -254,6 +254,6 @@ await team.join('https://x.com/i/spaces/1abc123');
 ## Related Resources
 
 - [`xspace-agent` SDK docs](https://github.com/nirholas/xspace-agent) — full SDK reference
-- [Spaces & Live Audio examples](docs/examples/spaces-live-audio.md) — scraping and metadata
-- [MCP Setup Guide](docs/mcp-setup.md) — configure the MCP server
-- [Spaces skill](skills/spaces-live/SKILL.md) — browser-based Spaces interaction
+- [Spaces & Live Audio examples](examples/spaces-live-audio.md) — scraping and metadata
+- [MCP Setup Guide](mcp-setup.md) — configure the MCP server
+- [Spaces skill](../skills/spaces-live/SKILL.md) — browser-based Spaces interaction

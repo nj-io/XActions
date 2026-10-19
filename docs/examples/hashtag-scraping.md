@@ -1025,10 +1025,10 @@ Don't want to run scripts? Use our web app:
 
 - [Twitter Search Docs](https://help.x.com/en/using-x/x-advanced-search)
 - [XActions Documentation](https://xactions.app/docs)
-- [Puppeteer Setup Guide](../../PUPPETEER_SETUP.md)
+- [Puppeteer Setup Guide](../troubleshooting.md#puppeteer)
 
 ---
 
 **Author:** nich ([@nichxbt](https://x.com/nichxbt))
 
-**License:** MIT
+**License:** Apache 2.0

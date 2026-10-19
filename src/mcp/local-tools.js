@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Local Tools (Puppeteer-based)
  * Free mode — all scraping delegated to canonical scrapers (single source of truth).
@@ -7,7 +7,7 @@
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @see https://xactions.app
- * @license MIT
+ * @license Apache-2.0
  */
 
 import {
@@ -36,6 +36,10 @@ import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 
+import { isBrowserConnected, isPageUsable } from '../utils/browserState.js';
+import { loadSavedSession } from '../utils/savedSession.js';
+import { performFollow, performUnfollow, FOLLOW_STATUS } from './followAction.js';
+
 // ============================================================================
 // Singleton Browser Management
 // ============================================================================
@@ -48,20 +52,129 @@ const randomDelay = (min = 1000, max = 3000) =>
   sleep(min + Math.random() * (max - min));
 
 /**
+ * Put the saved session on a freshly opened page.
+ *
+ * Without this the whole Puppeteer path runs logged out: X serves a shell
+ * with no `data-testid` in it to visitors it does not know, so no action
+ * selector ever matches and the tools report a failure that reads like a
+ * missing feature. `loadSavedSession` prefers `XACTIONS_SESSION_COOKIE` when
+ * it is set, then falls back to the jar `xactions connect` wrote.
+ *
+ * @param {object} pg
+ * @returns {Promise<void>}
+ */
+async function applySavedSession(pg) {
+  const session = await loadSavedSession();
+  if (!session) return;
+  try {
+    await pg.setCookie({
+      name: 'auth_token',
+      value: session.authToken,
+      domain: '.x.com',
+      path: '/',
+      httpOnly: true,
+      secure: true,
+    });
+    if (session.ct0) {
+      await pg.setCookie({
+        name: 'ct0',
+        value: session.ct0,
+        domain: '.x.com',
+        path: '/',
+        httpOnly: true,
+        secure: true,
+      });
+    }
+  } catch (err) {
+    console.error('[xactions] browser session could not be applied:', err.message);
+  }
+}
+
+/**
  * Ensure a browser/page pair is available, creating if needed.
  * Uses createBrowser/createPage from the canonical scrapers module.
  */
 async function ensureBrowser() {
-  if (!browser || !browser.isConnected()) {
+  if (!isBrowserConnected(browser) || !isPageUsable(page)) {
     if (browser) {
       try {
         await browser.close();
       } catch {}
     }
+    browser = null;
+    page = null;
     browser = await createBrowser();
     page = await createPage(browser);
+    await applySavedSession(page);
   }
   return { browser, page };
+}
+
+// ============================================================================
+// HTTP client (no browser) — preferred for public reads
+// ============================================================================
+
+let httpScraper = null;
+
+/**
+ * Lazily build the HTTP-only Scraper, authenticated when a session cookie is
+ * configured.
+ *
+ * X stopped serving profile and timeline content to logged-out browsers, so
+ * the Puppeteer path returned a page with nothing on it and these tools
+ * answered agents with every field set to null — indistinguishable from an
+ * empty account, so agents reported confidently wrong answers instead of
+ * failing. The internal GraphQL API still serves public reads to guest tokens,
+ * needs no Chromium, and returns in milliseconds.
+ *
+ * @returns {Promise<import('../client/index.js').Scraper>}
+ */
+async function ensureHttpScraper() {
+  if (httpScraper) return httpScraper;
+
+  const { Scraper } = await import('../client/index.js');
+  httpScraper = new Scraper();
+
+  const authToken = process.env.XACTIONS_SESSION_COOKIE;
+  const csrfToken = process.env.XACTIONS_CSRF_TOKEN;
+  if (authToken) {
+    const parts = [`auth_token=${authToken}`];
+    if (csrfToken) parts.push(`ct0=${csrfToken}`);
+    await httpScraper.setCookies(parts.join('; '));
+  }
+
+  return httpScraper;
+}
+
+/**
+ * Try the HTTP client first and fall back to the browser.
+ *
+ * The browser path still wins for anything that needs a rendered page or a
+ * logged-in UI action, so it stays as the fallback rather than being removed.
+ *
+ * @template T
+ * @param {() => Promise<T>} viaHttp
+ * @param {() => Promise<T>} viaBrowser
+ * @returns {Promise<T>}
+ */
+async function preferHttp(viaHttp, viaBrowser) {
+  try {
+    return await viaHttp();
+  } catch (httpError) {
+    try {
+      return await viaBrowser();
+    } catch {
+      // Report the HTTP failure: it carries the actionable message
+      // ("authenticate first"), while the browser failure is usually a
+      // downstream symptom of the same missing session.
+      throw httpError;
+    }
+  }
+}
+
+export async function getPage() {
+  const { page } = await ensureBrowser();
+  return page;
 }
 
 /**
@@ -78,11 +191,6 @@ async function newTab(timeout = 60000) {
 /**
  * Close browser (called by server.js on SIGINT/SIGTERM)
  */
-export async function getPage() {
-  const { page } = await ensureBrowser();
-  return page;
-}
-
 export async function closeBrowser() {
   if (browser) {
     try {
@@ -172,8 +280,42 @@ export async function x_login({ cookie }) {
 // ============================================================================
 
 export async function x_get_profile({ username }) {
-  const { page: pg } = await ensureBrowser();
-  return scrapeProfile(pg, username);
+  return preferHttp(
+    async () => {
+      const scraper = await ensureHttpScraper();
+      const profile = await scraper.getProfile(username);
+
+      // A profile object with no id is X saying "nothing here" in a shape that
+      // looks like success. Treat it as the failure it is so the browser
+      // fallback gets a turn instead of the agent getting nulls.
+      if (!profile?.id) throw new Error(`No profile data returned for @${username}`);
+
+      return {
+        name: profile.name,
+        username: profile.username,
+        bio: profile.bio,
+        location: profile.location,
+        website: profile.website,
+        joined: profile.joined,
+        following: profile.followingCount,
+        followers: profile.followersCount,
+        tweets: profile.tweetCount,
+        likes: profile.likesCount,
+        listed: profile.listedCount,
+        media: profile.mediaCount,
+        avatar: profile.avatar,
+        header: profile.banner,
+        verified: profile.verified || profile.isBlueVerified,
+        protected: profile.protected,
+        pinnedTweetIds: profile.pinnedTweetIds,
+        platform: 'twitter',
+      };
+    },
+    async () => {
+      const { page: pg } = await ensureBrowser();
+      return scrapeProfile(pg, username);
+    },
+  );
 }
 
 export async function x_get_followers({ username, limit = 100 }) {
@@ -203,13 +345,26 @@ export async function x_get_non_followers({ username }) {
 }
 
 export async function x_get_tweets({ username, limit = 50 }) {
-  const { page: pg } = await ensureBrowser();
-  return scrapeTweets(pg, username, { limit });
+  return preferHttp(
+    async () => {
+      const scraper = await ensureHttpScraper();
+      const tweets = [];
+      for await (const tweet of scraper.getTweets(username, limit)) {
+        tweets.push(tweet);
+      }
+      if (tweets.length === 0) throw new Error(`No tweets returned for @${username}`);
+      return tweets;
+    },
+    async () => {
+      const { page: pg } = await ensureBrowser();
+      return scrapeTweets(pg, username, { limit });
+    },
+  );
 }
 
-export async function x_search_tweets({ query, limit = 50 }) {
+export async function x_search_tweets({ query, limit = 50, filter = 'latest' }) {
   const { page: pg } = await ensureBrowser();
-  return searchTweets(pg, query, { limit });
+  return searchTweets(pg, query, { limit, filter });
 }
 
 // ============================================================================
@@ -228,53 +383,91 @@ export async function x_read_post({ url }) {
   finally { await tab.close().catch(() => {}); }
 }
 
+/**
+ * Collect a profile and a timeline sample, then run the shared analyser.
+ *
+ * The HTTP client is used rather than the browser because X stopped serving
+ * profile and timeline content to a logged-out browser: the DOM scrape came
+ * back empty and the analysis was computed over nothing.
+ *
+ * @param {string} username
+ * @param {number} limit
+ * @returns {Promise<object>} A report from src/analysis/accountReport.js
+ */
+async function collectReport(username, limit) {
+  const { buildAccountReport } = await import('../analysis/accountReport.js');
+  const scraper = await ensureHttpScraper();
+
+  const profile = await scraper.getProfile(username);
+  if (!profile?.id) throw new Error(`No profile data returned for @${username}`);
+
+  const tweets = [];
+  for await (const tweet of scraper.getTweets(username, limit)) {
+    tweets.push(tweet);
+    if (tweets.length >= limit) break;
+  }
+
+  return buildAccountReport({ profile, tweets });
+}
+
+/**
+ * Full account report: engagement, cadence, content mix, timing, top posts.
+ *
+ * Accepts one username or several. With several it also returns the
+ * side-by-side comparison, so an agent asking "who is doing better" gets the
+ * answer rather than four reports to reconcile itself.
+ *
+ * @param {{username: string|string[], limit?: number}} args
+ * @returns {Promise<object>}
+ */
+export async function x_account_report({ username, limit = 50 }) {
+  const names = (Array.isArray(username) ? username : [username]).map((n) => String(n).replace(/^@/, ''));
+  const sample = Math.min(Math.max(parseInt(limit, 10) || 50, 5), 200);
+
+  const reports = [];
+  for (const name of names) {
+    reports.push(await collectReport(name, sample));
+  }
+
+  if (reports.length === 1) return reports[0];
+
+  const { compareReports } = await import('../analysis/accountReport.js');
+  return { comparison: compareReports(reports), reports };
+}
+
+/**
+ * When an account's posts actually perform.
+ *
+ * Derived from the same report as `x_account_report` rather than recomputing
+ * its own buckets, so the two tools can never disagree about the best hour.
+ *
+ * @param {{username: string, limit?: number}} args
+ * @returns {Promise<object>}
+ */
 export async function x_best_time_to_post({ username, limit = 100 }) {
-  const { page: pg } = await ensureBrowser();
-  const tweets = await scrapeTweets(pg, username, { limit });
+  const sample = Math.min(Math.max(parseInt(limit, 10) || 100, 5), 200);
+  const report = await collectReport(String(username).replace(/^@/, ''), sample);
 
-  if (!tweets || !tweets.length) {
-    return { error: `No tweets found for @${username}` };
-  }
+  const rank = (buckets, label) =>
+    buckets
+      .filter((b) => b.posts >= report.timing.minimumBucketSample)
+      .sort((a, b) => b.medianEngagement - a.medianEngagement)
+      .map((b) => ({ [label]: b.label ?? `${String(b.index).padStart(2, '0')}:00 UTC`, posts: b.posts, medianEngagement: b.medianEngagement }));
 
-  const hourBuckets = Array.from({ length: 24 }, () => ({ count: 0, totalEngagement: 0 }));
-  const dayBuckets = Array.from({ length: 7 }, () => ({ count: 0, totalEngagement: 0 }));
-  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
-  for (const tweet of tweets) {
-    const dateStr = tweet.time || tweet.timestamp || tweet.date;
-    if (!dateStr) continue;
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) continue;
-
-    const hour = d.getUTCHours();
-    const day = d.getUTCDay();
-    const engagement = (parseInt(tweet.likes) || 0) + (parseInt(tweet.retweets) || 0) + (parseInt(tweet.replies) || 0);
-
-    hourBuckets[hour].count++;
-    hourBuckets[hour].totalEngagement += engagement;
-    dayBuckets[day].count++;
-    dayBuckets[day].totalEngagement += engagement;
-  }
-
-  const bestHours = hourBuckets
-    .map((b, i) => ({ hour: i, ...b, avgEngagement: b.count ? (b.totalEngagement / b.count) : 0 }))
-    .filter(b => b.count > 0)
-    .sort((a, b) => b.avgEngagement - a.avgEngagement)
-    .slice(0, 5);
-
-  const bestDays = dayBuckets
-    .map((b, i) => ({ day: dayNames[i], ...b, avgEngagement: b.count ? (b.totalEngagement / b.count) : 0 }))
-    .filter(b => b.count > 0)
-    .sort((a, b) => b.avgEngagement - a.avgEngagement);
+  const bestHours = rank(report.timing.byHourUTC, 'hour').slice(0, 5);
+  const bestDays = rank(report.timing.byWeekday, 'day');
 
   return {
-    username,
-    tweetsAnalyzed: tweets.length,
-    bestHoursUTC: bestHours.map(h => ({ hour: `${h.hour}:00 UTC`, posts: h.count, avgEngagement: Math.round(h.avgEngagement) })),
-    bestDays: bestDays.map(d => ({ day: d.day, posts: d.count, avgEngagement: Math.round(d.avgEngagement) })),
+    username: report.identity.username,
+    postsAnalyzed: report.meta.sampleSize,
+    sampleSpanDays: report.meta.sampleSpanDays,
+    minimumPostsPerBucket: report.timing.minimumBucketSample,
+    bestHoursUTC: bestHours,
+    bestDays,
+    medianEngagementOverall: report.engagement.medianPerPost,
     recommendation: bestHours.length
-      ? `Post around ${bestHours[0].hour}:00 UTC on ${bestDays[0]?.day || 'any day'} for best engagement`
-      : 'Not enough data to recommend',
+      ? `Post around ${bestHours[0].hour} on ${bestDays[0]?.day || 'any day'}. Ranked by median engagement, not by post count, so a single lucky post cannot pick the winner.`
+      : `Not enough data. No hour in the sample has the ${report.timing.minimumBucketSample} posts needed to rank it. Raise limit and try again.`,
   };
 }
 
@@ -283,33 +476,49 @@ export async function x_best_time_to_post({ username, limit = 100 }) {
 // ============================================================================
 
 export async function x_follow({ username }) {
-  const { page: pg } = await ensureBrowser();
-  await pg.goto(`https://x.com/${username}`, { waitUntil: 'networkidle2' });
-  await randomDelay();
-
-  // The follow button is the primary action in the placement tracking area,
-  // but only if the user isn't already followed (no -unfollow testid).
-  const followBtn = await pg.$('[data-testid="placementTracking"] [role="button"]:not([data-testid$="-unfollow"])');
-  if (followBtn) {
-    await followBtn.click();
-    await randomDelay();
-    return { success: true, message: `Followed @${username}` };
+  const handle = String(username || '').trim().replace(/^@/, '');
+  if (!handle) {
+    return { success: false, status: FOLLOW_STATUS.FAILED, message: 'No username given' };
   }
-  return { success: false, message: `Could not follow @${username}` };
+
+  let pg;
+  try {
+    ({ page: pg } = await ensureBrowser());
+  } catch (error) {
+    return {
+      success: false,
+      status: FOLLOW_STATUS.BROWSER,
+      message: `Could not start a browser: ${error.message}`,
+      username: handle,
+    };
+  }
+
+  const result = await performFollow(pg, handle);
+  if (result.status === FOLLOW_STATUS.BROWSER) await closeBrowser();
+  return result;
 }
 
 export async function x_unfollow({ username }) {
-  const { page: pg } = await ensureBrowser();
-  await pg.goto(`https://x.com/${username}`, { waitUntil: 'networkidle2' });
-  await randomDelay();
-
-  if (await clickIfPresent(pg, '[data-testid$="-unfollow"]')) {
-    await sleep(500);
-    await clickIfPresent(pg, '[data-testid="confirmationSheetConfirm"]');
-    await randomDelay();
-    return { success: true, message: `Unfollowed @${username}` };
+  const handle = String(username || '').trim().replace(/^@/, '');
+  if (!handle) {
+    return { success: false, status: FOLLOW_STATUS.FAILED, message: 'No username given' };
   }
-  return { success: false, message: `Could not unfollow @${username}` };
+
+  let pg;
+  try {
+    ({ page: pg } = await ensureBrowser());
+  } catch (error) {
+    return {
+      success: false,
+      status: FOLLOW_STATUS.BROWSER,
+      message: `Could not start a browser: ${error.message}`,
+      username: handle,
+    };
+  }
+
+  const result = await performUnfollow(pg, handle);
+  if (result.status === FOLLOW_STATUS.BROWSER) await closeBrowser();
+  return result;
 }
 
 // ============================================================================
@@ -395,6 +604,141 @@ export async function x_retweet({ url }) {
     return { success: true, message: 'Retweeted' };
   }
   return { success: false, message: 'Could not retweet' };
+}
+
+
+// ============================================================================
+// Engagement sweeps (profile / search / list)
+// ============================================================================
+
+/**
+ * Sweep a feed: like, repost, and reply to its posts.
+ *
+ * The same engine the `xactions engage` CLI runs (src/engage/), so a sweep an
+ * agent starts and a sweep a human starts behave identically, share the
+ * `~/.xactions/engage/` progress files, and skip what the other already did.
+ *
+ * Replies come from `templates` or, when `prompt` is set, from an LLM given
+ * that brief. This runs on the HTTP client, so any provider works: there is
+ * no page CSP in the way as there is in the browser script.
+ *
+ * @param {object} args
+ * @param {string} [args.username] - Profile to sweep
+ * @param {string} [args.search] - Search query to sweep instead
+ * @param {string} [args.list] - List ID to sweep instead
+ * @param {boolean} [args.like=true]
+ * @param {boolean} [args.repost=false]
+ * @param {boolean} [args.comment=false]
+ * @param {number} [args.limit=20]
+ * @param {string} [args.prompt] - Brief for LLM-written replies
+ * @param {string[]} [args.templates] - Reply templates ({author}, {name})
+ * @param {boolean} [args.dryRun=true] - Defaults to a preview, on purpose
+ * @returns {Promise<object>} Run report
+ */
+export async function x_engage(args = {}) {
+  const {
+    username, search, list, mode,
+    like = true, repost = false, comment = false,
+    limit = 20, includeReplies = false, includeReposts = false,
+    since, onlyFrom = [], skipUsers = [], keywords = [], skipKeywords = [],
+    minLikes = 0, maxLikes = 0,
+    prompt, persona, provider, model, apiKey, baseUrl,
+    templates = [], delaySeconds = 20, jitterSeconds = 10,
+    dryRun = true, reset = false, resume = true,
+  } = args;
+
+  const engage = await import('../engage/runner.js');
+  const { createEngageState } = await import('../engage/state.js');
+
+  const actions = { like: !!like, repost: !!repost, comment: !!comment };
+  if (!actions.like && !actions.repost && !actions.comment) {
+    throw new Error('x_engage: enable at least one of like, repost, comment');
+  }
+
+  const source = engage.resolveSource({ username, search, list, includeReplies, mode });
+  const scraper = await ensureHttpScraper();
+
+  let me = '';
+  if (!dryRun) {
+    const loggedIn = await scraper.isLoggedIn().catch(() => false);
+    if (!loggedIn) {
+      throw new Error('x_engage: not authenticated. Set XACTIONS_SESSION_COOKIE (auth_token) and XACTIONS_CSRF_TOKEN (ct0), or call with dryRun: true to preview.');
+    }
+    me = await scraper.me().then((p) => p?.username || '').catch(() => '');
+  }
+
+  let generator = null;
+  if (actions.comment) {
+    if (prompt) {
+      const { createCommentGenerator } = await import('../ai/commentGenerator.js');
+      generator = createCommentGenerator({ prompt, persona, provider, model, apiKey, baseUrl });
+    } else if (templates.length === 0) {
+      throw new Error('x_engage: comment needs either a prompt (LLM) or at least one template');
+    }
+  }
+
+  const state = await createEngageState({
+    stateKey: source.stateKey,
+    enabled: resume !== false,
+    reset: !!reset,
+  });
+
+  const filters = {
+    actions,
+    includeReplies: !!includeReplies,
+    includeReposts: !!includeReposts,
+    since: since ? new Date(since) : null,
+    done: state.done,
+    onlyFrom, skipUsers, keywords, skipKeywords,
+    minLikes: Number(minLikes) || 0,
+    maxLikes: Number(maxLikes) || 0,
+    self: me,
+  };
+
+  const cappedLimit = Math.max(1, Math.min(Number(limit) || 20, 200));
+  const { fetched, selected, skipped } = await engage.collectTweets(scraper, source, filters, cappedLimit);
+
+  if (fetched.length === 0) {
+    throw new Error(`x_engage: X returned no posts for ${source.label}. Check the target, or authenticate if it is a protected or search feed.`);
+  }
+
+  if (selected.length === 0) {
+    const reasons = {};
+    for (const s of skipped) reasons[s.why] = (reasons[s.why] || 0) + 1;
+    return {
+      source: source.label,
+      kind: source.kind,
+      dryRun: !!dryRun,
+      processed: 0,
+      message: 'Every post was filtered out. Nothing was engaged.',
+      skippedReasons: reasons,
+      priorRuns: state.priorCount,
+    };
+  }
+
+  const report = await engage.runEngage({
+    scraper,
+    source,
+    tweets: selected,
+    actions,
+    done: state.done,
+    templates,
+    generator,
+    dryRun: !!dryRun,
+    delay: Number(delaySeconds) || 0,
+    jitter: Number(jitterSeconds) || 0,
+    onProgressSaved: state.save,
+  });
+
+  return {
+    ...report,
+    read: fetched.length,
+    skipped: skipped.length,
+    priorRuns: state.priorCount,
+    stateFile: state.file,
+    commentSource: generator ? `ai:${generator.target.provider}/${generator.target.model}` : (actions.comment ? 'templates' : null),
+    note: dryRun ? 'Dry run: nothing was posted. Call again with dryRun: false to act.' : undefined,
+  };
 }
 
 // ============================================================================
@@ -729,13 +1073,107 @@ export async function x_auto_like({ keywords = [], maxLikes = 20 }) {
 
 export async function x_get_trends({ category, limit = 30 }) {
   const { page: pg } = await ensureBrowser();
-  return scrapeTrending(pg, { limit });
+  return scrapeTrending(pg, { category: category || 'trending', limit });
 }
 
 export async function x_get_explore({ category, limit = 30 }) {
   const { page: pg } = await ensureBrowser();
   // Explore and trending share the same underlying page data
-  return scrapeTrending(pg, { limit });
+  return scrapeTrending(pg, { category: category || 'trending', limit });
+}
+
+export async function x_get_home_timeline({ timeline = 'for_you', limit = 25 }) {
+  const { page: pg } = await ensureBrowser();
+
+  const normalizedTimeline = timeline === 'following' ? 'following' : 'for_you';
+  const targetLabel = normalizedTimeline === 'following' ? 'Following' : 'For you';
+
+  await pg.goto('https://x.com/home', { waitUntil: 'networkidle2', timeout: 30000 });
+  await randomDelay(2000, 3000);
+  await pg.waitForSelector('article[data-testid="tweet"]', { timeout: 30000 }).catch(() => {});
+
+  await pg.evaluate(async (label) => {
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    const tabs = Array.from(document.querySelectorAll('[data-testid="ScrollSnap-List"] a, [role="tab"]'));
+    const wanted = tabs.find((tab) => (tab.textContent || '').trim().toLowerCase().includes(label.toLowerCase()));
+    if (wanted && wanted.getAttribute('aria-selected') !== 'true') {
+      wanted.click();
+      await sleep(2000);
+    }
+  }, targetLabel);
+
+  const posts = new Map();
+  let emptyScrolls = 0;
+
+  while (posts.size < limit && emptyScrolls < 5) {
+    const batch = await pg.evaluate(() => {
+      const parseMetric = (value) => {
+        if (!value) return 0;
+        const cleaned = String(value).replace(/,/g, '').trim();
+        const match = cleaned.match(/([\d.]+)\s*([KMB]?)/i);
+        if (!match) return 0;
+        const num = parseFloat(match[1]);
+        const suffix = (match[2] || '').toUpperCase();
+        const mult = suffix === 'K' ? 1e3 : suffix === 'M' ? 1e6 : suffix === 'B' ? 1e9 : 1;
+        return Math.round(num * mult);
+      };
+
+      return Array.from(document.querySelectorAll('article[data-testid="tweet"]')).map((tweet) => {
+        const text = tweet.querySelector('[data-testid="tweetText"]')?.textContent?.trim() || '';
+        const timeEl = tweet.querySelector('time');
+        const statusLink = tweet.querySelector('a[href*="/status/"]');
+        const userLinks = Array.from(tweet.querySelectorAll('[data-testid="User-Name"] a[href^="/"]'));
+
+        let username = '';
+        let displayName = '';
+        for (const link of userLinks) {
+          const href = link.getAttribute('href') || '';
+          if (!href.startsWith('/') || href.includes('/status/')) continue;
+          if (!username) username = href.replace(/^\//, '');
+          if (!displayName) displayName = link.textContent?.trim() || '';
+        }
+
+        const replyAria = tweet.querySelector('[data-testid="reply"]')?.getAttribute('aria-label') || '';
+        const retweetAria = tweet.querySelector('[data-testid="retweet"]')?.getAttribute('aria-label') || '';
+        const likeAria = tweet.querySelector('[data-testid="like"], [data-testid="unlike"]')?.getAttribute('aria-label') || '';
+        const viewText = tweet.querySelector('[data-testid="app-text-transition-container"]')?.textContent?.trim() || '';
+        const quotedText = Array.from(tweet.querySelectorAll('[data-testid="tweetText"]')).slice(1).map((el) => el.textContent?.trim()).filter(Boolean);
+
+        return {
+          id: statusLink?.getAttribute('href') || `${username}:${text.slice(0, 80)}`,
+          username,
+          displayName,
+          text,
+          timestamp: timeEl?.getAttribute('datetime') || '',
+          url: statusLink ? `https://x.com${statusLink.getAttribute('href')}` : '',
+          replies: parseMetric(replyAria),
+          retweets: parseMetric(retweetAria),
+          likes: parseMetric(likeAria),
+          views: parseMetric(viewText),
+          quotedText,
+          isRepost: !!tweet.querySelector('[data-testid="socialContext"]'),
+        };
+      }).filter((item) => item.id && item.text);
+    });
+
+    const before = posts.size;
+    for (const item of batch) {
+      if (!posts.has(item.id)) posts.set(item.id, item);
+      if (posts.size >= limit) break;
+    }
+
+    emptyScrolls = posts.size === before ? emptyScrolls + 1 : 0;
+    if (posts.size >= limit) break;
+
+    await pg.evaluate(() => window.scrollBy(0, window.innerHeight * 1.5));
+    await sleep(1800);
+  }
+
+  return {
+    timeline: normalizedTimeline,
+    count: Math.min(posts.size, limit),
+    posts: Array.from(posts.values()).slice(0, limit),
+  };
 }
 
 // ============================================================================
@@ -1388,6 +1826,7 @@ export const toolMap = {
   x_get_thread,
   x_read_post,
   x_best_time_to_post,
+  x_account_report,
   // Core actions
   x_follow,
   x_unfollow,
@@ -1414,9 +1853,11 @@ export const toolMap = {
   x_discover_likes,
   x_clear_bookmarks,
   x_auto_like,
+  x_engage,
   // Discovery
   x_get_trends,
   x_get_explore,
+  x_get_home_timeline,
   // Notifications
   x_get_notifications,
   x_mute_user,

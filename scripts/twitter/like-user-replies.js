@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
  * 💬 Like User Replies - XActions
@@ -35,10 +35,7 @@
     
     // Only like replies from verified users
     onlyVerified: false,
-    
-    // Skip replies from accounts with fewer followers than this
-    minFollowers: 0,
-    
+
     // Only like replies with images/videos
     onlyWithMedia: false,
     
@@ -71,7 +68,7 @@
     tweetText: '[data-testid="tweetText"]',
     userCell: '[data-testid="User-Name"]',
     verifiedBadge: '[data-testid="icon-verified"]',
-    tweetMedia: '[data-testid="tweetPhoto"], [data-testid="videoPlayer"]',
+    tweetMedia: '[data-testid="tweetPhoto"], [data-testid="videoPlayer"], [data-testid="videoComponent"]',
     conversationThread: '[data-testid="cellInnerDiv"]',
     replyingTo: 'div[dir="ltr"]'
   };
@@ -115,6 +112,14 @@
 
   const processedTweets = new Set();
 
+  // Stop switch: run window.stopLikeUserReplies() from the console to abort
+  // the loop after the reply currently being processed.
+  let stopped = false;
+  window.stopLikeUserReplies = () => {
+    stopped = true;
+    log.warning('Stop requested. Finishing the current reply, then exiting.');
+  };
+
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
 ║  💬 LIKE USER REPLIES - XActions                         ║
@@ -140,6 +145,7 @@
   log.info(`Tweet ID: ${tweetId}`);
   log.info(`Max likes: ${CONFIG.maxLikes}`);
   log.info(`Skip original tweet: ${CONFIG.skipOriginalTweet}`);
+  log.info(`To stop early: window.stopLikeUserReplies()`);
 
   const isVerified = (tweet) => {
     return tweet.querySelector(SELECTORS.verifiedBadge) !== null;
@@ -164,7 +170,10 @@
     return CONFIG.onlyContaining.some(word => text.includes(word.toLowerCase()));
   };
 
-  const isOriginalTweet = (tweet, index) => {
+  const isOriginalTweet = (tweet, index, replyId) => {
+    // Structural check first: a tweet whose own permalink ID matches the
+    // /status/ ID in the URL is the original, on any UI language
+    if (replyId === tweetId) return true;
     // The original tweet is usually the first one on the page
     // and doesn't have "Replying to" text
     if (index === 0) return true;
@@ -185,13 +194,22 @@
   };
 
   const getReplyIdentifier = (tweet) => {
+    // Prefer the permalink around the timestamp: the first /status/ link in
+    // the article can belong to a quoted tweet and give the wrong ID
+    const timeAnchor = tweet.querySelector('time')?.closest('a[href*="/status/"]');
+    if (timeAnchor) {
+      const match = timeAnchor.href.match(/\/status\/(\d+)/);
+      if (match) return match[1];
+    }
     const links = tweet.querySelectorAll('a[href*="/status/"]');
     for (const link of links) {
       const match = link.href.match(/\/status\/(\d+)/);
       if (match) return match[1];
     }
+    // Text fallback. Do NOT append Date.now(): a changing ID makes the same
+    // reply look new on every pass, defeating deduplication entirely.
     const text = tweet.querySelector(SELECTORS.tweetText)?.textContent || '';
-    return text.substring(0, 100) + Date.now();
+    return text.substring(0, 100);
   };
 
   const getUsername = (tweet) => {
@@ -209,13 +227,13 @@
   // Initial scroll to load replies
   await sleep(2000);
 
-  while (stats.liked < CONFIG.maxLikes && scrollAttempts < CONFIG.maxScrollAttempts) {
+  while (!stopped && stats.liked < CONFIG.maxLikes && scrollAttempts < CONFIG.maxScrollAttempts) {
     const tweets = document.querySelectorAll(SELECTORS.tweet);
     let foundNewReply = false;
     let tweetIndex = 0;
 
     for (const tweet of tweets) {
-      if (stats.liked >= CONFIG.maxLikes) break;
+      if (stopped || stats.liked >= CONFIG.maxLikes) break;
 
       const replyId = getReplyIdentifier(tweet);
       
@@ -228,7 +246,7 @@
 
       try {
         // Skip original tweet if configured
-        if (CONFIG.skipOriginalTweet && isFirstBatch && isOriginalTweet(tweet, tweetIndex)) {
+        if (CONFIG.skipOriginalTweet && isFirstBatch && isOriginalTweet(tweet, tweetIndex, replyId)) {
           stats.skippedOriginal++;
           log.info('Skipped original tweet');
           tweetIndex++;

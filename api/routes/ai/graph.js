@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * AI Social Graph Endpoints
  *
@@ -13,7 +13,7 @@ import crypto from 'crypto';
 const router = express.Router();
 
 const generateOperationId = () =>
-  `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+  `ai-${Date.now()}-${crypto.randomBytes(16).toString('hex')}`;
 
 const errorResponse = (res, statusCode, error, message, extras = {}) =>
   res.status(statusCode).json({
@@ -166,7 +166,7 @@ router.post('/list', async (req, res) => {
 
   try {
     const { getRecentJobs } = await import('../../services/jobQueue.js');
-    const jobs = await getRecentJobs({ type: 'graphBuild', limit: Math.min(parseInt(limit) || 10, 50) });
+    const jobs = await getRecentJobs({ sessionCookie: req.sessionCookie, type: 'graphBuild', limit: Math.min(parseInt(limit) || 10, 50) });
 
     return successResponse(res, {
       graphs: jobs.map(j => ({

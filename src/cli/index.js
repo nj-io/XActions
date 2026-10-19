@@ -1,15 +1,16 @@
 #!/usr/bin/env node
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions CLI
  * Command-line interface for X/Twitter automation
  * 
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @see https://xactions.app
- * @license MIT
+ * @license Apache-2.0
  */
 
-import { Command } from 'commander';
+import { Command, Help } from 'commander';
+import { VERSION } from '../version.js';
 import chalk from 'chalk';
 import ora from 'ora';
 import inquirer from 'inquirer';
@@ -18,6 +19,20 @@ import path from 'path';
 import os from 'os';
 
 import scrapers from '../scrapers/index.js';
+import { registerConnectCommand } from './commands/connect.js';
+import { registerDoctorCommand } from './commands/doctor.js';
+import { registerAskCommand } from './commands/ask.js';
+import { registerDownloadCommand } from './commands/download.js';
+import { registerReportCommand } from './commands/report.js';
+import { registerQuickstartCommand } from './commands/quickstart.js';
+import { registerCompletionCommand } from './commands/completion.js';
+import { registerEngageCommand } from './commands/engage.js';
+import { registerReputationCommand } from './commands/reputation.js';
+import { registerSkillsCommand } from './commands/skills.js';
+import { registerDraftsCommand } from './commands/drafts.js';
+import { registerArchiveCommand } from './commands/archive.js';
+import { renderRootHelp } from './help-groups.js';
+import { createSpinner, printCompact, resolveOutputMode } from '../utils/output.js';
 
 const program = new Command();
 
@@ -39,8 +54,40 @@ async function loadConfig() {
 }
 
 async function saveConfig(config) {
-  await fs.mkdir(CONFIG_DIR, { recursive: true });
-  await fs.writeFile(CONFIG_FILE, JSON.stringify(config, null, 2));
+  // Holds the X auth_token: owner-only, and tightened on files an older
+  // version already created world-readable.
+  await fs.mkdir(CONFIG_DIR, { recursive: true, mode: 0o700 });
+  await fs.writeFile(CONFIG_FILE, JSON.stringify(config, null, 2), { mode: 0o600 });
+  await fs.chmod(CONFIG_FILE, 0o600);
+}
+
+/** Where the full cookie jar lives; `createHttpScraper` reads this first. */
+const COOKIE_FILE = path.join(CONFIG_DIR, 'cookies.json');
+
+/**
+ * Persist an imported set of cookies through the same storage path every later
+ * command reads. Writes the full jar to ~/.xactions/cookies.json (owner-only,
+ * what `createHttpScraper` prefers) and mirrors auth_token + ct0 into
+ * config.json (the fallback path). Returns the two tokens for reporting.
+ *
+ * @param {Array<{name: string, value: string, domain?: string, path?: string, secure?: boolean, httpOnly?: boolean, expires?: string|null}>} cookies
+ * @returns {Promise<{authToken: string|undefined, csrfToken: string|undefined, count: number}>}
+ */
+async function saveImportedSession(cookies) {
+  await fs.mkdir(CONFIG_DIR, { recursive: true, mode: 0o700 });
+  await fs.writeFile(COOKIE_FILE, JSON.stringify(cookies, null, 2), { encoding: 'utf-8', mode: 0o600 });
+  await fs.chmod(COOKIE_FILE, 0o600);
+
+  const authToken = cookies.find((c) => c.name === 'auth_token')?.value;
+  const csrfToken = cookies.find((c) => c.name === 'ct0')?.value;
+
+  const config = await loadConfig();
+  if (authToken) config.authToken = authToken;
+  if (csrfToken) config.csrfToken = csrfToken;
+  else delete config.csrfToken;
+  await saveConfig(config);
+
+  return { authToken, csrfToken, count: cookies.length };
 }
 
 function formatNumber(num) {
@@ -53,6 +100,102 @@ function formatNumber(num) {
 }
 
 /**
+ * Build an HTTP-only Scraper, authenticated if a session cookie is saved.
+ *
+ * Read commands prefer this over Puppeteer. X no longer serves profile or
+ * timeline content to a logged-out browser, so the DOM scrape came back empty
+ * and the CLI cheerfully printed `Followers: 0` and exited 0 — the first
+ * command in the README looked broken to every new user. The internal GraphQL
+ * API still answers guest-token requests for public reads, is an order of
+ * magnitude faster, and needs no Chromium download.
+ *
+ * @returns {Promise<import('../client/index.js').Scraper>}
+ */
+async function createHttpScraper() {
+  const { Scraper } = await import('../client/index.js');
+  const scraper = new Scraper();
+
+  // Prefer a full cookie jar exported from the browser — it carries ct0, which
+  // X requires as a CSRF header before it will treat a session as logged in.
+  try {
+    await scraper.loadCookies(path.join(CONFIG_DIR, 'cookies.json'));
+    return scraper;
+  } catch {
+    // No cookie jar saved; fall through to the values `xactions login` stores.
+  }
+
+  const config = await loadConfig();
+  if (config.authToken) {
+    const parts = [`auth_token=${config.authToken}`];
+    if (config.csrfToken) parts.push(`ct0=${config.csrfToken}`);
+    await scraper.setCookies(parts.join('; '));
+  }
+
+  return scraper;
+}
+
+/**
+ * Build the low-level HTTP client the thread scraper talks through.
+ *
+ * Same session sources as `createHttpScraper` — the cookie jar first, then the
+ * two tokens in config.json — but the thread parser lives in the http layer,
+ * which takes a cookie string rather than a Scraper. Puppeteer's `thread`
+ * command was replaced by this because x.com's page load never reached
+ * `networkidle2`, so every run died on a 30s navigation timeout; the
+ * `TweetDetail` query answers the same question in one request.
+ *
+ * @returns {Promise<import('../scrapers/twitter/http/client.js').TwitterHttpClient>}
+ */
+async function createTwitterHttpClient() {
+  const { TwitterHttpClient } = await import('../scrapers/twitter/http/client.js');
+
+  try {
+    const jar = JSON.parse(await fs.readFile(COOKIE_FILE, 'utf-8'));
+    const cookies = (Array.isArray(jar) ? jar : jar.cookies || [])
+      .filter((c) => c && c.name && c.value)
+      .map((c) => `${c.name}=${c.value}`)
+      .join('; ');
+    if (cookies.includes('auth_token=')) return new TwitterHttpClient({ cookies });
+  } catch {
+    // No cookie jar saved; fall through to the values `xactions login` stores.
+  }
+
+  const config = await loadConfig();
+  if (config.authToken) {
+    const parts = [`auth_token=${config.authToken}`];
+    if (config.csrfToken) parts.push(`ct0=${config.csrfToken}`);
+    return new TwitterHttpClient({ cookies: parts.join('; ') });
+  }
+
+  return new TwitterHttpClient();
+}
+
+/**
+ * Fail loudly when a scrape came back empty.
+ *
+ * Silently reporting "0 results" as success is the single most confusing thing
+ * a scraper can do: it is indistinguishable from an account that genuinely has
+ * nothing, so nobody files a bug and everybody assumes the tool is broken.
+ *
+ * @param {unknown[]} results
+ * @param {string} what - Noun for the message, e.g. "tweets"
+ * @param {string} hint - What the user should try next
+ * @throws {Error} When results is empty
+ */
+function assertNotEmpty(results, what, hint) {
+  if (results && results.length > 0) return;
+  throw new Error(
+    `No ${what} returned. This usually means X served an empty page rather than ` +
+      `that none exist.\n  ${hint}`,
+  );
+}
+
+/** Suggested next step when an unauthenticated read comes back empty. */
+const AUTH_HINT =
+  'Run `xactions login` with your auth_token cookie (DevTools > Application > Cookies > x.com), ' +
+  'or retry in a minute if you are being rate limited.';
+
+/**
  * Smart output handler — routes data to the right exporter based on file extension.
  * Supports: .json, .csv, .xlsx, plus --google-sheets flag.
  *
@@ -60,7 +203,29 @@ function formatNumber(num) {
  * @param {Object} options - CLI options (output, googleSheets, sheetName)
  * @param {string} defaultName - Default filename stem (e.g., 'followers')
  */
+/** Record kind per smartOutput default name, so --compact knows which columns matter. */
+const COMPACT_KIND = { followers: 'user', following: 'user', tweets: 'tweet', report: 'report' };
+
 async function smartOutput(data, options, defaultName = 'data') {
+  // `--compact` is the agent-facing sibling of `--json`: one record per line,
+  // essential fields only. Like `--json` it is a stdout contract and wins
+  // over every file destination.
+  const mode = resolveOutputMode(program, options);
+  if (mode.compact) {
+    printCompact(data, { kind: COMPACT_KIND[defaultName] || 'record', fields: mode.fields });
+    return;
+  }
+
+  // `--json` is an explicit "give me the data on stdout" and outranks every
+  // destination flag. These commands already default to JSON when no
+  // destination is set, but a script written against the documented contract
+  // (`--json` works on every read command) must not silently write a file
+  // instead of piping, and must not fail with "unknown option" either.
+  if (options.json) {
+    console.log(JSON.stringify(data, null, 2));
+    return;
+  }
+
   // Google Sheets export
   if (options.googleSheets) {
     try {
@@ -118,7 +283,31 @@ async function smartOutput(data, options, defaultName = 'data') {
 program
   .name('xactions')
   .description(chalk.bold('⚡ XActions - The Complete X/Twitter Automation Toolkit'))
-  .version('3.0.0');
+  .version(VERSION)
+  .option('--compact', 'One record per line, essential fields only, no colours or spinners (for agents and pipes)')
+  .option('--fields <list>', 'With --compact: comma-separated fields to print, e.g. id,text,likes');
+
+// ============================================================================
+// Commands that live in their own modules
+//
+// index.js is long enough that adding to it makes it harder to read, so
+// anything new is registered from src/cli/commands/. Each module owns its
+// flags, its rendering and its error handling, and takes whatever it needs
+// from here as an explicit dependency rather than reaching back in.
+// ============================================================================
+
+registerConnectCommand(program);
+registerDoctorCommand(program);
+registerAskCommand(program);
+registerReportCommand(program, { createHttpScraper, smartOutput });
+registerEngageCommand(program, { createHttpScraper, loadConfig, configDir: CONFIG_DIR });
+registerDownloadCommand(program, { createHttpScraper, loadConfig });
+registerReputationCommand(program, { createHttpScraper, loadConfig });
+registerQuickstartCommand(program, { version: VERSION });
+registerCompletionCommand(program);
+registerSkillsCommand(program);
+registerDraftsCommand(program);
+registerArchiveCommand(program);
 
 // ============================================================================
 // Auth Commands
@@ -127,28 +316,128 @@ program
 program
   .command('login')
   .description('Set up authentication with session cookie')
-  .action(async () => {
-    console.log(chalk.cyan('\n⚡ XActions Login Setup\n'));
-    console.log(chalk.gray('To get your auth_token cookie:'));
-    console.log(chalk.gray('1. Go to x.com and log in'));
-    console.log(chalk.gray('2. Open DevTools (F12) → Application → Cookies'));
-    console.log(chalk.gray('3. Find "auth_token" and copy its value\n'));
+  .option(
+    '--cookies-file <path>',
+    'Import cookies from a file: Netscape cookies.txt, Cookie-Editor / EditThisCookie JSON, Playwright / Puppeteer storageState, or a raw "auth_token=...; ct0=..." string',
+  )
+  .option(
+    '--from-browser [browser]',
+    'Read x.com cookies from a locally installed browser: chrome, chromium, brave, edge, arc, or firefox (default: firefox)',
+  )
+  .action(async (options) => {
+    // --cookies-file: parse an export and save it through the session path.
+    if (options.cookiesFile) {
+      const { parseCookieInput } = await import('../client/auth/cookieImport.js');
+      const spinner = ora(`Reading cookies from ${options.cookiesFile}`).start();
+      try {
+        const text = await fs.readFile(options.cookiesFile, 'utf-8');
+        const cookies = parseCookieInput(text);
+        const { authToken, csrfToken, count } = await saveImportedSession(cookies);
+        spinner.succeed(chalk.green(`Imported ${count} x.com cookie${count === 1 ? '' : 's'}`));
+        reportSessionSaved(authToken, csrfToken);
+      } catch (error) {
+        spinner.fail(chalk.red(error.message));
+        process.exitCode = 1;
+      }
+      return;
+    }
 
-    const { cookie } = await inquirer.prompt([
+    // --from-browser: read cookies straight out of the browser's cookie DB.
+    if (options.fromBrowser !== undefined) {
+      const { readBrowserCookies, SUPPORTED_BROWSERS } = await import('../client/auth/cookieImport.js');
+      const browser = options.fromBrowser === true ? 'firefox' : String(options.fromBrowser).toLowerCase();
+      if (!SUPPORTED_BROWSERS.includes(browser)) {
+        console.error(
+          chalk.red(`Unknown browser "${browser}". Supported: ${SUPPORTED_BROWSERS.join(', ')}.`),
+        );
+        process.exitCode = 1;
+        return;
+      }
+      const spinner = ora(`Reading x.com cookies from ${browser}`).start();
+      try {
+        const cookies = readBrowserCookies(browser);
+        const { authToken, csrfToken, count } = await saveImportedSession(cookies);
+        spinner.succeed(chalk.green(`Imported ${count} x.com cookie${count === 1 ? '' : 's'} from ${browser}`));
+        reportSessionSaved(authToken, csrfToken);
+      } catch (error) {
+        spinner.fail(chalk.red(error.message));
+        process.exitCode = 1;
+      }
+      return;
+    }
+
+    // Default: interactive paste of auth_token + ct0.
+    console.log(chalk.cyan('\n⚡ XActions Login Setup\n'));
+    console.log(chalk.gray('Fastest paths (no DevTools):'));
+    console.log(chalk.gray('  xactions login --from-browser firefox    Read cookies from your browser'));
+    console.log(chalk.gray('  xactions login --cookies-file cookies.txt  Import an exported cookies file'));
+    console.log(chalk.gray('  xactions connect                          Log in through a real browser\n'));
+    console.log(chalk.gray('Or paste them by hand:'));
+    console.log(chalk.gray('1. Go to x.com and log in'));
+    console.log(chalk.gray('2. Open DevTools (F12) → Application → Cookies → https://x.com'));
+    console.log(chalk.gray('3. Copy the values of "auth_token" and "ct0"\n'));
+    console.log(
+      chalk.gray('   ct0 is the CSRF token. Without it X treats the session as logged out,')
+    );
+    console.log(chalk.gray('   so search, bookmarks, and DMs stay unavailable.\n'));
+
+    const { cookie, csrf } = await inquirer.prompt([
       {
         type: 'password',
         name: 'cookie',
         message: 'Enter your auth_token cookie:',
         mask: '*',
       },
+      {
+        type: 'password',
+        name: 'csrf',
+        message: 'Enter your ct0 cookie (optional, press Enter to skip):',
+        mask: '*',
+      },
     ]);
 
     const config = await loadConfig();
     config.authToken = cookie;
+    if (csrf) {
+      config.csrfToken = csrf;
+    } else {
+      delete config.csrfToken;
+    }
     await saveConfig(config);
 
-    console.log(chalk.green('\n✓ Authentication saved!\n'));
+    console.log(chalk.green('\n✓ Authentication saved!'));
+    if (!csrf) {
+      console.log(
+        chalk.yellow('  No ct0 saved — login-only endpoints (search, DMs) will still be blocked.\n')
+      );
+    } else {
+      console.log('');
+    }
   });
+
+/**
+ * Print the outcome of a cookie import in a consistent voice, warning when the
+ * CSRF token is missing (session-tier endpoints stay blocked without it).
+ *
+ * @param {string|undefined} authToken
+ * @param {string|undefined} csrfToken
+ */
+function reportSessionSaved(authToken, csrfToken) {
+  if (!authToken) {
+    console.log(
+      chalk.yellow('  No auth_token found in that source. Make sure you were logged in to x.com when exporting.\n'),
+    );
+    return;
+  }
+  console.log(chalk.gray(`  Saved to ${COOKIE_FILE} (owner-only)`));
+  if (!csrfToken) {
+    console.log(
+      chalk.yellow('  No ct0 found — login-only endpoints (search, DMs) will stay blocked until you re-import with ct0.\n'),
+    );
+  } else {
+    console.log(chalk.gray('  auth_token + ct0 captured. Session-tier commands are unlocked.\n'));
+  }
+}
 
 program
   .command('logout')
@@ -156,8 +445,12 @@ program
   .action(async () => {
     const config = await loadConfig();
     delete config.authToken;
+    delete config.csrfToken;
     await saveConfig(config);
-    console.log(chalk.green('\n✓ Logged out successfully\n'));
+    // `login --from-browser` and `--cookies-file` save the session here, and it
+    // is read before the config, so leaving it kept the session logged in.
+    await fs.rm(COOKIE_FILE, { force: true });
+    console.log(chalk.green('\n✓ Logged out: the saved session and cookies are removed\n'));
   });
 
 // ============================================================================
@@ -169,23 +462,24 @@ program
   .description('Get profile information for a user')
   .option('-j, --json', 'Output as JSON')
   .action(async (username, options) => {
-    const spinner = ora(`Fetching profile for @${username}`).start();
+    const mode = resolveOutputMode(program, options);
+    const spinner = createSpinner(`Fetching profile for @${username}`, mode);
 
     try {
-      const browser = await scrapers.createBrowser();
-      const page = await scrapers.createPage(browser);
+      const scraper = await createHttpScraper();
+      const profile = await scraper.getProfile(username);
 
-      const config = await loadConfig();
-      if (config.authToken) {
-        await scrapers.loginWithCookie(page, config.authToken);
+      if (!profile || !profile.id) {
+        throw new Error(
+          `X returned no profile data for @${username}. Check the handle, or ${AUTH_HINT}`,
+        );
       }
-
-      const profile = await scrapers.scrapeProfile(page, username);
-      await browser.close();
 
       spinner.stop();
 
-      if (options.json) {
+      if (mode.compact) {
+        printCompact(profile, { kind: 'profile', fields: mode.fields });
+      } else if (options.json) {
         console.log(JSON.stringify(profile, null, 2));
       } else {
         console.log(chalk.bold(`\n⚡ @${profile.username || username}\n`));
@@ -193,16 +487,23 @@ program
         console.log(`  ${chalk.cyan('Bio:')}       ${profile.bio || 'N/A'}`);
         console.log(`  ${chalk.cyan('Location:')}  ${profile.location || 'N/A'}`);
         console.log(`  ${chalk.cyan('Website:')}   ${profile.website || 'N/A'}`);
-        console.log(`  ${chalk.cyan('Joined:')}    ${profile.joined || 'N/A'}`);
+        const joined = profile.joined ? new Date(profile.joined) : null;
         console.log(
-          `  ${chalk.cyan('Following:')} ${formatNumber(profile.following || 0)}  ${chalk.cyan('Followers:')} ${formatNumber(profile.followers || 0)}`
+          `  ${chalk.cyan('Joined:')}    ${joined && !Number.isNaN(joined.valueOf()) ? joined.toISOString().slice(0, 10) : 'N/A'}`
         );
-        if (profile.verified) console.log(`  ${chalk.blue('✓ Verified')}`);
+        console.log(
+          `  ${chalk.cyan('Following:')} ${formatNumber(profile.followingCount || 0)}  ${chalk.cyan('Followers:')} ${formatNumber(profile.followersCount || 0)}`
+        );
+        console.log(
+          `  ${chalk.cyan('Tweets:')}    ${formatNumber(profile.tweetCount || 0)}  ${chalk.cyan('Listed:')}    ${formatNumber(profile.listedCount || 0)}`
+        );
+        if (profile.verified || profile.isBlueVerified) console.log(`  ${chalk.blue('✓ Verified')}`);
         console.log();
       }
     } catch (error) {
       spinner.fail('Failed to fetch profile');
       console.error(chalk.red(error.message));
+      process.exitCode = 1;
     }
   });
 
@@ -218,33 +519,28 @@ program
   .option('--google-sheets <id>', 'Export directly to a Google Sheet (spreadsheet ID)')
   .option('--sheet-name <name>', 'Sheet/tab name for xlsx or Google Sheets export')
   .option('--sheet-mode <mode>', 'Google Sheets write mode: append, replace, new-sheet', 'append')
+  .option('--json', 'Force JSON on stdout, ignoring --output and --google-sheets')
   .action(async (username, options) => {
     const limit = parseInt(options.limit);
-    const spinner = ora(`Scraping followers for @${username}`).start();
+    const spinner = createSpinner(`Scraping followers for @${username}`, resolveOutputMode(program, options));
 
     try {
-      const browser = await scrapers.createBrowser();
-      const page = await scrapers.createPage(browser);
+      const scraper = await createHttpScraper();
 
-      const config = await loadConfig();
-      if (config.authToken) {
-        await scrapers.loginWithCookie(page, config.authToken);
+      const followers = [];
+      for await (const follower of scraper.getFollowers(username, limit)) {
+        followers.push(follower);
+        spinner.text = `Scraping followers for @${username} (${followers.length}/${limit})`;
       }
 
-      const followers = await scrapers.scrapeFollowers(page, username, {
-        limit,
-        onProgress: ({ scraped }) => {
-          spinner.text = `Scraping followers for @${username} (${scraped}/${limit})`;
-        },
-      });
-      await browser.close();
-
+      assertNotEmpty(followers, `followers for @${username}`, AUTH_HINT);
       spinner.succeed(`Scraped ${followers.length} followers`);
 
       await smartOutput(followers, options, 'followers');
     } catch (error) {
       spinner.fail('Failed to scrape followers');
       console.error(chalk.red(error.message));
+      process.exitCode = 1;
     }
   });
 
@@ -256,33 +552,28 @@ program
   .option('--google-sheets <id>', 'Export directly to a Google Sheet (spreadsheet ID)')
   .option('--sheet-name <name>', 'Sheet/tab name for xlsx or Google Sheets export')
   .option('--sheet-mode <mode>', 'Google Sheets write mode: append, replace, new-sheet', 'append')
+  .option('--json', 'Force JSON on stdout, ignoring --output and --google-sheets')
   .action(async (username, options) => {
     const limit = parseInt(options.limit);
-    const spinner = ora(`Scraping following for @${username}`).start();
+    const spinner = createSpinner(`Scraping following for @${username}`, resolveOutputMode(program, options));
 
     try {
-      const browser = await scrapers.createBrowser();
-      const page = await scrapers.createPage(browser);
+      const scraper = await createHttpScraper();
 
-      const config = await loadConfig();
-      if (config.authToken) {
-        await scrapers.loginWithCookie(page, config.authToken);
+      const following = [];
+      for await (const account of scraper.getFollowing(username, limit)) {
+        following.push(account);
+        spinner.text = `Scraping following for @${username} (${following.length}/${limit})`;
       }
 
-      const following = await scrapers.scrapeFollowing(page, username, {
-        limit,
-        onProgress: ({ scraped }) => {
-          spinner.text = `Scraping following for @${username} (${scraped}/${limit})`;
-        },
-      });
-      await browser.close();
-
+      assertNotEmpty(following, `accounts followed by @${username}`, AUTH_HINT);
       spinner.succeed(`Scraped ${following.length} following`);
 
       await smartOutput(following, options, 'following');
     } catch (error) {
       spinner.fail('Failed to scrape following');
       console.error(chalk.red(error.message));
+      process.exitCode = 1;
     }
   });
 
@@ -291,28 +582,45 @@ program
   .description('Find accounts that don\'t follow back')
   .option('-l, --limit <number>', 'Maximum to check', '500')
   .option('-o, --output <file>', 'Output file')
+  .option('--json', 'Force JSON on stdout, ignoring --output and --google-sheets')
   .action(async (username, options) => {
     const limit = parseInt(options.limit);
-    const spinner = ora('Analyzing follow relationships...').start();
+    const mode = resolveOutputMode(program, options);
+    const spinner = createSpinner('Analyzing follow relationships...', mode);
 
     try {
-      const browser = await scrapers.createBrowser();
-      const page = await scrapers.createPage(browser);
+      const scraper = await createHttpScraper();
 
-      const config = await loadConfig();
-      if (config.authToken) {
-        await scrapers.loginWithCookie(page, config.authToken);
+      spinner.text = 'Reading following list...';
+      const following = [];
+      for await (const account of scraper.getFollowing(username, limit)) {
+        following.push(account);
+        spinner.text = `Reading following list (${following.length})`;
       }
+      assertNotEmpty(following, `accounts followed by @${username}`, AUTH_HINT);
 
-      spinner.text = 'Scraping following list...';
-      const following = await scrapers.scrapeFollowing(page, username, { limit });
+      spinner.text = 'Reading follower list...';
+      const followerHandles = new Set();
+      for await (const follower of scraper.getFollowers(username, limit)) {
+        followerHandles.add(follower.username.toLowerCase());
+        spinner.text = `Reading follower list (${followerHandles.size})`;
+      }
+      assertNotEmpty([...followerHandles], `followers of @${username}`, AUTH_HINT);
 
-      await browser.close();
-
-      const nonFollowers = following.filter((u) => !u.followsBack);
-      const mutuals = following.filter((u) => u.followsBack);
+      // The GraphQL follow lists carry no `followsBack` flag, so the previous
+      // filter on it matched every single account and reported the entire
+      // following list as non-followers. Diff the two lists instead.
+      const nonFollowers = following.filter(
+        (u) => !followerHandles.has(u.username.toLowerCase()),
+      );
+      const mutuals = following.filter((u) => followerHandles.has(u.username.toLowerCase()));
 
       spinner.succeed('Analysis complete!');
+
+      if (mode.compact) {
+        printCompact(nonFollowers, { kind: 'user', fields: mode.fields });
+        return;
+      }
 
       console.log(chalk.bold('\n📊 Follow Analysis\n'));
       console.log(`  ${chalk.cyan('Total Following:')} ${following.length}`);
@@ -330,13 +638,16 @@ program
         }
       }
 
-      if (options.output) {
+      if (options.json) {
+        console.log(JSON.stringify(nonFollowers, null, 2));
+      } else if (options.output) {
         await scrapers.exportToJSON(nonFollowers, options.output);
         console.log(chalk.green(`\n✓ Full list saved to ${options.output}`));
       }
     } catch (error) {
       spinner.fail('Failed to analyze');
       console.error(chalk.red(error.message));
+      process.exitCode = 1;
     }
   });
 
@@ -349,31 +660,31 @@ program
   .option('--google-sheets <id>', 'Export directly to a Google Sheet (spreadsheet ID)')
   .option('--sheet-name <name>', 'Sheet/tab name for xlsx or Google Sheets export')
   .option('--sheet-mode <mode>', 'Google Sheets write mode: append, replace, new-sheet', 'append')
+  .option('--json', 'Force JSON on stdout, ignoring --output and --google-sheets')
   .action(async (username, options) => {
     const limit = parseInt(options.limit);
-    const spinner = ora(`Scraping tweets from @${username}`).start();
+    const spinner = createSpinner(`Scraping tweets from @${username}`, resolveOutputMode(program, options));
 
     try {
-      const browser = await scrapers.createBrowser();
-      const page = await scrapers.createPage(browser);
+      const scraper = await createHttpScraper();
+      const stream = options.replies
+        ? scraper.getTweetsAndReplies(username, limit)
+        : scraper.getTweets(username, limit);
 
-      const config = await loadConfig();
-      if (config.authToken) {
-        await scrapers.loginWithCookie(page, config.authToken);
+      const tweets = [];
+      for await (const tweet of stream) {
+        tweets.push(tweet);
+        spinner.text = `Scraping tweets from @${username} (${tweets.length}/${limit})`;
       }
 
-      const tweets = await scrapers.scrapeTweets(page, username, {
-        limit,
-        includeReplies: options.replies,
-      });
-      await browser.close();
-
+      assertNotEmpty(tweets, `tweets for @${username}`, AUTH_HINT);
       spinner.succeed(`Scraped ${tweets.length} tweets`);
 
       await smartOutput(tweets, options, 'tweets');
     } catch (error) {
       spinner.fail('Failed to scrape tweets');
       console.error(chalk.red(error.message));
+      process.exitCode = 1;
     }
   });
 
@@ -383,28 +694,38 @@ program
   .option('-l, --limit <number>', 'Maximum results', '50')
   .option('-f, --filter <type>', 'Filter: latest, top, people, photos, videos', 'latest')
   .option('-o, --output <file>', 'Output file')
+  .option('--json', 'Force JSON on stdout, ignoring --output and --google-sheets')
   .action(async (query, options) => {
     const limit = parseInt(options.limit);
-    const spinner = ora(`Searching for "${query}"`).start();
+    const mode = resolveOutputMode(program, options);
+    const spinner = createSpinner(`Searching for "${query}"`, mode);
 
     try {
-      const browser = await scrapers.createBrowser();
-      const page = await scrapers.createPage(browser);
+      const scraper = await createHttpScraper();
+      const { SearchMode } = await import('../client/index.js');
 
-      const config = await loadConfig();
-      if (config.authToken) {
-        await scrapers.loginWithCookie(page, config.authToken);
+      const searchMode =
+        {
+          latest: SearchMode.Latest,
+          top: SearchMode.Top,
+          photos: SearchMode.Photos,
+          videos: SearchMode.Videos,
+        }[String(options.filter).toLowerCase()] || SearchMode.Latest;
+
+      const tweets = [];
+      for await (const tweet of scraper.searchTweets(query, limit, searchMode)) {
+        tweets.push(tweet);
+        spinner.text = `Searching for "${query}" (${tweets.length}/${limit})`;
       }
 
-      const tweets = await scrapers.searchTweets(page, query, {
-        limit,
-        filter: options.filter,
-      });
-      await browser.close();
-
+      assertNotEmpty(tweets, `results for "${query}"`, AUTH_HINT);
       spinner.succeed(`Found ${tweets.length} tweets`);
 
-      if (options.output) {
+      if (mode.compact) {
+        printCompact(tweets, { kind: 'tweet', fields: mode.fields });
+      } else if (options.json) {
+        console.log(JSON.stringify(tweets, null, 2));
+      } else if (options.output) {
         await scrapers.exportToJSON(tweets, options.output);
         console.log(chalk.green(`✓ Saved to ${options.output}`));
       } else {
@@ -413,6 +734,7 @@ program
     } catch (error) {
       spinner.fail('Search failed');
       console.error(chalk.red(error.message));
+      process.exitCode = 1;
     }
   });
 
@@ -421,10 +743,12 @@ program
   .description('Scrape tweets for a hashtag')
   .option('-l, --limit <number>', 'Maximum results', '50')
   .option('-o, --output <file>', 'Output file')
+  .option('--json', 'Force JSON on stdout, ignoring --output and --google-sheets')
   .action(async (tag, options) => {
     const limit = parseInt(options.limit);
     const hashtag = tag.startsWith('#') ? tag : `#${tag}`;
-    const spinner = ora(`Scraping ${hashtag}`).start();
+    const mode = resolveOutputMode(program, options);
+    const spinner = createSpinner(`Scraping ${hashtag}`, mode);
 
     try {
       const browser = await scrapers.createBrowser();
@@ -440,7 +764,11 @@ program
 
       spinner.succeed(`Found ${tweets.length} tweets`);
 
-      if (options.output) {
+      if (mode.compact) {
+        printCompact(tweets, { kind: 'tweet', fields: mode.fields });
+      } else if (options.json) {
+        console.log(JSON.stringify(tweets, null, 2));
+      } else if (options.output) {
         await scrapers.exportToJSON(tweets, options.output);
         console.log(chalk.green(`✓ Saved to ${options.output}`));
       } else {
@@ -456,36 +784,43 @@ program
   .command('thread <url>')
   .description('Scrape a full tweet thread')
   .option('-o, --output <file>', 'Output file')
+  .option('--json', 'Force JSON on stdout, ignoring --output and --google-sheets')
   .action(async (url, options) => {
-    const spinner = ora('Scraping thread...').start();
+    const mode = resolveOutputMode(program, options);
+    const spinner = createSpinner('Scraping thread...', mode);
 
     try {
-      const browser = await scrapers.createBrowser();
-      const page = await scrapers.createPage(browser);
-
-      const config = await loadConfig();
-      if (config.authToken) {
-        await scrapers.loginWithCookie(page, config.authToken);
+      const tweetId = url.match(/status(?:es)?\/(\d{5,})/)?.[1] || (/^\d{5,}$/.test(url) ? url : null);
+      if (!tweetId) {
+        throw new Error(`Could not find a tweet id in "${url}". Pass a status URL or a numeric id.`);
       }
 
-      const thread = await scrapers.scrapeThread(page, url);
-      await browser.close();
+      const client = await createTwitterHttpClient();
+      const { scrapeFullThread } = await import('../scrapers/twitter/http/thread.js');
+      const result = await scrapeFullThread(client, tweetId);
+      const thread = [result.rootTweet, ...result.authorReplies].filter(Boolean);
 
+      assertNotEmpty(thread, 'tweets in thread', AUTH_HINT);
       spinner.succeed(`Scraped ${thread.length} tweets in thread`);
 
-      if (options.output) {
+      if (mode.compact) {
+        printCompact(thread, { kind: 'tweet', fields: mode.fields });
+      } else if (options.json) {
+        console.log(JSON.stringify(thread, null, 2));
+      } else if (options.output) {
         await scrapers.exportToJSON(thread, options.output);
         console.log(chalk.green(`✓ Saved to ${options.output}`));
       } else {
         console.log('\n' + chalk.bold('🧵 Thread:\n'));
         thread.forEach((tweet, i) => {
           console.log(chalk.cyan(`${i + 1}.`) + ` ${tweet.text?.slice(0, 100)}...`);
-          console.log(chalk.gray(`   ${tweet.timestamp || ''}\n`));
+          console.log(chalk.gray(`   ${tweet.createdAt || tweet.timestamp || ''}\n`));
         });
       }
     } catch (error) {
       spinner.fail('Failed to scrape thread');
       console.error(chalk.red(error.message));
+      process.exitCode = 1;
     }
   });
 
@@ -494,25 +829,34 @@ program
   .description('Scrape media from a user')
   .option('-l, --limit <number>', 'Maximum items', '50')
   .option('-o, --output <file>', 'Output file')
+  .option('--json', 'Force JSON on stdout, ignoring --output and --google-sheets')
   .action(async (username, options) => {
     const limit = parseInt(options.limit);
-    const spinner = ora(`Scraping media from @${username}`).start();
+    const mode = resolveOutputMode(program, options);
+    const spinner = createSpinner(`Scraping media from @${username}`, mode);
 
     try {
-      const browser = await scrapers.createBrowser();
-      const page = await scrapers.createPage(browser);
+      const client = await createTwitterHttpClient();
+      const { scrapeMedia } = await import('../scrapers/twitter/http/media.js');
+      const handle = username.replace(/^@/, '');
+      const raw = await scrapeMedia(client, handle, { limit });
+      const media = raw.map((m) => ({
+        type: m.mediaType,
+        url: m.url,
+        tweetUrl: m.tweetId ? `https://x.com/${handle}/status/${m.tweetId}` : undefined,
+        width: m.width || undefined,
+        height: m.height || undefined,
+        altText: m.altText || undefined,
+      }));
 
-      const config = await loadConfig();
-      if (config.authToken) {
-        await scrapers.loginWithCookie(page, config.authToken);
-      }
-
-      const media = await scrapers.scrapeMedia(page, username, { limit });
-      await browser.close();
-
+      assertNotEmpty(media, 'media items', AUTH_HINT);
       spinner.succeed(`Found ${media.length} media items`);
 
-      if (options.output) {
+      if (mode.compact) {
+        printCompact(media, { kind: 'media', fields: mode.fields });
+      } else if (options.json) {
+        console.log(JSON.stringify(media, null, 2));
+      } else if (options.output) {
         await scrapers.exportToJSON(media, options.output);
         console.log(chalk.green(`✓ Saved to ${options.output}`));
       } else {
@@ -521,6 +865,7 @@ program
     } catch (error) {
       spinner.fail('Failed to scrape media');
       console.error(chalk.red(error.message));
+      process.exitCode = 1;
     }
   });
 
@@ -863,7 +1208,7 @@ workflowCmd
         { type: 'input', name: 'name', message: 'Workflow name:' },
         { type: 'input', name: 'description', message: 'Description (optional):' },
         {
-          type: 'list',
+          type: 'select',
           name: 'triggerType',
           message: 'Trigger type:',
           choices: ['manual', 'schedule', 'webhook'],
@@ -1642,7 +1987,7 @@ program
       console.log(chalk.gray(`   ID: ${monitor.id}`));
 
       // Keep process alive
-      process.on('SIGINT', () => {
+      process.on('SIGINT', async () => {
         const { stopMonitor: stop } = await import('../analytics/reputation.js');
         stop(monitor.id);
         console.log(chalk.yellow('\n🛑 Monitor stopped.'));
@@ -2088,7 +2433,7 @@ personaCmd
     // Interactive mode if options not provided
     if (!preset) {
       const presetAnswer = await inquirer.prompt([{
-        type: 'list',
+        type: 'select',
         name: 'preset',
         message: '🎯 Choose your niche:',
         choices: Object.entries(NICHE_PRESETS).map(([key, val]) => ({
@@ -2111,7 +2456,7 @@ personaCmd
 
     if (!strategy) {
       const stratAnswer = await inquirer.prompt([{
-        type: 'list',
+        type: 'select',
         name: 'strategy',
         message: '📈 Growth strategy:',
         choices: Object.entries(ENGAGEMENT_STRATEGIES).map(([key, val]) => ({
@@ -2124,7 +2469,7 @@ personaCmd
 
     if (!activityPattern) {
       const actAnswer = await inquirer.prompt([{
-        type: 'list',
+        type: 'select',
         name: 'activity',
         message: '🕐 Activity pattern:',
         choices: Object.entries(ACTIVITY_PATTERNS).map(([key, val]) => ({
@@ -2469,11 +2814,29 @@ program
         console.log(chalk.green(`✅ Scraped ${result.results?.length || 0} profiles`));
       } else {
         const result = await bulkExecute(usernames, action, {
-          delay: parseInt(options.delay), dryRun: options.dryRun, resume: options.resume,
+          delayMs: parseInt(options.delay, 10) || 2000,
+          dryRun: options.dryRun,
+          resume: options.resume,
         });
-        console.log(chalk.green(`✅ Bulk ${action}: ${result.succeeded} succeeded, ${result.failed} failed`));
+        if (result.error) {
+          console.error(chalk.red(`❌ ${result.error}`));
+          process.exitCode = 1;
+        } else {
+          const already = result.alreadyFollowing ? `, ${result.alreadyFollowing} already done` : '';
+          console.log(chalk.green(`✅ Bulk ${action}: ${result.succeeded} succeeded, ${result.failed} failed${already}`));
+        }
       }
-    } catch (error) { console.error(chalk.red(`❌ ${error.message}`)); }
+    } catch (error) { console.error(chalk.red(`❌ ${error.message}`)); } finally {
+      // bulkExecute closes the browser it opened; this covers the paths that
+      // throw before it gets the chance, so the CLI never hangs on a live
+      // Puppeteer singleton after printing its summary.
+      if (action !== 'scrape' && !options.dryRun) {
+        try {
+          const { closeBrowser } = await import('../mcp/local-tools.js');
+          await closeBrowser();
+        } catch { /* nothing to close */ }
+      }
+    }
   });
 
 // ============================================================================
@@ -2681,7 +3044,7 @@ notifyCmd.command('configure').description('Configure notification channels inte
   try {
     const { getNotifier } = await import('../notifications/notifier.js');
     const notifier = await getNotifier();
-    const { channel } = await inquirer.prompt([{ type: 'list', name: 'channel', message: 'Configure which channel?', choices: ['slack', 'discord', 'telegram', 'email'] }]);
+    const { channel } = await inquirer.prompt([{ type: 'select', name: 'channel', message: 'Configure which channel?', choices: ['slack', 'discord', 'telegram', 'email'] }]);
     if (channel === 'slack' || channel === 'discord') {
       const { webhookUrl } = await inquirer.prompt([{ type: 'input', name: 'webhookUrl', message: `${channel} webhook URL:` }]);
       notifier.configure({ [channel]: { enabled: true, webhookUrl } });
@@ -3199,9 +3562,21 @@ clientCmd
 // Parse and Run
 // ============================================================================
 
-program.parse();
+// Fifty-plus commands printed as one flat alphabetical list tells a newcomer
+// nothing about where to start. Replace Commander's root help with the grouped
+// screen; sub-command help keeps the default format, which is fine at that size.
+const defaultFormatHelp = Help.prototype.formatHelp;
+program.configureHelp({
+  formatHelp(command, helper) {
+    return command === program
+      ? renderRootHelp(program, VERSION)
+      : defaultFormatHelp.call(this, command, helper);
+  },
+});
 
-// Show help if no command provided
-if (!process.argv.slice(2).length) {
-  program.outputHelp();
-}
+// Commander prints help and exits when it is given no arguments, so bare
+// `xactions` lands on the grouped screen above. That screen points at
+// `xactions quickstart` in three places, which is where a first-time user
+// should go; there is deliberately no redirect here, because an implicit jump
+// would hide the command list from someone who ran the binary to see it.
+program.parse();

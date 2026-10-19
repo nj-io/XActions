@@ -1,8 +1,16 @@
 # 📚 XActions — Complete Script Catalog
 
-The complete collection of 150+ browser console scripts, guides, and tutorials for X/Twitter automation. Each guide includes working code samples, configuration options, step-by-step tutorials, and best practices.
+Guides for every automation XActions ships: what each one does, how to configure
+it, and what to watch out for. Each page includes working code, the settings
+worth changing, and the failure modes worth knowing about.
 
-> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) | **150+ scripts** | **No API keys** | **100% free & open source**
+Looking for something else?
+
+- **Runnable Node.js programs** — [`examples/`](../../examples/)
+- **Copy-paste console scripts** — [browser-scripts.md](../browser-scripts.md)
+- **Step-by-step walkthroughs** — [tutorials/](../../tutorials/)
+
+> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) | **No API keys** | **100% free and open source**
 
 ---
 
@@ -163,15 +171,6 @@ Create, schedule, and manage your X/Twitter content.
 | [Content Calendar](content-calendar.md) | Plan and visualize your posting schedule |
 | [Content Repurposer](content-repurposer.md) | Transform tweets between formats |
 | [Pin Tweet Manager](pin-tweet-manager.md) | Pin/unpin tweets, auto-rotate pinned content |
-| [Edit Post](edit-post.md) | Edit existing posts or undo within Premium window |
-| [Share & Embed](share-embed.md) | Copy links, get embed codes, bulk share |
-| [Video Captions](video-captions.md) | Upload SRT/VTT captions for videos |
-| [Text Formatting](text-formatting.md) | Bold, italic, monospace via Unicode formatting |
-| [Mention Users](mention-users.md) | Compose posts mentioning multiple users |
-| [Like Post](like-post.md) | Like specific posts by URL or keyword |
-| [Repost Post](repost-post.md) | Repost or unrepost specific posts |
-| [Follow Account](follow-account.md) | Follow a list of usernames by profile |
-| [Post Interactions](post-interactions.md) | View who liked, retweeted, and quoted a post |
 
 ---
 
@@ -232,9 +231,6 @@ Send, export, and manage DMs.
 | [DM Manager](dm-manager.md) | Full DM management: send, export, manage requests |
 | [DM Exporter](dm-exporter.md) | Export DM conversations with full details |
 | [Send Direct Message](send-direct-message.md) | Send personalized DMs to user list |
-| [Group DM](group-dm.md) | Create group conversations with multiple users |
-| [DM Calls](dm-calls.md) | Initiate audio and video calls in DM conversations |
-| [Encrypted DM](encrypted-dm.md) | Enable and send encrypted direct messages |
 
 ---
 
@@ -265,11 +261,8 @@ Create and manage lists and communities.
 |---------|-------------|
 | [List Manager](list-manager.md) | Create, manage, and populate lists |
 | [Manage Lists](manage-lists.md) | Manage X Lists with bulk operations |
-| [Follow List](follow-list.md) | Follow, unfollow, and pin X lists |
 | [Join Communities](join-communities.md) | Discover and join communities by keyword |
 | [Leave All Communities](leave-all-communities.md) | Leave all communities with whitelist |
-| [Create Community](create-community.md) | Create a new X Community with rules and settings |
-| [Manage Community](manage-community.md) | Member management, posting, moderation |
 
 ---
 
@@ -307,8 +300,6 @@ Manage Twitter Spaces, live audio, and events.
 |---------|-------------|
 | [Spaces & Live Audio](spaces-live-audio.md) | Create, join, and schedule Spaces |
 | [Spaces Manager](spaces-manager.md) | Manage Spaces, events, and live streams |
-| [Host Space](host-space.md) | Start a new Space with title, topic, and recording |
-| [Join Space](join-space.md) | Find and join live Spaces by keyword or host |
 
 ---
 
@@ -321,16 +312,6 @@ Premium-only features and subscription management.
 | [Premium Features](premium-features.md) | Premium feature management |
 | [Premium Manager](premium-manager.md) | Check Premium tier and available features |
 | [Articles & Longform](articles-longform.md) | Compose and publish articles (Premium+) |
-| [Subscribe Premium](subscribe-premium.md) | Tier comparison and subscription navigation |
-| [Verified Only](verified-only.md) | Toggle verified-only reply restrictions on posts |
-| [ID Verification](id-verification.md) | Check and navigate ID verification flow |
-| [Media Studio](media-studio.md) | Access Media Studio library and analytics |
-| [X Pro](x-pro.md) | Access X Pro (TweetDeck) multi-column view |
-| [Creator Subscriptions](creator-subscriptions.md) | Setup paid subscriptions and revenue sharing |
-| [Premium Gifting](premium-gifting.md) | Gift Premium subscription to another user |
-| [Delegate Access](delegate-access.md) | Manage delegate account access and permissions |
-| [View Analytics](view-analytics.md) | Scrape and export account/post analytics |
-| [Ads Manager](ads-manager.md) | Campaigns, post boosting, ads dashboard |
 
 ---
 
@@ -342,11 +323,6 @@ Search, trends, and explore automation.
 |---------|-------------|
 | [Discovery & Explore](discovery-explore.md) | Search, trends, topics, and explore feed |
 | [Streaming](streaming.md) | Real-time tweet streaming |
-| [Topic Manager](topic-manager.md) | Follow, unfollow, and discover topics |
-| [Save Search](save-search.md) | Save and manage search queries |
-| [Timeline Viewer](timeline-viewer.md) | Switch For You/Following timelines and collect posts |
-| [Upload Contacts](upload-contacts.md) | Navigate contact sync and discovery |
-| [Community Notes](community-notes.md) | View, write, and rate Community Notes |
 
 ---
 

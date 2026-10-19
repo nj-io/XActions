@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Client — Tweet Data Model
  *
@@ -6,7 +6,7 @@
  * Use Tweet.fromGraphQL(raw) to parse raw API responses.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 /**
@@ -189,11 +189,15 @@ export class Tweet {
     tweet.text = tweet.fullText;
     tweet.conversationId = legacy.conversation_id_str || '';
 
-    // User info from core.user_results
+    // User info from core.user_results. X has moved `screen_name`/`name` from
+    // `legacy` into `core` on User objects, so read both: on new payloads
+    // `legacy.screen_name` is undefined and the author would come back blank.
     const userResult = raw.core?.user_results?.result;
     if (userResult) {
-      tweet.username = userResult.legacy?.screen_name || '';
-      tweet.userId = userResult.rest_id || userResult.legacy?.id_str || '';
+      const userCore = userResult.core || {};
+      const userLegacy = userResult.legacy || {};
+      tweet.username = userCore.screen_name || userLegacy.screen_name || '';
+      tweet.userId = userResult.rest_id || userLegacy.id_str || userCore.user_id_str || '';
     }
 
     // Timestamp

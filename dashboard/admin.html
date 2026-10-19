@@ -131,8 +131,9 @@
     }
 
     .tab-btn.active {
-      background: var(--accent);
+      background: linear-gradient(135deg,#1d9bf0,#22d3ee);
       color: white;
+      box-shadow: 0 8px 24px -8px rgba(29,155,240,.6);
     }
 
     .tab-content {
@@ -265,11 +266,13 @@
       border: 1px solid var(--border);
       border-radius: 16px;
       padding: 20px;
-      transition: all 0.2s;
+      transition: transform 0.26s cubic-bezier(.22,1,.36,1), border-color 0.26s cubic-bezier(.22,1,.36,1), box-shadow 0.26s cubic-bezier(.22,1,.36,1);
     }
 
     .session-card:hover {
-      border-color: var(--accent);
+      transform: translateY(-3px);
+      border-color: rgba(29,155,240,.4);
+      box-shadow: 0 10px 34px -12px rgba(0,0,0,.6);
     }
 
     .session-card.running {
@@ -425,6 +428,16 @@
       outline: 2px solid var(--accent);
       outline-offset: 2px;
     }
+    button:focus-visible, .btn-test-webhook:focus-visible {
+      box-shadow: 0 0 0 3px rgba(29,155,240,.28);
+    }
+
+    /* Ambient glow */
+    body::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;background:radial-gradient(1000px 560px at 82% -6%,rgba(29,155,240,.1),transparent 60%)}
+
+    /* Offline note */
+    .offline-note{display:flex;gap:12px;align-items:flex-start;background:rgba(29,155,240,0.06);border:1px solid rgba(29,155,240,0.3);border-radius:14px;padding:16px 18px;color:#aab4c0;font-size:.92rem;margin:16px 0}
+    .offline-note strong{color:#e7e9ea}.offline-note a{color:#1d9bf0}.offline-note .offline-ic{font-size:1.2rem;line-height:1.3}
 
     /* Link differentiation (WCAG 1.4.1) */
     main a:not(.nav-item):not(.btn):not(.nav__link):not(.nav__brand),
@@ -537,9 +550,9 @@
     </div>
   </div>
 
-  <div id=\"connection-status\" class=\"status-badge status-disconnected\" role=\"status\" aria-live=\"polite\">
-    <span class=\"pulse\" aria-hidden=\"true\"></span>
-    <span id=\"connection-text\">Connecting...</span>
+  <div id="connection-status" class="status-badge status-disconnected" role="status" aria-live="polite">
+    <span class="pulse" aria-hidden="true"></span>
+    <span id="connection-text">Connecting...</span>
   </div>
   </main>
 
@@ -553,10 +566,28 @@
 
     const sessions = new Map();
     let totalUnfollows = 0;
+    let offlineWarned = false;
 
-    // Connect to WebSocket as admin
+    // Designed offline notice (backend migrating).
+    const OFFLINE_HTML = '<div class="offline-note" role="status"><span class="offline-ic">📡</span><div><strong>Backend offline.</strong> The hosted API is being migrated. Browser scripts, the CLI, and docs work without it. <a href="/docs">Read the docs →</a></div></div>';
+    function showAdminOffline() {
+      if (!offlineWarned) { console.warn('Admin realtime offline. Backend is being migrated.'); offlineWarned = true; }
+      const badge = document.getElementById('connection-status');
+      if (badge) {
+        badge.className = 'status-badge status-disconnected';
+        document.getElementById('connection-text').textContent = 'Offline';
+      }
+      const container = document.getElementById('sessions-container');
+      if (container && !document.getElementById('adminOffline')) {
+        container.innerHTML = `<div id="adminOffline">${OFFLINE_HTML}</div>`;
+      }
+    }
+
+    // Connect to WebSocket as admin. Cap reconnection so a dead backend is not hammered forever.
     const socket = io(API_URL, {
-      auth: { token: authToken, role: 'admin' }
+      auth: { token: authToken, role: 'admin' },
+      reconnectionAttempts: 4,
+      timeout: 8000,
     });
 
     socket.on('connect', () => {
@@ -574,6 +605,12 @@
         alert('You do not have admin access');
         window.location.href = '/dashboard';
       }
+    });
+
+    // Stop retrying once attempts are exhausted and surface the offline notice.
+    socket.io.on('reconnect_failed', showAdminOffline);
+    socket.on('connect_error', () => {
+      if (socket.io.backoff && socket.io.backoff.attempts >= 4) showAdminOffline();
     });
 
     // Initial session list
@@ -785,7 +822,9 @@
           renderWebhookStatus(webhookData.webhooks);
         }
       } catch (err) {
-        console.error('Failed to load payment stats:', err);
+        if (!offlineWarned) { console.warn('Admin payments API offline. Backend is being migrated.'); offlineWarned = true; }
+        document.getElementById('payments-by-operation').innerHTML = OFFLINE_HTML;
+        document.getElementById('recent-payments').innerHTML = OFFLINE_HTML;
       }
     }
 

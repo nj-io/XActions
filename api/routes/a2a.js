@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * Agent-to-Agent (A2A) Task Delegation Routes
  *
@@ -7,13 +7,17 @@
  *
  * Routes:
  *   GET  /api/a2a/skills  — list all registered skills (free, no payment)
- *   POST /api/a2a/task    — submit a task, returns operationId for polling
+ *   POST /api/a2a/task    — submit a task as your XActions account (Bearer
+ *                           token); it runs with the X session you saved, or
+ *                           the sessionCookie in input
  *
  * @author nichxbt
  */
 
 import { Router } from 'express';
 import { errorResponse } from '../utils/errorResponse.js';
+import { authMiddleware } from '../middleware/auth.js';
+import { PublicUrlError, assertPublicUrl } from '../utils/publicUrl.js';
 
 const router = Router();
 
@@ -53,7 +57,9 @@ router.get('/skills', async (req, res) => {
  *   callbackUrl {string}  optional  Webhook URL — result is POSTed here on completion
  *   contextId   {string}  optional  Conversation/thread ID for multi-step workflows
  */
-router.post('/task', async (req, res) => {
+// Tasks act as an account, so they need one: anonymous tasks would run every
+// paid skill for free, outside the x402 gate.
+router.post('/task', authMiddleware, async (req, res) => {
   const { id, skill, input, callbackUrl, contextId } = req.body;
 
   if (!skill) {
@@ -64,10 +70,10 @@ router.post('/task', async (req, res) => {
   }
   if (callbackUrl) {
     try {
-      const u = new URL(callbackUrl);
-      if (!['http:', 'https:'].includes(u.protocol)) throw new Error();
-    } catch {
-      return errorResponse(res, 400, 'INVALID_INPUT', 'callbackUrl must be a valid http/https URL', { retryable: false });
+      await assertPublicUrl(callbackUrl, 'callbackUrl');
+    } catch (err) {
+      if (err instanceof PublicUrlError) return errorResponse(res, 400, 'INVALID_INPUT', err.message, { retryable: false });
+      throw err;
     }
   }
 
@@ -88,6 +94,7 @@ router.post('/task', async (req, res) => {
     const { addJob } = await import('../services/jobQueue.js');
 
     const { jobId } = await addJob(jobType, {
+      userId: req.user.id,
       config: { ...input, callbackUrl: callbackUrl || null },
       a2aTaskId: id || null,
       a2aSkill: skill,
@@ -115,6 +122,10 @@ router.post('/task', async (req, res) => {
       meta: { createdAt: new Date().toISOString() },
     });
   } catch (err) {
+    // A skill with no processor is a 501 and a refused URL a 400; only the rest are ours.
+    if (err.status >= 400 && err.status < 600) {
+      return errorResponse(res, err.status, err.code || 'TASK_FAILED', err.message, { retryable: false });
+    }
     console.error('❌ A2A task error:', err);
     return errorResponse(res, 500, 'TASK_FAILED', err.message);
   }

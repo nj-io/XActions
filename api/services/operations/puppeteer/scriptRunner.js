@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * Browser Script Runner (Puppeteer)
  *
@@ -183,7 +183,7 @@ export async function runBrowserScript(config, updateProgress, isCancelled) {
       // eval() in the page context executes both IIFEs and module-style scripts
       scriptResult = await Promise.race([
         page.evaluate((code) => {
-          return Promise.resolve(eval(code)); // eslint-disable-line no-eval
+          return Promise.resolve(eval(code));
         }, patchedCode),
         new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Script timed out')), SCRIPT_TIMEOUT_MS + 5_000)

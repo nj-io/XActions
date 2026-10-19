@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Client — Cookie Storage Integration
  *
@@ -6,7 +6,7 @@
  * Stores sessions in ~/.xactions/config.json and provides multi-session management.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 import { promises as fs } from 'node:fs';
@@ -43,8 +43,10 @@ async function readConfig() {
  * @param {Object} config
  */
 async function writeConfig(config) {
-  await fs.mkdir(dirname(CONFIG_FILE), { recursive: true });
-  await fs.writeFile(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf-8');
+  // Holds the X session: owner-only, including files an older version created.
+  await fs.mkdir(dirname(CONFIG_FILE), { recursive: true, mode: 0o700 });
+  await fs.writeFile(CONFIG_FILE, JSON.stringify(config, null, 2), { encoding: 'utf-8', mode: 0o600 });
+  await fs.chmod(CONFIG_FILE, 0o600);
 }
 
 // ============================================================================

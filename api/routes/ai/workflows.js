@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * AI Workflows Endpoints
  *
@@ -13,7 +13,7 @@ import crypto from 'crypto';
 const router = express.Router();
 
 const generateOperationId = () =>
-  `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+  `ai-${Date.now()}-${crypto.randomBytes(16).toString('hex')}`;
 
 const errorResponse = (res, statusCode, error, message, extras = {}) =>
   res.status(statusCode).json({
@@ -70,6 +70,12 @@ router.post('/create', async (req, res) => {
   const { name, description, steps, schedule } = req.body;
 
   if (!name) return res.status(400).json({ error: 'INVALID_INPUT', message: 'name is required' });
+  if (schedule) {
+    return res.status(400).json({
+      error: 'INVALID_INPUT',
+      message: 'Scheduled workflows are not supported. Save the workflow, then call POST /api/ai/workflows/run from your own scheduler.',
+    });
+  }
   if (!Array.isArray(steps) || steps.length === 0) {
     return res.status(400).json({
       error: 'INVALID_INPUT',
@@ -94,7 +100,6 @@ router.post('/create', async (req, res) => {
       config: {
         name, description: description || null,
         steps: steps.slice(0, 50),
-        schedule: schedule || null,
         sessionCookie: req.sessionCookie,
       },
       source: 'ai-api',
@@ -103,7 +108,7 @@ router.post('/create', async (req, res) => {
 
     return successResponse(res, {
       operationId, status: 'queued', type: 'workflow-create',
-      config: { name, stepCount: steps.length, scheduled: !!schedule },
+      config: { name, stepCount: Math.min(steps.length, 50) },
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 3000 },
     });
   } catch (error) {
@@ -151,24 +156,28 @@ router.post('/run', async (req, res) => {
 
 /**
  * POST /api/ai/workflows/list
- * List saved workflows
+ * List the workflows this session has saved
  */
 router.post('/list', async (req, res) => {
   const { limit = 20 } = req.body;
 
   try {
-    const { getRecentJobs } = await import('../../services/jobQueue.js');
-    const jobs = await getRecentJobs({ type: 'workflowCreate', limit: Math.min(parseInt(limit) || 20, 100) });
+    const { ownerStore, ownerKeyForSession } = await import('../../services/processors/content.processors.js');
+    const saved = await ownerStore.list(ownerKeyForSession(req.sessionCookie), 'workflows');
+    const workflows = saved.slice(0, Math.min(Math.max(parseInt(limit) || 20, 1), 100));
 
     return successResponse(res, {
-      workflows: jobs.map(j => ({
-        workflowId: j.id,
-        name: j.config?.name,
-        stepCount: j.config?.steps?.length || 0,
-        status: j.status,
-        createdAt: j.createdAt,
+      workflows: workflows.map((w) => ({
+        workflowId: w.id,
+        name: w.name,
+        description: w.description,
+        stepCount: w.steps?.length || 0,
+        steps: w.steps,
+        createdAt: w.createdAt,
+        updatedAt: w.updatedAt,
       })),
-      count: jobs.length,
+      count: workflows.length,
+      total: saved.length,
     });
   } catch (error) {
     return errorResponse(res, 500, 'ACTION_FAILED', error.message);

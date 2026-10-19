@@ -5,7 +5,10 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # Stage 1: Dependencies
-FROM node:20-slim AS deps
+FROM node:22-slim AS deps
+
+# The production stage runs the distro's Chromium, so Puppeteer's own download is wasted here.
+ENV PUPPETEER_SKIP_DOWNLOAD=true
 
 WORKDIR /app
 
@@ -19,7 +22,7 @@ RUN npm ci --omit=dev && npx prisma generate
 # ═══════════════════════════════════════════════════════════════════════════════
 # Stage 2: Production runtime
 # ═══════════════════════════════════════════════════════════════════════════════
-FROM node:20-slim AS production
+FROM node:22-slim AS production
 
 # Install Chromium and required system dependencies for Puppeteer
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -45,7 +48,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Puppeteer config — use system Chromium instead of downloading
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 ENV NODE_ENV=production
 

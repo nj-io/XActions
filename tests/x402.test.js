@@ -1,14 +1,15 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * x402 AI API Test Suite
- * 
- * Tests for the x402 payment middleware and AI endpoints.
- * Verifies that:
- * - AI endpoints return 402 without payment
- * - Payment headers are correctly formatted
- * - Human endpoints remain free
- * - Health check returns pricing info
- * 
+ * x402: the shape of the 402 challenge, and which endpoints are free.
+ *
+ * This suite runs against a mock middleware defined below, not against the real
+ * gates, so it can say nothing about whether a payment is actually verified.
+ * Treat it as a contract test for the 402 document: the fields an agent parses,
+ * the base64 PAYMENT-REQUIRED header, and the endpoints that must never be
+ * gated. Whether a payment is accepted is tested against the real modules in
+ * tests/x402-gate.test.js, and whether the prices match real routes in
+ * tests/x402-routes.test.js.
+ *
  * @author nichxbt
  */
 
@@ -268,79 +269,18 @@ describe('x402 AI API', () => {
     });
   });
   
-  describe('With valid payment', () => {
-    const createValidPayment = () => {
-      const payment = {
-        x402Version: 2,
-        scheme: 'exact',
-        network: 'eip155:84532',
-        payload: {
-          signature: '0xMockSignature',
-          from: '0xTestPayer',
-          to: '0xTestAddress',
-          value: '1000',
-          validAfter: 0,
-          validBefore: Math.floor(Date.now() / 1000) + 3600,
-          nonce: '0x1234567890abcdef',
-        },
-      };
-      return Buffer.from(JSON.stringify(payment)).toString('base64');
-    };
-    
-    it('returns 200 for AI scrape/profile with valid payment', async () => {
-      const res = await request(app)
-        .post('/api/ai/scrape/profile')
-        .set('X-PAYMENT', createValidPayment())
-        .send({ username: 'test' });
-      
-      expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.username).toBe('test');
-    });
-    
-    it('returns 200 for AI scrape/followers with valid payment', async () => {
-      const res = await request(app)
-        .post('/api/ai/scrape/followers')
-        .set('X-PAYMENT', createValidPayment())
-        .send({ username: 'test', limit: 100 });
-      
-      expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.followers).toBeInstanceOf(Array);
-    });
-    
-    it('returns 200 for AI action endpoints with valid payment', async () => {
-      const res = await request(app)
-        .post('/api/ai/action/unfollow-non-followers')
-        .set('X-PAYMENT', createValidPayment())
-        .send({ maxUnfollows: 50 });
-      
-      expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.operationId).toBeDefined();
-      expect(res.body.data.status).toBe('queued');
-    });
-    
-    it('accepts payment via PAYMENT-SIGNATURE header (alternative)', async () => {
-      const res = await request(app)
-        .post('/api/ai/scrape/profile')
-        .set('PAYMENT-SIGNATURE', createValidPayment())
-        .send({ username: 'test' });
-      
-      expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-    });
-    
-    it('indicates payment was verified in response metadata', async () => {
-      const res = await request(app)
-        .post('/api/ai/scrape/profile')
-        .set('X-PAYMENT', createValidPayment())
-        .send({ username: 'test' });
-      
-      expect(res.body.meta.paid).toBe(true);
-    });
-  });
-  
+  // What used to sit here: a "With valid payment" block that attached
+  // `signature: '0xMockSignature'` and asserted a 200. It was passing against
+  // the mock middleware defined at the top of this file, which lets any
+  // `X-PAYMENT` header through, so what it actually asserted was that an
+  // unverified header is accepted. The real gates had exactly that bug, and
+  // this suite could not have caught it because it never loads them.
+  //
+  // Payment acceptance is now tested against the real modules, with the
+  // facilitator stubbed at the fetch boundary, in tests/x402-gate.test.js.
+  // What stays here is what this fixture can honestly check: the shape of the
+  // 402 challenge, and that free endpoints stay free.
+
   describe('With invalid payment', () => {
     it('returns 402 for malformed base64 payment', async () => {
       const res = await request(app)
@@ -940,10 +880,16 @@ describe('Multi-Network Support', () => {
     
     it('should have valid USDC addresses for all networks', async () => {
       const { SUPPORTED_NETWORKS } = await import('../api/config/x402-config.js');
-      
+
+      // The address format follows the network's CAIP-2 namespace: EVM chains
+      // use a 20-byte hex contract, Solana a base58 SPL mint.
       for (const [networkId, config] of Object.entries(SUPPORTED_NETWORKS)) {
         expect(config.usdc).toBeDefined();
-        expect(config.usdc).toMatch(/^0x[a-fA-F0-9]{40}$/);
+        if (networkId.startsWith('solana:')) {
+          expect(config.usdc).toMatch(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/);
+        } else {
+          expect(config.usdc).toMatch(/^0x[a-fA-F0-9]{40}$/);
+        }
       }
     });
   });

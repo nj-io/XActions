@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth.js';
@@ -42,8 +42,7 @@ router.post('/unfollow-non-followers', async (req, res) => {
       config: { 
         maxUnfollows, 
         dryRun,
-        username: req.user.twitterUsername,
-        sessionCookie: req.user.sessionCookie
+        username: req.user.twitterUsername
       }
     });
 
@@ -84,8 +83,7 @@ router.post('/unfollow-everyone', async (req, res) => {
       config: { 
         maxUnfollows, 
         dryRun,
-        username: req.user.twitterUsername,
-        sessionCookie: req.user.sessionCookie
+        username: req.user.twitterUsername
       }
     });
 
@@ -122,8 +120,7 @@ router.post('/detect-unfollowers', async (req, res) => {
       userId: req.user.id,
       authMethod: req.user.authMethod || 'oauth',
       config: {
-        username: req.user.twitterUsername,
-        sessionCookie: req.user.sessionCookie
+        username: req.user.twitterUsername
       }
     });
 

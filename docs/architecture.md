@@ -1,6 +1,6 @@
 # Architecture
 
-> XActions v3.1.0 — System architecture, project structure, and design decisions.
+> XActions v3.5.0 — System architecture, project structure, and design decisions.
 
 ## High-Level Architecture
 
@@ -62,15 +62,16 @@ xactions/
 │   │   ├── threadExtractor.js    # Thread unrolling
 │   │   ├── followerScanner.js    # Follower change detection
 │   │   ├── jobQueue.js           # Bull queue for background jobs
+│   │   ├── processors/           # One run(ctx) per queued job type
 │   │   ├── licenseManager.js     # License key management
 │   │   └── operations/           # Operation implementations
 │   └── utils/              # Shared utilities
 │
 ├── src/                    # Core source code
 │   ├── cli/                # CLI entry point
-│   │   └── index.js        # 80+ commands (2983 lines)
+│   │   └── index.js        # 56 commands
 │   ├── mcp/                # MCP server
-│   │   └── server.js       # 87 tools (3899 lines)
+│   │   └── server.js       # 144 tools
 │   ├── scrapers/           # Multi-platform scrapers
 │   │   ├── twitter/        # Twitter Puppeteer scrapers
 │   │   ├── bluesky/        # Bluesky AT Protocol scrapers
@@ -178,6 +179,29 @@ Scripts in `src/` are designed to run standalone in a browser DevTools console �
 | Auth | JWT + bcrypt |
 | Payments | Stripe + x402 micropayments |
 
+## Background jobs
+
+Routes that take longer than a request (bulk follows, scrapes, monitors) queue
+a job and answer with an `operationId`. The worker (`npm run worker`, or the API
+process itself) runs it:
+
+- **One processor per job type.** Each `api/services/processors/*.processors.js`
+  maps job types to a `run(ctx)` function. The queue registers exactly those
+  and refuses any other type with a `501`, so a route cannot accept, or be
+  paid for, work that nothing runs. `tests/api/processors/coverage.test.js`
+  fails the build when a route queues a type with no processor.
+- **The context carries the session.** `ctx.http()` is a logged-in
+  `TwitterHttpClient`, `ctx.scraper()` the client library, `ctx.page()` a
+  Puppeteer page for what the HTTP API cannot do. The session is the cookie the
+  caller sent (AI routes) or the dashboard user's saved session, decrypted.
+- **Writes are capped.** `ctx.charge()` records write actions against the same
+  rolling 24 hour per-account caps as the MCP server.
+- **Status for 24 hours.** `GET /api/ai/action/status/:operationId` and
+  `GET /api/operations/status/:operationId` read the job by the id the route
+  returned. An agent's `GET /api/ai/action/history` lists only operations
+  queued with its own session, and the session is removed from Redis once a
+  job will not run again.
+
 ## Environment Variables
 
 | Variable | Required | Description |
@@ -187,7 +211,8 @@ Scripts in `src/` are designed to run standalone in a browser DevTools console �
 | `SESSION_SECRET` | No | Express session secret |
 | `PORT` | No | Server port (default: 3001) |
 | `NODE_ENV` | No | `development` or `production` |
-| `REDIS_URL` | No | Redis for Bull queue |
+| `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` | No | Redis for the Bull job queue |
+| `XACTIONS_WORKER_CONCURRENCY` | No | Jobs one worker process runs at once (default 8) |
 | `STRIPE_SECRET_KEY` | No | Stripe payments |
 | `OPENROUTER_API_KEY` | No | AI features (OpenRouter) |
 | `X_SESSION_COOKIE` | No | Default auth_token for CLI |
@@ -266,7 +291,7 @@ workflow run morning-engage
 | Document | Covers |
 |----------|--------|
 | [getting-started.md](getting-started.md) | Installation, quick start |
-| [cli-reference.md](cli-reference.md) | 78+ CLI commands |
+| [cli-reference.md](cli-reference.md) | 56 CLI commands |
 | [rest-api.md](rest-api.md) | 175+ REST API endpoints |
 | [mcp-setup.md](mcp-setup.md) | MCP server for AI agents |
 | [agents.md](agents.md) | Autonomous thought leader agent |
@@ -285,4 +310,4 @@ workflow run morning-engage
 
 ---
 
-*XActions v3.1.0 — by nichxbt*
+*XActions v3.5.0 — by nichxbt*

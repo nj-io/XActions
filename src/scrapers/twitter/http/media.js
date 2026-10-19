@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * Twitter/X Media Upload & Scrape via HTTP
  *
@@ -8,13 +8,14 @@
  * Depends on: client.js (TwitterHttpClient), auth.js (TwitterAuth), endpoints.js
  *
  * @author nich (@nichxbt)
- * @license MIT
+ * @license Apache-2.0
  */
 
 import { readFile, writeFile, stat } from 'node:fs/promises';
 import { createWriteStream, createReadStream } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import { extname, resolve } from 'node:path';
+import { userTimelineInstructions } from './tweets.js';
 
 // ---------------------------------------------------------------------------
 // GraphQL endpoint constants — will be imported from endpoints.js (Build 01-01)
@@ -100,6 +101,8 @@ const CATEGORY_BY_MIME = {
 
 const STATUS_POLL_INITIAL_MS = 1000;
 const STATUS_POLL_MAX_MS = 15000;
+/** Give up on server-side processing after this long rather than poll forever. */
+const STATUS_POLL_TIMEOUT_MS = 10 * 60 * 1000;
 
 // ---------------------------------------------------------------------------
 // MIME detection helpers
@@ -195,7 +198,7 @@ function requireAuth(client) {
  * @param {string} mediaType — MIME e.g. 'image/jpeg'
  * @param {string} mediaCategory — 'tweet_image' | 'tweet_video' | 'tweet_gif'
  * @param {{ onProgress?: (info: { phase: string, percent: number }) => void }} [opts]
- * @returns {Promise<{ mediaId: string, mediaKey: string|null }>}
+ * @returns {Promise<{ mediaId: string, mediaKey: string|null, expiresAfterSecs: number|null }>}
  */
 export async function uploadChunked(client, buffer, mediaType, mediaCategory, opts = {}) {
   const { onProgress } = opts;
@@ -203,14 +206,14 @@ export async function uploadChunked(client, buffer, mediaType, mediaCategory, op
   // ---- INIT ----------------------------------------------------------------
   onProgress?.({ phase: 'init', percent: 0 });
 
-  const initResp = await client.rest(UPLOAD_BASE, {
+  const initResp = await client.request(UPLOAD_BASE, {
     method: 'POST',
-    form: {
+    body: new URLSearchParams({
       command: 'INIT',
       total_bytes: String(buffer.length),
       media_type: mediaType,
       media_category: mediaCategory,
-    },
+    }),
   });
 
   const mediaId = initResp.media_id_string;
@@ -231,36 +234,32 @@ export async function uploadChunked(client, buffer, mediaType, mediaCategory, op
       percent: Math.round(((i + 1) / totalChunks) * 100),
     });
 
-    await client.rest(UPLOAD_BASE, {
-      method: 'POST',
-      multipart: {
-        command: 'APPEND',
-        media_id: mediaId,
-        segment_index: String(i),
-        media_data: chunk.toString('base64'),
-      },
-    });
+    const form = new FormData();
+    form.set('command', 'APPEND');
+    form.set('media_id', mediaId);
+    form.set('segment_index', String(i));
+    form.set('media', new Blob([chunk], { type: 'application/octet-stream' }), 'blob');
+    // X answers APPEND with an empty body; request() reads that as {}.
+    await client.request(UPLOAD_BASE, { method: 'POST', body: form });
   }
 
   // ---- FINALIZE ------------------------------------------------------------
   onProgress?.({ phase: 'finalize', percent: 100 });
 
-  const finalResp = await client.rest(UPLOAD_BASE, {
+  const finalResp = await client.request(UPLOAD_BASE, {
     method: 'POST',
-    form: {
-      command: 'FINALIZE',
-      media_id: mediaId,
-    },
+    body: new URLSearchParams({ command: 'FINALIZE', media_id: mediaId }),
   });
 
   // ---- STATUS poll (videos/GIFs with processing_info) ----------------------
-  if (finalResp.processing_info) {
-    await pollProcessingStatus(client, mediaId, onProgress);
-  }
+  const processed = finalResp.processing_info
+    ? await pollProcessingStatus(client, mediaId, onProgress)
+    : null;
 
   return {
     mediaId,
-    mediaKey: finalResp.media_key ?? null,
+    mediaKey: finalResp.media_key ?? processed?.media_key ?? null,
+    expiresAfterSecs: finalResp.expires_after_secs ?? initResp.expires_after_secs ?? null,
   };
 }
 
@@ -271,29 +270,28 @@ export async function uploadChunked(client, buffer, mediaType, mediaCategory, op
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string} mediaId
  * @param {Function} [onProgress]
+ * @returns {Promise<object>} the final STATUS response
  */
 export async function pollProcessingStatus(client, mediaId, onProgress) {
   let waitMs = STATUS_POLL_INITIAL_MS;
+  const deadline = Date.now() + STATUS_POLL_TIMEOUT_MS;
 
-  // eslint-disable-next-line no-constant-condition
   while (true) {
-    const resp = await client.rest(UPLOAD_BASE, {
-      method: 'GET',
-      params: {
-        command: 'STATUS',
-        media_id: mediaId,
-      },
-    });
+    if (Date.now() > deadline) {
+      throw new Error(`Media processing failed for ${mediaId}: still processing after ${STATUS_POLL_TIMEOUT_MS / 60000} minutes`);
+    }
+    const status = new URLSearchParams({ command: 'STATUS', media_id: mediaId });
+    const resp = await client.request(`${UPLOAD_BASE}?${status}`, { method: 'GET' });
 
     const info = resp.processing_info;
-    if (!info) return; // no processing needed
+    if (!info) return resp; // no processing needed
 
     const state = info.state; // 'pending' | 'in_progress' | 'succeeded' | 'failed'
     const progressPercent = info.progress_percent ?? 0;
 
     onProgress?.({ phase: 'processing', percent: progressPercent });
 
-    if (state === 'succeeded') return;
+    if (state === 'succeeded') return resp;
     if (state === 'failed') {
       const errMsg = info.error?.message ?? 'Media processing failed';
       throw new Error(`Media processing failed for ${mediaId}: ${errMsg}`);
@@ -428,13 +426,9 @@ export async function uploadGif(client, gifPathOrBuffer) {
 export async function setAltText(client, mediaId, altText) {
   requireAuth(client);
 
-  await client.rest(METADATA_URL, {
+  await client.request(METADATA_URL, {
     method: 'POST',
-    body: JSON.stringify({
-      media_id: mediaId,
-      alt_text: { text: altText },
-    }),
-    headers: { 'content-type': 'application/json' },
+    body: { media_id: mediaId, alt_text: { text: altText } },
   });
 }
 
@@ -515,7 +509,10 @@ export async function scrapeMedia(client, username, options = {}) {
   while (mediaItems.length < limit) {
     const variables = {
       userId,
-      count: Math.min(20, limit - mediaItems.length),
+      // `count` is tweets per page, not media items. Scaling it by the media
+      // still missing asked X for a 2-tweet page whenever two photos were
+      // left, which starved the pagination cursor and stopped the scrape.
+      count: 20,
       includePromotedContent: false,
       withClientEventToken: false,
       withBirdwatchNotes: false,
@@ -531,8 +528,7 @@ export async function scrapeMedia(client, username, options = {}) {
       DEFAULT_FEATURES,
     );
 
-    const instructions =
-      resp?.data?.user?.result?.timeline_v2?.timeline?.instructions ?? [];
+    const instructions = userTimelineInstructions(resp?.data);
 
     let foundTweets = false;
     nextCursor = null;

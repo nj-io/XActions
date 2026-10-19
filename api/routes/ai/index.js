@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * AI Agent API Routes
  *
@@ -18,6 +18,7 @@ import actionRoutes from './actions.js';
 import monitorRoutes from './monitor.js';
 import utilityRoutes from './utility.js';
 import writerRoutes from './writer.js';
+import reputationRoutes from './reputation.js';
 import postingRoutes from './posting.js';
 import engagementRoutes from './engagement.js';
 import messagesRoutes from './messages.js';
@@ -261,12 +262,17 @@ router.get('/', (req, res) => {
         'POST /api/ai/optimizer/predict': 'Predict performance',
         'POST /api/ai/optimizer/variations': 'Generate variations',
       },
+      reputation: {
+        'POST /api/ai/reputation/score': 'Risk-score a batch of posts and get a reputation report',
+        'GET /api/ai/reputation/dimensions': 'List the scoring rubric',
+      },
       writer: {
         'POST /api/ai/writer/analyze-voice': 'Analyze writing voice',
         'POST /api/ai/writer/generate': 'Generate tweets in voice',
         'POST /api/ai/writer/rewrite': 'Rewrite tweet',
         'POST /api/ai/writer/calendar': 'Content calendar',
         'POST /api/ai/writer/reply': 'Generate reply',
+        'POST /api/ai/writer/comment': 'Generate comment from a brief (no voice profile)',
       },
       utility: {
         'POST /api/ai/download/video': 'Download video',
@@ -327,29 +333,24 @@ router.get('/', (req, res) => {
       },
       account: {
         'POST /api/ai/account/backup': 'Full account backup',
-        'POST /api/ai/account/download-data': 'Request data download',
         'POST /api/ai/account/audit-followers': 'Audit followers for bots',
         'POST /api/ai/account/delegate-access': 'Manage delegate access',
         'POST /api/ai/account/verify-identity': 'Identity verification',
-        'POST /api/ai/account/upload-contacts': 'Upload contacts',
         'POST /api/ai/account/multi-account': 'Multi-account management',
         'POST /api/ai/account/join-date': 'Get account join date',
         'POST /api/ai/account/login-history': 'Login history',
         'POST /api/ai/account/connected-accounts': 'Connected accounts',
-        'POST /api/ai/account/appeal-suspension': 'Appeal suspension',
         'POST /api/ai/account/qr-code': 'Generate QR code',
       },
       ads: {
         'POST /api/ai/ads/campaigns': 'Manage ad campaigns',
         'POST /api/ai/ads/dashboard': 'Ads dashboard',
         'POST /api/ai/ads/media-studio': 'Media Studio',
-        'POST /api/ai/ads/boost': 'Boost a tweet',
         'POST /api/ai/ads/analytics': 'Ads analytics',
       },
       xpro: {
         'POST /api/ai/xpro/dashboard': 'X Pro dashboard',
         'POST /api/ai/xpro/columns': 'Manage columns',
-        'POST /api/ai/xpro/manage': 'X Pro management',
       },
       discovery: {
         'POST /api/ai/discovery/trending': 'Trending topics',
@@ -363,8 +364,6 @@ router.get('/', (req, res) => {
       },
       premium: {
         'POST /api/ai/premium/check': 'Check premium status',
-        'POST /api/ai/premium/gift': 'Gift premium',
-        'POST /api/ai/premium/subscribe': 'Subscribe to premium',
         'POST /api/ai/premium/features': 'Premium features',
       },
       settings: {
@@ -373,7 +372,6 @@ router.get('/', (req, res) => {
         'POST /api/ai/settings/protected': 'Toggle protected tweets',
         'POST /api/ai/settings/blocked': 'Manage blocked accounts',
         'POST /api/ai/settings/muted': 'Manage muted accounts',
-        'POST /api/ai/settings/download-data': 'Request data download',
         'POST /api/ai/settings/advanced': 'Advanced settings',
         'POST /api/ai/settings/block-list': 'Import/export block list',
       },
@@ -420,11 +418,11 @@ router.get('/', (req, res) => {
         'POST /api/ai/viral/headlines': 'Generate headlines',
       },
       billing: {
-        'POST /api/ai/billing/checkout': 'Create checkout session',
-        'POST /api/ai/billing/portal': 'Billing portal',
+        'POST /api/ai/billing/checkout': 'Create a Stripe checkout session (Authorization: Bearer <account token>)',
+        'POST /api/ai/billing/portal': 'Open the Stripe billing portal (Bearer token)',
         'POST /api/ai/billing/plans': 'List plans',
-        'POST /api/ai/billing/usage': 'Usage data',
-        'POST /api/ai/billing/invoices': 'List invoices',
+        'POST /api/ai/billing/usage': 'Your usage this period (Bearer token)',
+        'POST /api/ai/billing/invoices': 'Your invoices (Bearer token)',
       },
       webhooksManagement: {
         'POST /api/ai/webhooks/create': 'Create webhook',
@@ -500,6 +498,7 @@ router.use('/alert', monitorRoutes);      // backward compat: /alert/new-followe
 // the same handler chain four times per request.
 router.use(['/download', '/export', '/unroll', '/analyze'], utilityRoutes);
 router.use('/writer', writerRoutes);
+router.use('/reputation', reputationRoutes);
 
 // Mount new route modules
 router.use('/posting', postingRoutes);

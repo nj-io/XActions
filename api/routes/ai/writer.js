@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * AI Tweet Writer API Routes
  * 
@@ -10,12 +10,13 @@
  * POST /api/ai/writer/rewrite — improve an existing tweet
  * POST /api/ai/writer/calendar — generate weekly content calendar
  * POST /api/ai/writer/reply — generate a reply to a tweet
+ * POST /api/ai/writer/comment — generate a reply from a brief, no voice profile needed
  * GET  /api/ai/writer/voice-profiles — list saved voice profiles
  * 
  * Rate limit: 10 generations/minute for free tier.
  * 
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 import express from 'express';
@@ -303,6 +304,49 @@ router.post('/reply', generationLimiter, async (req, res) => {
   } catch (error) {
     res.status(500).json({
       error: 'Reply generation failed',
+      message: error.message,
+    });
+  }
+});
+
+/**
+ * Generate a comment for a post from a plain-language brief.
+ * POST /api/ai/writer/comment
+ *
+ * No voice profile needed: the brief ("be supportive, ask one question") is
+ * the whole instruction. This is what the browser sweep and `xactions engage`
+ * use, so the same request works from a script, a cron, or another agent.
+ *
+ * Body: {
+ *   tweet: { text, author?, authorName?, quotedText?, hasMedia? },
+ *   prompt, persona?, provider?, model?, apiKey?, baseUrl?,
+ *   temperature?, allowHashtags?, allowEmoji?, history?: string[]
+ * }
+ */
+router.post('/comment', generationLimiter, async (req, res) => {
+  try {
+    const { tweet, prompt, history = [], ...llm } = req.body || {};
+    if (!tweet || !tweet.text) {
+      return res.status(400).json({ error: 'tweet.text is required — the post to reply to' });
+    }
+    if (!prompt) {
+      return res.status(400).json({ error: 'prompt is required — how the comment should sound' });
+    }
+
+    const { createCommentGenerator } = await import('../../../src/ai/commentGenerator.js');
+    const generator = createCommentGenerator({ prompt, ...llm });
+    if (Array.isArray(history)) generator.history.push(...history.filter((h) => typeof h === 'string').slice(-10));
+    const result = await generator.generate(tweet);
+
+    res.json({
+      success: true,
+      data: { comment: result.text, model: result.model, attempts: result.attempts, provider: generator.target.provider },
+      operation: 'ai:generate-comment',
+    });
+  } catch (error) {
+    const status = /needs an API key|Unknown LLM provider|needs baseUrl/.test(error.message) ? 400 : 500;
+    res.status(status).json({
+      error: 'Comment generation failed',
       message: error.message,
     });
   }

@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Voice Analyzer
  * 
@@ -6,14 +6,15 @@
  * The killer feature: scrape tweets → analyze voice → generate in their style.
  * 
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 // ============================================================================
 // Stop Words (filtered from vocabulary analysis)
 // ============================================================================
 
-const STOP_WORDS = new Set([
+/** Common English words that carry no topic, shared by the text analyzers. */
+export const STOP_WORDS = new Set([
   'the', 'be', 'to', 'of', 'and', 'a', 'in', 'that', 'have', 'i',
   'it', 'for', 'not', 'on', 'with', 'he', 'as', 'you', 'do', 'at',
   'this', 'but', 'his', 'by', 'from', 'they', 'we', 'say', 'her', 'she',

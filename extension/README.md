@@ -98,7 +98,7 @@ popup.js                    service-worker.js              bridge.js            
 |---|---|
 | [Extension User Guide](../docs/extension.md) | Installation, usage, each automation explained, tips, FAQ |
 | [Extension Internal API](../docs/extension-api.md) | Message protocol, storage schema, event flow |
-| [Extension Developer Guide](../docs/extension-dev.md) | Adding automations, modifying UI, DOM selectors, testing |
+| [Extension Developer Guide](../docs/extension-api.md) | Adding automations, modifying UI, DOM selectors, testing |
 
 ## Permissions
 
@@ -115,3 +115,38 @@ popup.js                    service-worker.js              bridge.js            
 ## Credits
 
 Built by [nichxbt](https://x.com/nichxbt) as part of [XActions](https://github.com/nirholas/XActions).
+
+
+## LLM relay for page scripts
+
+x.com ships a Content-Security-Policy whose `connect-src` blocks the page from
+calling OpenRouter, OpenAI, Anthropic, or a local Ollama. The extension's
+service worker is not bound by the page's CSP, so a page script can ask it to
+make the call:
+
+```js
+window.postMessage({
+  source: 'xactions-page',
+  type: 'LLM_REQUEST',
+  id: 'any-unique-id',
+  request: {
+    provider: 'openrouter',           // openrouter | openai | anthropic | xai | ollama | custom
+    apiKey: 'sk-or-...',              // blank for ollama
+    model: 'google/gemini-2.5-flash', // provider default when omitted
+    baseUrl: '',                      // full chat-completions URL for custom
+    messages: [{ role: 'user', content: 'hi' }],
+    temperature: 0.9,
+    maxTokens: 160,
+  },
+}, '*');
+
+window.addEventListener('message', (e) => {
+  if (e.data?.source === 'xactions-extension' && e.data.type === 'LLM_RESPONSE' && e.data.id === 'any-unique-id') {
+    console.log(e.data.text, e.data.error);
+  }
+});
+```
+
+`scripts/engageProfile.js` uses this when its provider is set to **XActions
+extension (any provider)**. The key travels page, content script, service
+worker for that one request and is not stored by the extension.

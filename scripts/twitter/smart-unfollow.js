@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
  * 🧠 Smart Unfollow
@@ -30,7 +30,9 @@
  * ============================================================
  */
 
-const CONFIG = {
+// `var` (not `const`): a repeated top-level `const` paste in the same
+// DevTools tab throws "already been declared" instead of re-running.
+var CONFIG = {
   // ---- TIMING ----
   
   // Days to wait before unfollowing non-followers
@@ -83,6 +85,10 @@ const CONFIG = {
   
   const TRACKING_KEY = 'xactions_follow_tracking';
   const FOLLOWERS_KEY = 'xactions_my_current_followers';
+  // Shared with protect-active-users.js and whitelist.js so a user marked
+  // protected/whitelisted by either script is never touched here.
+  const PROTECTED_KEY = 'xactions_protected_users';
+  const WHITELIST_KEY = 'xactions_whitelist';
   
   console.log('╔════════════════════════════════════════════════════════════╗');
   console.log('║  🧠 SMART UNFOLLOW                                         ║');
@@ -196,31 +202,62 @@ const CONFIG = {
     if (saved) trackingData = JSON.parse(saved);
     console.log(`📚 Loaded ${Object.keys(trackingData).length} tracked follows`);
   } catch (e) {}
-  
+
+  // Load protected users (from protect-active-users.js: engaged likers/
+  // repliers/retweeters) and the shared whitelist (from whitelist.js) so
+  // both lists are respected here too, not just CONFIG.whitelist.
+  const protectedUsers = new Set();
+  try {
+    const saved = localStorage.getItem(PROTECTED_KEY);
+    if (saved) {
+      const data = JSON.parse(saved);
+      (data.users || []).forEach(u => u.username && protectedUsers.add(u.username.toLowerCase()));
+    }
+  } catch (e) {}
+  try {
+    const saved = localStorage.getItem(WHITELIST_KEY);
+    if (saved) {
+      const list = JSON.parse(saved);
+      (Array.isArray(list) ? list : []).forEach(u => u.username && protectedUsers.add(u.username.toLowerCase()));
+    }
+  } catch (e) {}
+  if (protectedUsers.size > 0) {
+    console.log(`🛡️ Loaded ${protectedUsers.size} protected/whitelisted users (never unfollowed)`);
+  }
+
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - CONFIG.daysToWait);
   
   let totalUnfollowed = 0;
   let scrolls = 0;
   let retries = 0;
-  
+  const seenUsers = new Set();
+
   console.log('');
   console.log('🚀 Scanning following list...');
   console.log('');
-  
+
   while (totalUnfollowed < CONFIG.maxUnfollows && scrolls < CONFIG.maxScrolls && retries < CONFIG.maxRetries) {
     const cells = document.querySelectorAll($userCell);
-    let foundAny = false;
-    
+    let newUsersThisPass = 0;
+
     for (const cell of cells) {
       if (totalUnfollowed >= CONFIG.maxUnfollows) break;
-      
+
       const username = getUsername(cell);
       if (!username) continue;
-      
-      // Skip whitelist
+
+      // Progress = new accounts appearing in the list, not just unfollow
+      // candidates. A run of mutuals must not end the session early.
+      if (!seenUsers.has(username)) {
+        seenUsers.add(username);
+        newUsersThisPass++;
+      }
+
+      // Skip whitelist (inline CONFIG list + shared whitelist.js / protect-active-users.js lists)
       if (CONFIG.whitelist.includes(username.toLowerCase())) continue;
-      
+      if (protectedUsers.has(username.toLowerCase())) continue;
+
       // Check if follows you
       if (myFollowers.has(username) || cell.querySelector($followsYou)) {
         continue; // Mutual - keep
@@ -244,9 +281,7 @@ const CONFIG = {
       // This user should be unfollowed
       const unfollowBtn = cell.querySelector($unfollowBtn);
       if (!unfollowBtn) continue;
-      
-      foundAny = true;
-      
+
       if (CONFIG.dryRun) {
         console.log(`🔍 Would unfollow: @${username}`);
         totalUnfollowed++;
@@ -280,12 +315,12 @@ const CONFIG = {
       }
     }
     
-    if (!foundAny) {
+    if (newUsersThisPass === 0) {
       retries++;
     } else {
       retries = 0;
     }
-    
+
     window.scrollTo(0, document.body.scrollHeight);
     await sleep(CONFIG.scrollDelay);
     scrolls++;

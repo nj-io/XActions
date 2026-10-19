@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
  * 🔖 Bookmark Exporter
@@ -25,7 +25,9 @@
  * ============================================================
  */
 
-const CONFIG = {
+// `var` (not `const`): a repeated top-level `const` paste in the same
+// DevTools tab throws "already been declared" instead of re-running.
+var CONFIG = {
   // Maximum bookmarks to export
   maxBookmarks: 1000,
   
@@ -86,10 +88,12 @@ const CONFIG = {
    */
   function extractBookmark(tweet) {
     try {
-      // Get tweet ID
-      const link = tweet.querySelector('a[href*="/status/"]');
+      // Get tweet ID: the timestamp's enclosing anchor is the tweet's own
+      // permalink; the first /status/ link can belong to a quoted tweet
+      const timeAnchor = tweet.querySelector('time')?.closest('a[href*="/status/"]');
+      const link = timeAnchor || tweet.querySelector('a[href*="/status/"]');
       if (!link) return null;
-      
+
       const href = link.getAttribute('href');
       const match = href.match(/\/status\/(\d+)/);
       if (!match) return null;
@@ -98,8 +102,10 @@ const CONFIG = {
       if (seenIds.has(tweetId)) return null;
       seenIds.add(tweetId);
       
-      // Get author
-      const authorLink = tweet.querySelector('a[href^="/"][role="link"]');
+      // Get author (User-Name block is the real author; a bare first link in
+      // the article can belong to a reposter's socialContext or a quoted tweet)
+      const authorLink = tweet.querySelector('[data-testid="User-Name"] a[href^="/"]') ||
+                         tweet.querySelector('a[href^="/"][role="link"]');
       const authorUsername = authorLink ? authorLink.getAttribute('href').replace('/', '').split('/')[0] : 'unknown';
       
       // Get display name
@@ -124,7 +130,7 @@ const CONFIG = {
       
       // Check for media
       const hasImage = tweet.querySelector('[data-testid="tweetPhoto"]') !== null;
-      const hasVideo = tweet.querySelector('[data-testid="videoPlayer"]') !== null;
+      const hasVideo = tweet.querySelector('[data-testid="videoPlayer"], [data-testid="videoComponent"]') !== null;
       
       // Get image URLs
       const images = [];
@@ -230,7 +236,7 @@ const CONFIG = {
       `"${b.author.name.replace(/"/g, '""')}"`,
       b.author.username,
       `"${b.text.replace(/"/g, '""').replace(/\n/g, ' ')}"`,
-      b.displayTime,
+      `"${b.displayTime.replace(/"/g, '""')}"`,
       b.metrics.likes,
       b.metrics.retweets,
       b.metrics.replies,

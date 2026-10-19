@@ -1,6 +1,6 @@
 # Real-Time Streaming
 
-> Subscribe to live tweet, follower, and mention events via polling + Socket.IO. No API keys needed.
+> Subscribe to live tweet, follower, and mention events via polling + Socket.IO, or push events straight off x.com's own event pipeline. No API keys needed.
 
 ## Overview
 
@@ -81,6 +81,187 @@ curl -X POST http://localhost:3001/api/streams/stop \
 | `tweet` | New tweets from a user | `stream:tweet:new` |
 | `follower` | Follower count changes | `stream:follower:new`, `stream:follower:lost` |
 | `mention` | Mentions of a user | `stream:mention:new` |
+
+A stream can also run on the live transport instead of polling, which adds the
+`stream:engagement`, `stream:dm` and `stream:typing` events. See
+[Live event stream](#live-event-stream).
+
+---
+
+## Live event stream
+
+Polling asks x.com "anything new?" every 15 seconds or more. The live pipeline
+is the other direction: x.com's own web client keeps one long-lived connection
+open to `https://api.x.com/live_pipeline/events` and receives frames as things
+happen. XActions speaks the same protocol, so engagement counters, DM updates
+and typing indicators arrive in under a second with no polling interval at all.
+
+Two things to know before you build on it:
+
+- **It needs a logged-in session.** Guest tokens are rejected. The connection
+  carries the `auth_token` and `ct0` cookies, exactly like every other authed
+  call in the toolkit. Without them `open()` fails with `LivePipelineAuthError`
+  before a request is made.
+- **It is not a WebSocket, whatever its reputation says.** The endpoint answers
+  an `Upgrade: websocket` request the same way it answers a plain GET, and the
+  web client reads it as a chunked HTTP response of newline-delimited JSON.
+  `createLivePipeline()` speaks that transport. Everything a WebSocket would
+  give you (push delivery, live subscription changes, automatic reconnect) is
+  here; the wire format underneath is just HTTP.
+
+### Quick start
+
+```javascript
+import { TwitterHttpClient } from 'xactions/scrapers/twitter/http';
+import { createLivePipeline, Topic } from 'xactions/streaming';
+
+// auth_token and ct0 from a logged-in session
+const client = new TwitterHttpClient({ cookies: process.env.X_COOKIES });
+
+const pipeline = createLivePipeline({
+  client,
+  topics: [Topic.tweetEngagement('1749528513')],
+  onEvent: (event) => {
+    if (event.type === 'engagement') {
+      console.log(`likes ${event.payload.likeCount}, views ${event.payload.viewCount}`);
+    }
+  },
+  onError: (err, info) => {
+    console.error(err.message, info); // { fatal, willRetry, attempt, delayMs }
+  },
+});
+
+const { sessionId } = await pipeline.open();
+console.log('live pipeline session', sessionId);
+
+// Change what you are watching without dropping the connection
+await pipeline.subscribe(Topic.tweetEngagement('1765829534'));
+await pipeline.unsubscribe(Topic.tweetEngagement('1749528513'));
+
+// Resolves once the connection is shut and every timer is cleared
+await pipeline.close();
+```
+
+### Topics
+
+A topic names one thing to watch. Build them with the `Topic` helpers rather
+than by hand, so a missing id fails at the call site instead of silently
+subscribing to nothing.
+
+| Helper | Topic string | What arrives |
+|--------|--------------|--------------|
+| `Topic.tweetEngagement(tweetId)` | `/tweet_engagement/<tweetId>` | Like, retweet, quote, reply and view counters as they change |
+| `Topic.dmUpdate(conversationId)` | `/dm_update/<conversationId>` | A new message landed in that conversation |
+| `Topic.dmTyping(conversationId)` | `/dm_typing/<conversationId>` | The other side is typing |
+
+A conversation id is either a group id (`1234567890`) or `partnerId-yourId`
+(`1234567890-9876543210`).
+
+**DM topics only attach on the opening connection.** x.com answers a
+mid-session `subscribe()` for a `dm_update` or `dm_typing` topic with an entry
+in the subscription error list, so pass them to `createLivePipeline({ topics })`
+rather than adding them later. Engagement topics can be added and removed at
+any time.
+
+### Event shape
+
+Every frame is normalised into the same object, and the untouched frame is kept
+on `raw` so nothing x.com sends is lost:
+
+```javascript
+{
+  type: 'engagement',                       // engagement | dm | typing | config | unknown
+  topic: '/tweet_engagement/1749528513',
+  payload: { tweetId: '1749528513', likeCount: 12, retweetCount: 3,
+             quoteCount: 1, replyCount: 0, viewCount: 4096,
+             viewCountState: 'EnabledWithCount' },
+  receivedAt: '2026-08-27T20:11:04.512Z',
+  raw: { topic: '...', payload: { tweet_engagement: { like_count: '12', ... } } }
+}
+```
+
+| `type` | `payload` |
+|--------|-----------|
+| `engagement` | `{ tweetId, likeCount, retweetCount, quoteCount, replyCount, viewCount, viewCountState }`, counters as numbers, `null` when the frame omits one |
+| `dm` | `{ conversationId, userId }` |
+| `typing` | `{ conversationId, userId }` |
+| `config` | `{ kind: 'session', sessionId, subscriptionTtlMillis, heartbeatMillis }` on connect, or `{ kind: 'subscriptions', errors }` after a subscription change |
+| `unknown` | `{ name, data }` for a frame key this version does not model yet |
+
+One frame can carry several payload keys, and each one becomes its own event.
+
+### Resilience
+
+| Behaviour | What happens |
+|-----------|--------------|
+| Keepalive | Blank keepalive lines re-arm a silence watchdog set to three times the heartbeat interval the server advertises. Silence past that aborts the connection and reconnects, rather than leaving a dead socket open |
+| Subscription TTL | The server expires subscriptions after `subscriptionTtlMillis`; the pipeline re-asserts the current topic set at 80% of that window |
+| Reconnect | Exponential backoff with jitter (`minDelayMs * factor^(attempt-1)`, capped at `maxDelayMs`, spread by `jitter`). Tune with `reconnect: { minDelayMs, maxDelayMs, factor, jitter, maxAttempts, random }`, or pass `reconnect: false` |
+| Resubscribe | The reconnect carries the live topic set, including topics added by `subscribe()` after the first connect |
+| Auth failure | Never retried. `LivePipelineAuthError` is fatal: refresh the cookies and open again |
+| Give up | Once `maxAttempts` reconnects are spent, `onError` fires with `{ fatal: true }` and a `reconnect_exhausted` error, and the pipeline is closed |
+| `close()` | Resolves after the read loop and the reconnect supervisor have both finished, so nothing is left running behind it |
+
+### Using it from the stream manager
+
+`createStream()` takes a `transport` option. It defaults to `poll`, so existing
+streams behave exactly as before.
+
+```javascript
+import { createStream } from 'xactions/streaming';
+
+const stream = await createStream({
+  type: 'tweet',
+  username: 'elonmusk',
+  transport: 'live',
+  topics: ['/tweet_engagement/1749528513'],
+  cookies: process.env.X_COOKIES,   // auth_token AND ct0
+});
+```
+
+Events reach Socket.IO clients and the stream history under
+`stream:engagement`, `stream:dm` and `stream:typing`, alongside the polling
+events, each tagged `transport: 'live'`:
+
+```javascript
+socket.on('stream:engagement', (data) => {
+  // { streamId, username, transport: 'live', topic, data: { likeCount, ... }, timestamp }
+});
+```
+
+**Polling is always the fallback.** If the pipeline cannot open (no topics, no
+logged-in session, x.com unreachable) or gives up reconnecting later, the
+manager logs the reason once, sets `transportFallbackReason` on the stream, and
+schedules the normal poll job. A live stream never leaves you with no data.
+
+`updateStream(streamId, { topics })` diffs the topic set and applies it to the
+running session, so a watch list can change without a reconnect.
+
+### API reference
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `createLivePipeline(options)` | `({ client, topics?, onEvent?, onError?, reconnect?, fetch?, eventsUrl?, subscriptionsUrl?, openTimeoutMs?, heartbeatTimeoutMs? }) → LivePipeline` | Build a pipeline. Nothing connects until `open()` |
+| `pipeline.open()` | `() → Promise<{ sessionId, topics }>` | Connect and resolve on the session config frame. Rejects without retrying, so a caller can fall back |
+| `pipeline.subscribe(topics)` | `(string\|string[]) → Promise<{ topics, errors, raw }\|null>` | Add topics to the running session |
+| `pipeline.unsubscribe(topics)` | `(string\|string[]) → Promise<{ topics, errors, raw }\|null>` | Drop topics from the running session |
+| `pipeline.close()` | `() → Promise<void>` | Shut the connection down and settle |
+| `pipeline.sessionId` / `.topics` / `.isOpen` / `.state` / `.stats` | getters | Session id, live topic set, and counters (`connects`, `reconnects`, `frames`, `events`, `malformedFrames`, `lastFrameAt`, `lastError`) |
+| `Topic` | object | `tweetEngagement`, `dmUpdate`, `dmTyping` |
+| `normalizeFrame(frame)` | `(object) → Event[]` | Frame to typed events, exported for anyone parsing captured traffic |
+| `computeBackoffDelay(attempt, opts)` | `(number, object) → number` | The reconnect schedule, exported so it can be reasoned about and tested |
+| `LivePipelineError` / `LivePipelineAuthError` | classes | Typed failures. `LivePipelineError.code` is one of `not_open`, `no_config`, `open_timeout`, `http_error`, `no_body`, `parse_error`, `handler_error`, `heartbeat_timeout`, `stream_closed`, `reconnect_exhausted` |
+
+### What x.com may change
+
+This is x.com's internal pipeline, not a documented API. The endpoint paths,
+the frame keys, and the topic shapes here were read from the live service and
+can change without notice. Two design choices keep that from being a cliff: an
+unrecognised payload key arrives as an `unknown` event with the raw frame
+attached rather than being dropped, and the stream manager falls back to
+polling whenever the pipeline stops working. If frames stop arriving, check
+`pipeline.stats.malformedFrames` and the `raw` payload of an `unknown` event
+before assuming the session is at fault.
 
 ---
 

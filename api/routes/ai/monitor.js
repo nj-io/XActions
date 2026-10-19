@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * AI Monitoring Endpoints
  * 
@@ -10,6 +10,12 @@
 
 import express from 'express';
 import crypto from 'crypto';
+import { createJobContext } from '../../services/processors/context.js';
+import messagingProcessors, {
+  handleMonitorAction,
+  sessionOwnerKey,
+  snapshots,
+} from '../../services/processors/messaging.processors.js';
 
 const router = express.Router();
 
@@ -17,7 +23,7 @@ const router = express.Router();
  * Generate unique operation ID
  */
 const generateOperationId = () => {
-  return `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+  return `ai-${Date.now()}-${crypto.randomBytes(16).toString('hex')}`;
 };
 
 /**
@@ -35,14 +41,11 @@ const errorResponse = (res, statusCode, error, message, extras = {}) => {
   });
 };
 
-// Require session cookie for monitoring
+// Require session cookie for monitoring. Snapshots and monitors belong to the
+// session that made them, so reading them needs the same session (a GET sends
+// it as the X-Session-Cookie header).
 router.use(async (req, res, next) => {
-  // Skip for certain read-only endpoints
-  if (req.path.startsWith('/snapshot/') && req.method === 'GET') {
-    return next();
-  }
-  
-  const sessionCookie = req.body.sessionCookie || req.headers['x-session-cookie'];
+  const sessionCookie = req.body?.sessionCookie || req.headers['x-session-cookie'];
   
   if (!sessionCookie) {
     return res.status(400).json({
@@ -54,7 +57,16 @@ router.use(async (req, res, next) => {
   }
   
   req.sessionCookie = sessionCookie;
+  req.ownerKey = sessionOwnerKey(sessionCookie);
   next();
+});
+
+/** How to manage a monitor from the route that started it. */
+const manageLinks = (endpoint, idField, id) => ({
+  status: { method: 'POST', endpoint, body: { action: 'status', [idField]: id } },
+  stop: { method: 'POST', endpoint, body: { action: 'stop', [idField]: id } },
+  pause: { method: 'POST', endpoint, body: { action: 'pause', [idField]: id } },
+  resume: { method: 'POST', endpoint, body: { action: 'resume', [idField]: id } },
 });
 
 /**
@@ -242,37 +254,43 @@ router.post('/following', async (req, res) => {
 
 /**
  * GET /api/ai/monitor/snapshot/:username
- * Get latest monitoring snapshot for a username
+ * The latest snapshot this session took of a username (monitor/account first,
+ * then monitor/followers or monitor/following).
  */
 router.get('/snapshot/:username', async (req, res) => {
-  const { username } = req.params;
-  const cleanUsername = username.replace(/^@/, '').toLowerCase();
-  
+  const cleanUsername = req.params.username.replace(/^@/, '').toLowerCase();
+
   try {
-    const { getLatestSnapshot } = await import('../../services/monitoring.js');
-    const snapshot = await getLatestSnapshot(cleanUsername);
-    
+    const candidates = await Promise.all(
+      ['account', 'followers', 'following'].map((kind) => snapshots.latest(req.ownerKey, kind, cleanUsername)),
+    );
+    const snapshot = candidates.find(Boolean);
+
     if (!snapshot) {
       return res.status(404).json({
         error: 'NOT_FOUND',
         code: 'E_NO_SNAPSHOT',
-        message: `No monitoring snapshot found for @${cleanUsername}`,
+        message: `No monitoring snapshot of @${cleanUsername} was taken with this session`,
         hint: 'Create a snapshot first using POST /api/ai/monitor/account',
       });
     }
-    
+
     res.json({
       success: true,
       data: {
         username: cleanUsername,
         snapshot: {
           id: snapshot.id,
+          kind: snapshot.kind,
           createdAt: snapshot.createdAt,
+          profile: snapshot.profile || null,
           stats: snapshot.stats || null,
-          followerCount: snapshot.followerCount,
-          followingCount: snapshot.followingCount,
-          followers: snapshot.includesFollowersList ? snapshot.followers : null,
-          following: snapshot.includesFollowingList ? snapshot.following : null,
+          followerCount: snapshot.stats?.followers ?? snapshot.followers?.total ?? null,
+          followingCount: snapshot.stats?.following ?? snapshot.following?.total ?? null,
+          followers: snapshot.followers ? snapshot.followers.entries.map(([, handle]) => handle) : null,
+          following: snapshot.following ? snapshot.following.entries.map(([, handle]) => handle) : null,
+          followersComplete: snapshot.followers?.complete ?? null,
+          followingComplete: snapshot.following?.complete ?? null,
         },
       },
       meta: {
@@ -286,10 +304,10 @@ router.get('/snapshot/:username', async (req, res) => {
 
 /**
  * POST /api/ai/monitor/compare
- * Compare two snapshots to see differences
+ * Compare two snapshots: the latest two of a username, or two by id
  */
 router.post('/compare', async (req, res) => {
-  const { username, snapshotId1, snapshotId2 } = req.body;
+  const { username, snapshotId1, snapshotId2, kind = 'account' } = req.body;
   
   if (!username && (!snapshotId1 || !snapshotId2)) {
     return res.status(400).json({
@@ -297,59 +315,68 @@ router.post('/compare', async (req, res) => {
       message: 'Either username (to compare latest with previous) or both snapshotId1 and snapshotId2 are required',
       schema: {
         username: { type: 'string', description: 'Compare latest with previous for this user' },
+        kind: { type: 'string', enum: ['account', 'followers', 'following'], default: 'account' },
         snapshotId1: { type: 'string', description: 'First snapshot ID (older)' },
         snapshotId2: { type: 'string', description: 'Second snapshot ID (newer)' },
       },
     });
   }
+  if (!['account', 'followers', 'following'].includes(kind)) {
+    return res.status(400).json({ error: 'INVALID_INPUT', message: 'kind must be account, followers or following' });
+  }
   
   try {
-    const { compareSnapshots } = await import('../../services/monitoring.js');
-    const comparison = await compareSnapshots({
-      username: username?.replace(/^@/, '').toLowerCase(),
-      snapshotId1,
-      snapshotId2,
-    });
-    
-    if (!comparison) {
-      return res.status(404).json({
-        error: 'NOT_FOUND',
-        message: 'Could not find snapshots to compare',
-      });
+    let older;
+    let newer;
+    if (snapshotId1 && snapshotId2) {
+      [older, newer] = await Promise.all([snapshots.find(req.ownerKey, snapshotId1), snapshots.find(req.ownerKey, snapshotId2)]);
+    } else {
+      [newer, older] = await snapshots.history(req.ownerKey, kind, username.replace(/^@/, '').toLowerCase(), 2);
     }
     
+    if (!older || !newer) {
+      return res.status(404).json({
+        error: 'NOT_FOUND',
+        message: 'Two snapshots taken with this session are needed. Take another with POST /api/ai/monitor/account (or /followers, /following).',
+      });
+    }
+    if (older.kind !== newer.kind || older.username !== newer.username) {
+      return res.status(400).json({ error: 'INVALID_INPUT', message: 'Both snapshots must be of the same account and kind' });
+    }
+    if (older.createdAt > newer.createdAt) [older, newer] = [newer, older];
+
+    const followers = older.followers && newer.followers ? snapshots.diffList(older.followers, newer.followers) : null;
+    const following = older.following && newer.following ? snapshots.diffList(older.following, newer.following) : null;
+    const profile = older.kind === 'account' ? snapshots.diffAccount(older, newer).profile : [];
+    const ms = Date.parse(newer.createdAt) - Date.parse(older.createdAt);
+    const count = (snap, list) => snap.stats?.[list] ?? snap[list]?.total ?? null;
+
     res.json({
       success: true,
       data: {
-        username: comparison.username,
+        username: newer.username,
+        kind: newer.kind,
         comparison: {
-          from: {
-            snapshotId: comparison.snapshot1.id,
-            createdAt: comparison.snapshot1.createdAt,
-            followerCount: comparison.snapshot1.followerCount,
-            followingCount: comparison.snapshot1.followingCount,
-          },
-          to: {
-            snapshotId: comparison.snapshot2.id,
-            createdAt: comparison.snapshot2.createdAt,
-            followerCount: comparison.snapshot2.followerCount,
-            followingCount: comparison.snapshot2.followingCount,
-          },
+          from: { snapshotId: older.id, createdAt: older.createdAt, followerCount: count(older, 'followers'), followingCount: count(older, 'following') },
+          to: { snapshotId: newer.id, createdAt: newer.createdAt, followerCount: count(newer, 'followers'), followingCount: count(newer, 'following') },
           changes: {
-            followers: {
-              gained: comparison.followersGained || [],
-              lost: comparison.followersLost || [],
-              netChange: (comparison.followersGained?.length || 0) - (comparison.followersLost?.length || 0),
+            profile,
+            followers: followers && {
+              gained: followers.gained,
+              lost: followers.lost,
+              lossesKnown: followers.lossesKnown,
+              netChange: followers.netChange,
             },
-            following: {
-              added: comparison.followingAdded || [],
-              removed: comparison.followingRemoved || [],
-              netChange: (comparison.followingAdded?.length || 0) - (comparison.followingRemoved?.length || 0),
+            following: following && {
+              added: following.gained,
+              removed: following.lost,
+              removalsKnown: following.lossesKnown,
+              netChange: following.netChange,
             },
           },
           timeBetween: {
-            ms: Date.parse(comparison.snapshot2.createdAt) - Date.parse(comparison.snapshot1.createdAt),
-            human: comparison.timeBetweenHuman,
+            ms,
+            human: ms >= 86_400_000 ? `${Math.round(ms / 86_400_000)} days` : ms >= 3_600_000 ? `${Math.round(ms / 3_600_000)} hours` : `${Math.round(ms / 60_000)} minutes`,
           },
         },
       },
@@ -364,9 +391,13 @@ router.post('/compare', async (req, res) => {
 
 /**
  * POST /api/ai/alert/new-followers
- * Get new followers since last check
+ * New and lost followers since this session's last check, answered inline
  */
-router.post('/alert/new-followers', async (req, res) => {
+// Also reachable as /new-followers, which is what /api/ai/alert/new-followers
+// resolves to once index.js mounts this router at /alert. Without the alias the
+// backward-compatible path that mount exists to serve was
+// /api/ai/alert/alert/new-followers, which nothing was ever told to call.
+router.post(['/alert/new-followers', '/new-followers'], async (req, res) => {
   const { username } = req.body;
   
   if (!username) {
@@ -378,91 +409,67 @@ router.post('/alert/new-followers', async (req, res) => {
   }
   
   const cleanUsername = username.replace(/^@/, '').toLowerCase();
+  const startTime = Date.now();
+  const ctx = createJobContext({
+    id: generateOperationId(),
+    name: 'monitorFollowers',
+    data: {
+      type: 'monitorFollowers',
+      sessionHash: req.ownerKey.slice('session:'.length),
+      config: { username: cleanUsername, compareWithPrevious: true, limit: 200, sessionCookie: req.sessionCookie },
+    },
+  });
   
   try {
-    const startTime = Date.now();
-    
-    // Get current followers and compare with stored snapshot
-    const { scrapeFollowers } = await import('../../services/browserAutomation.js');
-    const { getLatestSnapshot, saveSnapshot } = await import('../../services/monitoring.js');
-    
-    // Get current followers (limited for speed)
-    const current = await scrapeFollowers(req.sessionCookie, cleanUsername, { limit: 200 });
-    const currentUsernames = new Set((current.users || []).map(u => u.username.toLowerCase()));
-    
-    // Get previous snapshot
-    const previous = await getLatestSnapshot(cleanUsername);
-    
-    let newFollowers = [];
-    let lostFollowers = [];
-    
-    if (previous && previous.followers) {
-      const previousUsernames = new Set(previous.followers.map(u => u.toLowerCase()));
-      
-      // Find new followers
-      newFollowers = (current.users || [])
-        .filter(u => !previousUsernames.has(u.username.toLowerCase()))
-        .map(u => ({
-          username: u.username,
-          displayName: u.name || u.displayName,
-          bio: u.bio || null,
-          verified: u.verified || false,
-        }));
-      
-      // Find lost followers (from recent followers)
-      lostFollowers = previous.followers
-        .filter(username => !currentUsernames.has(username.toLowerCase()))
-        .slice(0, 50); // Limit to recent
-    }
-    
-    // Save new snapshot
-    await saveSnapshot(cleanUsername, {
-      followers: (current.users || []).map(u => u.username.toLowerCase()),
-      followerCount: current.users?.length || 0,
-    });
-    
+    const result = await messagingProcessors.monitorFollowers.run(ctx);
+    const gained = result.gained || [];
+    const lost = result.lost || [];
     res.json({
       success: true,
       data: {
         username: cleanUsername,
         newFollowers: {
-          count: newFollowers.length,
-          users: newFollowers.slice(0, 100), // Limit response size
+          count: gained.length,
+          users: gained.slice(0, 100),
         },
         lostFollowers: {
-          count: lostFollowers.length,
-          usernames: lostFollowers,
+          count: lost.length,
+          usernames: lost.map((u) => u.username),
+          known: result.lossesKnown ?? false,
         },
-        currentFollowerCount: currentUsernames.size,
-        previousCheck: previous ? {
-          at: previous.createdAt,
-          followerCount: previous.followerCount,
+        currentFollowerCount: result.total,
+        previousCheck: result.previousSnapshot ? {
+          at: result.previousSnapshot.createdAt,
+          followerCount: result.previousSnapshot.total,
         } : null,
-        isFirstCheck: !previous,
+        isFirstCheck: result.isBaseline,
       },
       meta: {
         scrapedAt: new Date().toISOString(),
         durationMs: Date.now() - startTime,
-        note: !previous ? 'First check - baseline saved for future comparisons' : null,
+        note: result.isBaseline ? 'First check - baseline saved for future comparisons' : null,
       },
     });
   } catch (error) {
+    if (error.name === 'JobInputError' || error.name === 'XSessionError') {
+      return errorResponse(res, error.status || 400, 'INVALID_INPUT', error.message, { retryable: false });
+    }
     console.error('❌ New followers alert error:', error);
     return errorResponse(res, 500, 'ALERT_FAILED', error.message);
+  } finally {
+    await ctx.dispose();
   }
 });
 
 /**
  * DELETE /api/ai/monitor/snapshot/:username
- * Delete monitoring data for a username
+ * Delete this session's snapshots of a username
  */
 router.delete('/snapshot/:username', async (req, res) => {
-  const { username } = req.params;
-  const cleanUsername = username.replace(/^@/, '').toLowerCase();
+  const cleanUsername = req.params.username.replace(/^@/, '').toLowerCase();
   
   try {
-    const { deleteSnapshots } = await import('../../services/monitoring.js');
-    const deleted = await deleteSnapshots(cleanUsername);
+    const deleted = await snapshots.remove(req.ownerKey, cleanUsername);
     
     res.json({
       success: true,
@@ -481,16 +488,13 @@ router.delete('/snapshot/:username', async (req, res) => {
 
 /**
  * GET /api/ai/monitor/list
- * List all monitored accounts
+ * Accounts this session has snapshots of
  */
 router.get('/list', async (req, res) => {
-  const { limit = 50 } = req.query;
+  const limit = Math.min(parseInt(req.query.limit) || 50, 200);
   
   try {
-    const { listMonitoredAccounts } = await import('../../services/monitoring.js');
-    const accounts = await listMonitoredAccounts({
-      limit: Math.min(parseInt(limit) || 50, 200),
-    });
+    const accounts = (await snapshots.accounts(req.ownerKey)).slice(0, limit);
     
     res.json({
       success: true,
@@ -501,6 +505,7 @@ router.get('/list', async (req, res) => {
           snapshotCount: a.snapshotCount,
           latestFollowerCount: a.latestFollowerCount,
           latestFollowingCount: a.latestFollowingCount,
+          kinds: a.kinds,
         })),
         count: accounts.length,
       },
@@ -515,28 +520,20 @@ router.get('/list', async (req, res) => {
 
 /**
  * POST /api/ai/monitor/keyword
- * Start monitoring a keyword for new mentions
+ * Start monitoring a keyword for new posts, or (with action) list, read,
+ * pause, resume or stop a keyword monitor
  */
 router.post('/keyword', async (req, res) => {
-  const { keyword, interval = '15m', action = 'start', monitorId } = req.body;
-
-  if (action === 'start' && !keyword) {
-    return res.status(400).json({ error: 'INVALID_INPUT', message: 'keyword is required' });
-  }
+  const { keyword, interval = '15m' } = req.body;
 
   try {
-    const { queueJob, cancelJob, getRecentJobs } = await import('../../services/jobQueue.js');
-
-    if (action === 'stop' && monitorId) {
-      await cancelJob(monitorId);
-      return res.json({ success: true, data: { monitorId, status: 'stopped' } });
+    if (await handleMonitorAction(req, res, { type: 'monitorKeyword', session: req.sessionCookie })) return;
+    if (req.body.action && req.body.action !== 'start') {
+      return res.status(400).json({ error: 'INVALID_INPUT', message: 'action must be start, list, status, pause, resume or stop' });
     }
+    if (!keyword) return res.status(400).json({ error: 'INVALID_INPUT', message: 'keyword is required' });
 
-    if (action === 'list') {
-      const jobs = await getRecentJobs({ type: 'monitorKeyword', limit: 20 });
-      return res.json({ success: true, data: { monitors: jobs.map(j => ({ monitorId: j.id, keyword: j.config?.keyword, status: j.status })) } });
-    }
-
+    const { queueJob } = await import('../../services/jobQueue.js');
     const operationId = generateOperationId();
     await queueJob({
       id: operationId,
@@ -551,6 +548,7 @@ router.post('/keyword', async (req, res) => {
       data: {
         monitorId: operationId, status: 'started', keyword, interval,
         polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 60000 },
+        manage: manageLinks('/api/ai/monitor/keyword', 'monitorId', operationId),
       },
     });
   } catch (error) {
@@ -560,21 +558,20 @@ router.post('/keyword', async (req, res) => {
 
 /**
  * POST /api/ai/monitor/follower-alerts
- * Get notifications when specific accounts follow/unfollow
+ * Get notifications when an account gains or loses followers, or (with
+ * action) list, read, pause, resume or stop an alert
  */
 router.post('/follower-alerts', async (req, res) => {
-  const { username, webhookUrl, action = 'start', alertId } = req.body;
+  const { username, webhookUrl } = req.body;
 
   try {
-    const { queueJob, cancelJob } = await import('../../services/jobQueue.js');
-
-    if (action === 'stop' && alertId) {
-      await cancelJob(alertId);
-      return res.json({ success: true, data: { alertId, status: 'stopped' } });
+    if (await handleMonitorAction(req, res, { type: 'followerAlerts', idField: 'alertId', session: req.sessionCookie })) return;
+    if (req.body.action && req.body.action !== 'start') {
+      return res.status(400).json({ error: 'INVALID_INPUT', message: 'action must be start, list, status, pause, resume or stop' });
     }
-
     if (!username) return res.status(400).json({ error: 'INVALID_INPUT', message: 'username is required' });
 
+    const { queueJob } = await import('../../services/jobQueue.js');
     const operationId = generateOperationId();
     await queueJob({
       id: operationId,
@@ -594,6 +591,7 @@ router.post('/follower-alerts', async (req, res) => {
         alertId: operationId, status: 'started',
         username: username.replace(/^@/, '').toLowerCase(),
         polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 300000 },
+        manage: manageLinks('/api/ai/monitor/follower-alerts', 'alertId', operationId),
       },
     });
   } catch (error) {
@@ -603,10 +601,17 @@ router.post('/follower-alerts', async (req, res) => {
 
 /**
  * POST /api/ai/monitor/track-engagement
- * Track engagement on specific tweets over time
+ * Track engagement on specific tweets over time, or (with action) list,
+ * read, pause, resume or stop a tracker
  */
 router.post('/track-engagement', async (req, res) => {
   const { tweetIds, tweetUrls, interval = '1h', duration = '24h' } = req.body;
+
+  try {
+    if (await handleMonitorAction(req, res, { type: 'trackEngagement', session: req.sessionCookie })) return;
+  } catch (error) {
+    return errorResponse(res, 500, 'MONITOR_FAILED', error.message);
+  }
 
   const urls = tweetUrls || [];
   const ids = tweetIds || [];
@@ -637,9 +642,10 @@ router.post('/track-engagement', async (req, res) => {
     return res.json({
       success: true,
       data: {
-        operationId, status: 'queued', type: 'track-engagement',
-        config: { tweetCount: allIds.length, interval, duration },
+        operationId, monitorId: operationId, status: 'queued', type: 'track-engagement',
+        config: { tweetCount: Math.min(allIds.length, 20), interval, duration },
         polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 60000 },
+        manage: manageLinks('/api/ai/monitor/track-engagement', 'monitorId', operationId),
       },
     });
   } catch (error) {

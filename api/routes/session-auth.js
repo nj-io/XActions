@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import express from 'express';
 import crypto from 'crypto';
 import { body, validationResult } from 'express-validator';
@@ -9,10 +9,13 @@ import browserAutomation from '../services/browserAutomation.js';
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Encryption helpers for session cookies
-const ENCRYPTION_KEY = process.env.SESSION_SECRET || process.env.JWT_SECRET;
+// Encryption helpers for session cookies.
+// COOKIE_ENCRYPTION_KEY is the dedicated key; SESSION_SECRET / JWT_SECRET remain
+// as fallbacks so existing deployments keep decrypting what they already stored.
+const ENCRYPTION_KEY =
+  process.env.COOKIE_ENCRYPTION_KEY || process.env.SESSION_SECRET || process.env.JWT_SECRET;
 if (!ENCRYPTION_KEY && process.env.NODE_ENV === 'production') {
-  console.error('❌ SESSION_SECRET or JWT_SECRET must be set in production');
+  console.error('❌ COOKIE_ENCRYPTION_KEY (or SESSION_SECRET / JWT_SECRET) must be set in production');
   process.exit(1);
 }
 const ALGORITHM = 'aes-256-gcm';

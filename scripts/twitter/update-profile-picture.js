@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
  * 🖼️ Update Profile Picture
@@ -28,7 +28,9 @@
  * ============================================================
  */
 
-const CONFIG = {
+// `var` (not `const`): a repeated top-level `const` paste in the same
+// DevTools tab throws "already been declared" instead of re-running.
+var CONFIG = {
   // Delay for UI interactions (ms)
   actionDelay: 1500,
   
@@ -48,7 +50,7 @@ const CONFIG = {
   // DOM Selectors
   const $editProfileBtn = '[data-testid="editProfileButton"]';
   const $avatarImageInput = 'input[data-testid="fileInput"][accept*="image"]';
-  const $addAvatarBtn = '[data-testid="addAvatarButton"]';
+  const $addAvatarBtn = '[data-testid="addAvatarButton"], [data-testid="editProfileAvatar"]';
   const $avatarContainer = '[data-testid="UserAvatar-Container"]';
   const $saveButton = '[data-testid="Profile_Save_Button"]';
   

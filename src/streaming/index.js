@@ -1,9 +1,9 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Streaming — barrel export
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 export {
@@ -20,9 +20,27 @@ export {
   isHealthy,
   setIO,
   shutdown,
+  attachLiveTransport,
+  detachLiveTransport,
   STREAM_TYPES,
+  TRANSPORTS,
   getPoolStatus,
 } from './streamManager.js';
+
+export {
+  createLivePipeline,
+  computeBackoffDelay,
+  normalizeFrame,
+  parseTopic,
+  Topic,
+  LivePipeline,
+  LivePipelineError,
+  LivePipelineAuthError,
+  LIVE_EVENT_TYPES,
+  LIVE_PIPELINE_EVENTS_URL,
+  LIVE_PIPELINE_SUBSCRIPTIONS_URL,
+  DEFAULT_RECONNECT,
+} from './livePipeline.js';
 
 export { pollTweets } from './tweetStream.js';
 export { pollFollowers } from './followerStream.js';

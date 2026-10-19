@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * Tests for src/scrapers/twitter/http/media.js
  *
@@ -24,10 +24,22 @@ import {
   getVideoUrl,
   parseMediaEntity,
 } from '../../src/scrapers/twitter/http/media.js';
+import { TwitterHttpClient } from '../../src/scrapers/twitter/http/client.js';
 
 // ---------------------------------------------------------------------------
 // Client mock factory
 // ---------------------------------------------------------------------------
+
+/** The string fields of a request, from a form, multipart, JSON body or query. */
+function fieldsOf(url, opts = {}) {
+  const body = opts.body;
+  if (body instanceof URLSearchParams || body instanceof FormData) {
+    return Object.fromEntries([...body.entries()].filter(([, v]) => typeof v === 'string'));
+  }
+  const query = new URL(url).searchParams;
+  if (query.has('command')) return Object.fromEntries(query);
+  return body && typeof body === 'object' ? body : {};
+}
 
 function createMockClient({ authenticated = true } = {}) {
   const calls = [];
@@ -37,29 +49,22 @@ function createMockClient({ authenticated = true } = {}) {
     isAuthenticated: vi.fn(() => authenticated),
     AuthError: Error,
 
-    rest: vi.fn(async (url, opts = {}) => {
-      calls.push({ type: 'rest', url, opts });
-
-      // Route by command in form / multipart / params
-      const command =
-        opts.form?.command ?? opts.multipart?.command ?? opts.params?.command;
+    request: vi.fn(async (url, opts = {}) => {
+      const fields = fieldsOf(url, opts);
+      calls.push({ type: 'request', url, opts, fields });
+      const command = fields.command;
 
       if (command === 'INIT') {
         return { media_id_string: '1234567890', media_id: 1234567890 };
       }
       if (command === 'APPEND') {
-        return null; // APPEND returns nothing on success
+        return {}; // APPEND answers with an empty body
       }
       if (command === 'FINALIZE') {
         return { media_id_string: '1234567890', media_key: '3_1234567890' };
       }
       if (command === 'STATUS') {
         return { processing_info: { state: 'succeeded', progress_percent: 100 } };
-      }
-
-      // metadata/create
-      if (url.includes('metadata/create')) {
-        return {};
       }
 
       return {};
@@ -285,11 +290,11 @@ describe('media — INIT request format', () => {
     await uploadChunked(client, buffer, 'image/jpeg', 'tweet_image');
 
     const initCall = client._calls.find(
-      (c) => c.type === 'rest' && c.opts.form?.command === 'INIT',
+      (c) => c.fields.command === 'INIT',
     );
     expect(initCall).toBeDefined();
     expect(initCall.opts.method).toBe('POST');
-    expect(initCall.opts.form).toEqual({
+    expect(initCall.fields).toEqual({
       command: 'INIT',
       total_bytes: '1024',
       media_type: 'image/jpeg',
@@ -307,12 +312,12 @@ describe('media — APPEND chunking', () => {
     await uploadChunked(client, buffer, 'video/mp4', 'tweet_video');
 
     const appendCalls = client._calls.filter(
-      (c) => c.type === 'rest' && c.opts.multipart?.command === 'APPEND',
+      (c) => c.fields.command === 'APPEND',
     );
 
     expect(appendCalls).toHaveLength(2);
-    expect(appendCalls[0].opts.multipart.segment_index).toBe('0');
-    expect(appendCalls[1].opts.multipart.segment_index).toBe('1');
+    expect(appendCalls[0].fields.segment_index).toBe('0');
+    expect(appendCalls[1].fields.segment_index).toBe('1');
   });
 
   it('sends a single chunk for a small file', async () => {
@@ -322,7 +327,7 @@ describe('media — APPEND chunking', () => {
     await uploadChunked(client, buffer, 'image/png', 'tweet_image');
 
     const appendCalls = client._calls.filter(
-      (c) => c.type === 'rest' && c.opts.multipart?.command === 'APPEND',
+      (c) => c.fields.command === 'APPEND',
     );
     expect(appendCalls).toHaveLength(1);
   });
@@ -351,10 +356,10 @@ describe('media — FINALIZE request', () => {
     const result = await uploadChunked(client, buffer, 'image/jpeg', 'tweet_image');
 
     const finalizeCall = client._calls.find(
-      (c) => c.type === 'rest' && c.opts.form?.command === 'FINALIZE',
+      (c) => c.fields.command === 'FINALIZE',
     );
     expect(finalizeCall).toBeDefined();
-    expect(finalizeCall.opts.form).toEqual({
+    expect(finalizeCall.fields).toEqual({
       command: 'FINALIZE',
       media_id: '1234567890',
     });
@@ -367,12 +372,12 @@ describe('media — video processing status polling', () => {
   it('polls until succeeded', async () => {
     let callCount = 0;
     const client = createMockClient();
-    // Override rest to simulate pending → succeeded
-    client.rest = vi.fn(async (url, opts) => {
-      const command = opts.form?.command ?? opts.multipart?.command ?? opts.params?.command;
+    // Override request to simulate pending, then succeeded
+    client.request = vi.fn(async (url, opts) => {
+      const command = fieldsOf(url, opts).command;
 
       if (command === 'INIT') return { media_id_string: '555' };
-      if (command === 'APPEND') return null;
+      if (command === 'APPEND') return {};
       if (command === 'FINALIZE') {
         return {
           media_id_string: '555',
@@ -402,16 +407,16 @@ describe('media — video processing status polling', () => {
     expect(result.mediaId).toBe('555');
 
     // Should have polled STATUS multiple times
-    const statusCalls = client.rest.mock.calls.filter(
-      ([, opts]) => opts.params?.command === 'STATUS',
+    const statusCalls = client.request.mock.calls.filter(
+      ([url, opts]) => fieldsOf(url, opts).command === 'STATUS',
     );
     expect(statusCalls.length).toBeGreaterThanOrEqual(3);
   });
 
   it('throws on processing failure', async () => {
     const client = createMockClient();
-    client.rest = vi.fn(async (url, opts) => {
-      const command = opts.form?.command ?? opts.multipart?.command ?? opts.params?.command;
+    client.request = vi.fn(async (url, opts) => {
+      const command = fieldsOf(url, opts).command;
       if (command === 'STATUS') {
         return {
           processing_info: {
@@ -429,6 +434,49 @@ describe('media — video processing status polling', () => {
   });
 });
 
+describe('media upload on the wire, through a real client', () => {
+  /**
+   * The upload once went through client.rest() with options rest() ignores,
+   * against a URL rest() prefixed with the REST base, so no upload could
+   * work while every mock-based test passed. This one drives the real client
+   * and checks what fetch receives.
+   */
+  it('sends a form INIT, multipart APPENDs, accepts the empty APPEND body, and FINALIZEs', async () => {
+    const requests = [];
+    const reply = (status, text) => ({ status, ok: status < 300, headers: { get: () => null }, text: async () => text });
+    const fetch = async (url, init) => {
+      requests.push({ url, init });
+      const fields = init.body instanceof FormData
+        ? Object.fromEntries([...init.body.entries()].map(([k, v]) => [k, typeof v === 'string' ? v : v]))
+        : Object.fromEntries(new URLSearchParams(init.body || new URL(url).search));
+      if (fields.command === 'INIT') return reply(202, JSON.stringify({ media_id_string: '42' }));
+      if (fields.command === 'APPEND') return reply(204, '');
+      if (fields.command === 'FINALIZE') return reply(201, JSON.stringify({ media_id_string: '42', media_key: '3_42' }));
+      if (url.includes('metadata/create')) return reply(200, '');
+      throw new Error(`unplanned request ${url}`);
+    };
+    const client = new TwitterHttpClient({ cookies: 'auth_token=t; ct0=c', fetch, maxRetries: 0, transactionId: false });
+
+    const buffer = Buffer.alloc(6 * 1024 * 1024, 7);
+    const result = await uploadChunked(client, buffer, 'image/png', 'dm_image');
+    await setAltText(client, '42', 'a chart');
+
+    expect(result).toEqual({ mediaId: '42', mediaKey: '3_42', expiresAfterSecs: null });
+    const [init, append0, append1, finalize, alt] = requests;
+    expect(init.url).toBe('https://upload.x.com/i/media/upload.json');
+    expect(init.init.headers['content-type']).toBe('application/x-www-form-urlencoded');
+    expect(new URLSearchParams(init.init.body).get('media_category')).toBe('dm_image');
+    expect(append0.init.body).toBeInstanceOf(FormData);
+    expect(append0.init.headers['content-type']).toBeUndefined();
+    expect(append0.init.body.get('segment_index')).toBe('0');
+    expect(append1.init.body.get('segment_index')).toBe('1');
+    expect(append0.init.body.get('media').size + append1.init.body.get('media').size).toBe(buffer.length);
+    expect(new URLSearchParams(finalize.init.body).get('command')).toBe('FINALIZE');
+    expect(JSON.parse(alt.init.body)).toEqual({ media_id: '42', alt_text: { text: 'a chart' } });
+    expect(requests).toHaveLength(5); // nothing was retried
+  });
+});
+
 describe('media — alt text setting', () => {
   it('sends correct body to metadata/create', async () => {
     const client = createMockClient();
@@ -441,8 +489,7 @@ describe('media — alt text setting', () => {
     expect(call).toBeDefined();
     expect(call.opts.method).toBe('POST');
 
-    const body = JSON.parse(call.opts.body);
-    expect(body).toEqual({
+    expect(call.opts.body).toEqual({
       media_id: '1234567890',
       alt_text: { text: 'A sunset over mountains' },
     });
@@ -633,10 +680,10 @@ describe('media — uploadGif sets correct category', () => {
     await uploadGif(client, gifBuf);
 
     const initCall = client._calls.find(
-      (c) => c.type === 'rest' && c.opts.form?.command === 'INIT',
+      (c) => c.fields.command === 'INIT',
     );
-    expect(initCall.opts.form.media_category).toBe('tweet_gif');
-    expect(initCall.opts.form.media_type).toBe('image/gif');
+    expect(initCall.fields.media_category).toBe('tweet_gif');
+    expect(initCall.fields.media_type).toBe('image/gif');
   });
 
   it('rejects GIFs over 15 MB', async () => {

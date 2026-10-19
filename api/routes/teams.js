@@ -1,91 +1,116 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Team Management API Routes
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 import { Router } from 'express';
-import authMiddleware from '../middleware/auth.js';
+import { authenticate as authMiddleware } from '../middleware/auth.js';
 
 const router = Router();
 
-// GET /api/teams — list teams for the authenticated user
-router.get('/', authMiddleware, async (req, res) => {
+// Every team route acts for a signed-in user. Most of them once had no auth at
+// all: anyone could create teams, invite, remove members or read activity.
+router.use(authMiddleware);
+
+const teams = () => import('../../src/auth/teamManager.js');
+
+/**
+ * Continue only if the caller belongs to the team, and when `action` is given,
+ * only if their role allows it. Answers 404 rather than 403 to non-members, so
+ * team ids cannot be probed.
+ */
+function requireTeamRole(action) {
+  return async (req, res, next) => {
+    try {
+      const { checkPermission, getUserRole } = await teams();
+      const role = await getUserRole(req.params.id, req.user.username);
+      if (!role) return res.status(404).json({ error: 'Team not found' });
+      if (action && !checkPermission(role, action)) {
+        return res.status(403).json({ error: `Your role (${role}) cannot ${action.replace('-', ' ')}` });
+      }
+      req.teamRole = role;
+      next();
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  };
+}
+
+// GET /api/teams — the teams the caller belongs to
+router.get('/', async (req, res) => {
   try {
-    const { getUserTeams } = await import('../../src/auth/teamManager.js');
-    const teams = await getUserTeams(req.user.username);
-    res.json({ teams });
+    const { getUserTeams } = await teams();
+    res.json({ teams: await getUserTeams(req.user.username) });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// POST /api/teams — create a team
+// POST /api/teams — create a team owned by the caller
 router.post('/', async (req, res) => {
   try {
-    const { createTeam } = await import('../../src/auth/teamManager.js');
-    const { name, owner } = req.body;
-    if (!name) return res.status(400).json({ error: 'name required' });
-    const team = await createTeam(name, owner || 'default');
-    res.json(team);
+    const { createTeam } = await teams();
+    const { name } = req.body;
+    if (!name || typeof name !== 'string') return res.status(400).json({ error: 'name required' });
+    res.json(await createTeam(name.trim().slice(0, 100), req.user.username));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// GET /api/teams/:id/members
-router.get('/:id/members', async (req, res) => {
+// GET /api/teams/:id/members — members only
+router.get('/:id/members', requireTeamRole(), async (req, res) => {
   try {
-    const { listTeamMembers } = await import('../../src/auth/teamManager.js');
-    const members = await listTeamMembers(req.params.id);
-    res.json({ members });
+    const { listTeamMembers } = await teams();
+    res.json({ members: await listTeamMembers(req.params.id) });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// POST /api/teams/:id/invite
-router.post('/:id/invite', async (req, res) => {
+// POST /api/teams/:id/invite — needs a role that manages members
+router.post('/:id/invite', requireTeamRole('manage-members'), async (req, res) => {
   try {
-    const { inviteUser } = await import('../../src/auth/teamManager.js');
+    const { inviteUser } = await teams();
     const { email, role } = req.body;
-    const result = await inviteUser(req.params.id, email, role);
-    res.json(result);
+    if (!email) return res.status(400).json({ error: 'email required' });
+    res.json(await inviteUser(req.params.id, email, role));
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// DELETE /api/teams/:id/members/:username — manage-members, or leaving yourself
+router.delete('/:id/members/:username', async (req, res, next) => {
+  if (req.params.username === req.user.username) return requireTeamRole()(req, res, next);
+  return requireTeamRole('manage-members')(req, res, next);
+}, async (req, res) => {
+  try {
+    const { removeUser } = await teams();
+    res.json(await removeUser(req.params.id, req.params.username));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// DELETE /api/teams/:id/members/:username
-router.delete('/:id/members/:username', async (req, res) => {
+// PUT /api/teams/:id/members/:username/role — needs a role that manages members
+router.put('/:id/members/:username/role', requireTeamRole('manage-members'), async (req, res) => {
   try {
-    const { removeUser } = await import('../../src/auth/teamManager.js');
-    const result = await removeUser(req.params.id, req.params.username);
-    res.json(result);
+    const { updateRole } = await teams();
+    res.json(await updateRole(req.params.id, req.params.username, req.body.role));
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(400).json({ error: error.message });
   }
 });
 
-// PUT /api/teams/:id/members/:username/role
-router.put('/:id/members/:username/role', async (req, res) => {
+// GET /api/teams/:id/activity — members only
+router.get('/:id/activity', requireTeamRole(), async (req, res) => {
   try {
-    const { updateRole } = await import('../../src/auth/teamManager.js');
-    const result = await updateRole(req.params.id, req.params.username, req.body.role);
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// GET /api/teams/:id/activity
-router.get('/:id/activity', async (req, res) => {
-  try {
-    const { getActivityLog } = await import('../../src/auth/teamManager.js');
+    const { getActivityLog } = await teams();
     const filters = { limit: parseInt(req.query.limit) || 50, user: req.query.user };
-    const log = await getActivityLog(req.params.id, filters);
-    res.json({ activity: log });
+    res.json({ activity: await getActivityLog(req.params.id, filters) });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

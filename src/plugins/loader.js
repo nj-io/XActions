@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Plugin Loader
  * Discovers and loads plugins from npm packages and local paths.
@@ -8,7 +8,7 @@
  * 
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @see https://xactions.app
- * @license MIT
+ * @license Apache-2.0
  */
 
 import fs from 'fs/promises';
@@ -23,9 +23,11 @@ import { createRequire } from 'module';
 const CONFIG_DIR = path.join(os.homedir(), '.xactions');
 const PLUGINS_FILE = path.join(CONFIG_DIR, 'plugins.json');
 
+// Whole-name patterns (a valid npm package name and nothing else): a prefix
+// test once accepted "xactions-plugin-x; <any shell command>".
 const PLUGIN_NAME_PATTERNS = [
-  /^xactions-plugin-/,
-  /^@xactions\//,
+  /^xactions-plugin-[a-z0-9][a-z0-9._-]*(@[a-z0-9.^~<>=*-]+)?$/,
+  /^@xactions\/[a-z0-9][a-z0-9._-]*(@[a-z0-9.^~<>=*-]+)?$/,
 ];
 
 // ============================================================================

@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
  * 📍 Like By Location - XActions
@@ -89,6 +89,20 @@
     window.scrollBy(0, window.innerHeight * 0.75);
   };
 
+  // Navigate within the SPA. Assigning window.location.href triggers a full
+  // page load, which destroys this console script before it can continue.
+  const spaNavigate = (url) => {
+    try {
+      const target = new URL(url, window.location.href);
+      if (target.origin === window.location.origin) {
+        window.history.pushState({}, '', target.href);
+        window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
+        return;
+      }
+    } catch (e) {}
+    window.location.href = url;
+  };
+
   const log = {
     info: (msg) => console.log(`ℹ️ ${msg}`),
     success: (msg) => console.log(`✅ ${msg}`),
@@ -111,6 +125,14 @@
 
   const processedTweets = new Set();
 
+  // Stop switch: run window.stopLikeByLocation() from the console to abort
+  // the loop after the tweet currently being processed.
+  let stopped = false;
+  window.stopLikeByLocation = () => {
+    stopped = true;
+    log.warning('Stop requested. Finishing the current tweet, then exiting.');
+  };
+
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
 ║  📍 LIKE BY LOCATION - XActions                          ║
@@ -122,6 +144,7 @@
   log.info(`Location: ${CONFIG.location}`);
   log.info(`Radius: ${CONFIG.radiusMiles} miles`);
   log.info(`Max likes: ${CONFIG.maxLikes}`);
+  log.info(`To stop early: window.stopLikeByLocation()`);
 
   // Build the search query
   const buildSearchQuery = () => {
@@ -147,9 +170,9 @@
     
     log.info(`Search query: ${query}`);
     log.info(`Navigating to search...`);
-    
-    window.location.href = searchUrl;
-    
+
+    spaNavigate(searchUrl);
+
     // Wait for page to load
     await sleep(3000);
     
@@ -169,34 +192,48 @@
   };
 
   const isReply = (tweet) => {
-    const tweetContent = tweet.textContent || '';
-    return tweetContent.includes('Replying to');
+    // Structural marker first (locale-independent), then the English UI text
+    if (tweet.querySelector('[data-testid="in-reply-to"]') !== null) return true;
+    return Array.from(tweet.querySelectorAll('div[dir]')).some(el =>
+      el.innerText.startsWith('Replying to'));
   };
 
   const isRetweet = (tweet) => {
-    return tweet.querySelector(SELECTORS.retweetIndicator) !== null;
+    // Reposts render socialContext inside an <a>; pinned posts render it as a
+    // plain element. Checking the tag keeps pinned posts from matching.
+    const socialContext = tweet.querySelector(SELECTORS.retweetIndicator);
+    return !!socialContext && socialContext.closest('a') !== null;
   };
 
   const getTweetIdentifier = (tweet) => {
+    // Prefer the permalink around the timestamp: the first /status/ link in
+    // the article can belong to a quoted tweet and give the wrong ID
+    const timeAnchor = tweet.querySelector('time')?.closest('a[href*="/status/"]');
+    if (timeAnchor) {
+      const match = timeAnchor.href.match(/\/status\/(\d+)/);
+      if (match) return match[1];
+    }
     const links = tweet.querySelectorAll('a[href*="/status/"]');
     for (const link of links) {
       const match = link.href.match(/\/status\/(\d+)/);
       if (match) return match[1];
     }
+    // Text fallback. Do NOT append Date.now(): a changing ID makes the same
+    // tweet look new on every pass, defeating deduplication entirely.
     const text = tweet.querySelector(SELECTORS.tweetText)?.textContent || '';
-    return text.substring(0, 100) + Date.now();
+    return text.substring(0, 100);
   };
 
   const likeTweets = async () => {
     let scrollAttempts = 0;
     let noNewTweetsCount = 0;
 
-    while (stats.liked < CONFIG.maxLikes && scrollAttempts < CONFIG.maxScrollAttempts) {
+    while (!stopped && stats.liked < CONFIG.maxLikes && scrollAttempts < CONFIG.maxScrollAttempts) {
       const tweets = document.querySelectorAll(SELECTORS.tweet);
       let foundNewTweet = false;
 
       for (const tweet of tweets) {
-        if (stats.liked >= CONFIG.maxLikes) break;
+        if (stopped || stats.liked >= CONFIG.maxLikes) break;
 
         const tweetId = getTweetIdentifier(tweet);
         

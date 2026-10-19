@@ -819,7 +819,7 @@ If you don't need the remote API, use XActions for free:
 
 ### Browser Scripts
 Copy-paste scripts directly in your browser console.
-→ [View all scripts](/features)
+→ [View all scripts](browser-scripts.md)
 
 ### CLI Tool
 ```bash

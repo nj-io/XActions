@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
  * 🚨 Report Spam
@@ -27,7 +27,9 @@
  * ============================================================
  */
 
-const CONFIG = {
+// `var` (not `const`): a repeated top-level `const` paste in the same
+// DevTools tab throws "already been declared" instead of re-running.
+var CONFIG = {
   // Spam detection keywords in bio
   spamKeywords: [
     'free giveaway',
@@ -104,49 +106,54 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - Accounts will NOT be reported    
     const prevSize = scanned.size;
 
     document.querySelectorAll($userCell).forEach(cell => {
-      const link = cell.querySelector('a[href^="/"]');
-      const username = link?.getAttribute('href')?.replace('/', '')?.split('/')[0];
-      if (!username || scanned.has(username)) return;
+      try {
+        const link = cell.querySelector('a[href^="/"]');
+        const username = link?.getAttribute('href')?.replace('/', '')?.split('/')[0];
+        if (!username || scanned.has(username)) return;
 
-      scanned.add(username);
+        scanned.add(username);
 
-      const reasons = [];
-      let spamScore = 0;
+        const reasons = [];
+        let spamScore = 0;
 
-      // Check bio
-      const bioEl = cell.querySelector('[data-testid="UserDescription"]');
-      const bio = (bioEl?.textContent || '').toLowerCase();
+        // Check bio
+        const bioEl = cell.querySelector('[data-testid="UserDescription"]');
+        const bio = (bioEl?.textContent || '').toLowerCase();
 
-      CONFIG.spamKeywords.forEach(kw => {
-        if (bio.includes(kw.toLowerCase())) {
-          spamScore += 30;
-          reasons.push(`Bio: "${kw}"`);
-        }
-      });
-
-      // Check for default avatar
-      if (CONFIG.detection.flagDefaultAvatar) {
-        const avatar = cell.querySelector('img[src*="default_profile"]');
-        if (avatar) {
-          spamScore += 10;
-          reasons.push('Default avatar');
-        }
-      }
-
-      // Check for external links in bio
-      if (CONFIG.detection.flagExternalLinks && bio.match(/https?:\/\//)) {
-        spamScore += 5;
-        reasons.push('External link in bio');
-      }
-
-      if (spamScore >= 30) {
-        spamAccounts.push({
-          username,
-          bio: bioEl?.textContent || '',
-          spamScore,
-          reasons,
-          element: cell
+        CONFIG.spamKeywords.forEach(kw => {
+          if (bio.includes(kw.toLowerCase())) {
+            spamScore += 30;
+            reasons.push(`Bio: "${kw}"`);
+          }
         });
+
+        // Check for default avatar
+        if (CONFIG.detection.flagDefaultAvatar) {
+          const avatar = cell.querySelector('img[src*="default_profile"]');
+          if (avatar) {
+            spamScore += 10;
+            reasons.push('Default avatar');
+          }
+        }
+
+        // Check for external links in bio
+        if (CONFIG.detection.flagExternalLinks && bio.match(/https?:\/\//)) {
+          spamScore += 5;
+          reasons.push('External link in bio');
+        }
+
+        if (spamScore >= 30) {
+          spamAccounts.push({
+            username,
+            bio: bioEl?.textContent || '',
+            spamScore,
+            reasons,
+            element: cell
+          });
+        }
+      } catch (e) {
+        // One malformed cell (missing link, unexpected structure) must never
+        // abort the whole scan for every other cell in this pass.
       }
     });
 
@@ -204,6 +211,15 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - Accounts will NOT be reported    
     for (const spam of toReport) {
       console.log(`\n⏳ Processing @${spam.username}...`);
 
+      // The page kept scrolling during the scan above, and X virtualizes
+      // long lists: a cell captured early can already be detached from the
+      // DOM by the time we get here. Interacting with a detached node is a
+      // silent no-op, so skip it explicitly instead of pretending to report.
+      if (!document.body.contains(spam.element)) {
+        console.log(`   ⚠️ Skipped @${spam.username}: row scrolled out of the DOM. Re-run closer to this account.`);
+        continue;
+      }
+
       try {
         spam.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
         await sleep(500);
@@ -219,10 +235,16 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - Accounts will NOT be reported    
             reportOption.click();
             await sleep(1000);
 
-            // Select "Spam" as reason
+            // Select "Spam" as reason. Match only short, clickable labels
+            // (radio/menu items) so a longer descriptive paragraph that
+            // happens to also contain the word "spam" isn't clicked instead.
             const spamOption = Array.from(document.querySelectorAll('span'))
-              .find(el => el.textContent.toLowerCase().includes('spam'));
-            
+              .find(el => {
+                const text = el.textContent.trim().toLowerCase();
+                if (!text.includes('spam') || text.length > 40) return false;
+                return !!el.closest('[role="radio"], [role="menuitem"], [role="button"], label');
+              });
+
             if (spamOption) {
               spamOption.click();
               await sleep(500);

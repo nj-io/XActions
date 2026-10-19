@@ -16,7 +16,7 @@ node api/server.js
 node dashboard-server.js
 ```
 
-Open [http://localhost:3001](http://localhost:3001) in your browser.
+Open [http://localhost:3001](http://localhost:3001) in your browser (the standalone dashboard server listens on [http://localhost:3000](http://localhost:3000); set `PORT` to change it).
 
 ### Production
 

@@ -1,6 +1,10 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 // scripts/naturalFlow.js
-// Simulates a natural X/Twitter browsing session:
+// Simulate a natural browsing session: scroll, like, reply, retweet, follow, and check notifications on a human rhythm
+// Paste in DevTools console on x.com/home
+// by nichxbt
+//
+// The session it walks:
 //   → scroll home timeline, like keyword-matched posts
 //   → occasionally reply, retweet, or bookmark
 //   → follow interesting authors (checks bio + followers first)
@@ -10,9 +14,6 @@
 //
 // Features: interactive setup, live floating HUD, context-aware replies,
 //           engagement scoring, cooldown escalation, session history
-//
-// Paste in DevTools console on x.com/home
-// by nichxbt
 
 (() => {
   'use strict';

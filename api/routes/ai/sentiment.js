@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * AI Sentiment & Reputation Endpoints
  *
@@ -9,11 +9,12 @@
 
 import express from 'express';
 import crypto from 'crypto';
+import { handleMonitorAction } from '../../services/processors/messaging.processors.js';
 
 const router = express.Router();
 
 const generateOperationId = () =>
-  `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+  `ai-${Date.now()}-${crypto.randomBytes(16).toString('hex')}`;
 
 const errorResponse = (res, statusCode, error, message, extras = {}) =>
   res.status(statusCode).json({
@@ -136,39 +137,22 @@ router.post('/analyze', async (req, res) => {
 
 /**
  * POST /api/ai/sentiment/monitor
- * Start/stop/list reputation monitoring
+ * Start reputation monitoring, or list, read, pause, resume or stop a monitor
  */
 router.post('/monitor', async (req, res) => {
-  const { action = 'start', username, monitorId, interval = '1h' } = req.body;
+  const { action = 'start', username, interval = '1h', webhookUrl } = req.body;
 
-  const validActions = ['start', 'stop', 'list', 'status'];
+  const validActions = ['start', 'stop', 'list', 'status', 'pause', 'resume'];
   if (!validActions.includes(action)) {
     return res.status(400).json({ error: 'INVALID_INPUT', message: `action must be one of: ${validActions.join(', ')}` });
   }
 
   try {
-    const { queueJob, cancelJob, getRecentJobs, getJobStatus } = await import('../../services/jobQueue.js');
+    if (await handleMonitorAction(req, res, { type: 'reputationMonitor', session: req.sessionCookie })) return;
 
-    if (action === 'list') {
-      const jobs = await getRecentJobs({ type: 'reputationMonitor', limit: 20 });
-      return successResponse(res, {
-        monitors: jobs.map(j => ({ monitorId: j.id, username: j.config?.username, status: j.status, createdAt: j.createdAt })),
-      });
-    }
-
-    if (action === 'status' && monitorId) {
-      const status = await getJobStatus(monitorId);
-      return successResponse(res, { monitorId, status: status?.status || 'not_found', result: status?.result });
-    }
-
-    if (action === 'stop' && monitorId) {
-      await cancelJob(monitorId);
-      return successResponse(res, { monitorId, status: 'cancelled' });
-    }
-
-    // action === 'start'
     if (!username) return res.status(400).json({ error: 'INVALID_INPUT', message: 'username is required to start monitoring' });
 
+    const { queueJob } = await import('../../services/jobQueue.js');
     const operationId = generateOperationId();
     await queueJob({
       id: operationId,
@@ -176,18 +160,21 @@ router.post('/monitor', async (req, res) => {
       config: {
         username: username.replace(/^@/, '').toLowerCase(),
         interval,
+        webhookUrl: webhookUrl || null,
         sessionCookie: req.sessionCookie,
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
 
+    const manage = (act) => ({ method: 'POST', endpoint: '/api/ai/sentiment/monitor', body: { action: act, monitorId: operationId } });
     return successResponse(res, {
       monitorId: operationId,
       status: 'started',
       username: username.replace(/^@/, '').toLowerCase(),
       interval,
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 60000 },
+      manage: { status: manage('status'), pause: manage('pause'), resume: manage('resume'), stop: manage('stop') },
     });
   } catch (error) {
     return errorResponse(res, 500, 'ACTION_FAILED', error.message);

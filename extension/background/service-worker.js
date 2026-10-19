@@ -93,8 +93,83 @@ async function handleMessage(message, sender) {
     case 'GLOBAL_RESUME':
       return globalResume();
 
+    case 'LLM_REQUEST':
+      return completeChat(message.request || {});
+
     default:
       return { error: 'Unknown message type' };
+  }
+}
+
+// ============================================
+// LLM RELAY (for scripts/engageProfile.js and any page script)
+// ============================================
+// The page cannot call these hosts itself: x.com ships a Content-Security-Policy
+// whose connect-src only allows api.x.ai among LLM providers. The service worker
+// is not bound by the page's CSP, and manifest.json grants it these hosts.
+const LLM_URLS = {
+  openrouter: 'https://openrouter.ai/api/v1/chat/completions',
+  openai: 'https://api.openai.com/v1/chat/completions',
+  xai: 'https://api.x.ai/v1/chat/completions',
+  ollama: 'http://localhost:11434/v1/chat/completions',
+  anthropic: 'https://api.anthropic.com/v1/messages',
+};
+
+const LLM_DEFAULT_MODELS = {
+  openrouter: 'google/gemini-2.5-flash',
+  openai: 'gpt-4o-mini',
+  xai: 'grok-3-mini',
+  ollama: 'llama3.1',
+  anthropic: 'claude-3-5-haiku-latest',
+};
+
+async function completeChat(request) {
+  const provider = String(request.provider || 'openrouter').toLowerCase();
+  const url = request.baseUrl || LLM_URLS[provider];
+  if (!url) return { error: `Unknown provider "${provider}" and no baseUrl given` };
+  const model = request.model || LLM_DEFAULT_MODELS[provider];
+  if (!model) return { error: 'No model given for the custom provider' };
+  const messages = Array.isArray(request.messages) ? request.messages : [];
+  if (messages.length === 0) return { error: 'No messages in LLM request' };
+  if (!request.apiKey && provider !== 'ollama' && provider !== 'custom') {
+    return { error: `${provider} needs an API key` };
+  }
+
+  const headers = { 'Content-Type': 'application/json' };
+  let body;
+  if (provider === 'anthropic') {
+    headers['x-api-key'] = request.apiKey;
+    headers['anthropic-version'] = '2023-06-01';
+    const system = messages.filter((m) => m.role === 'system').map((m) => m.content).join('\n\n');
+    body = {
+      model,
+      max_tokens: request.maxTokens || 160,
+      temperature: request.temperature ?? 0.9,
+      ...(system ? { system } : {}),
+      messages: messages.filter((m) => m.role !== 'system').map((m) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content })),
+    };
+  } else {
+    if (request.apiKey) headers.Authorization = `Bearer ${request.apiKey}`;
+    if (provider === 'openrouter') {
+      headers['HTTP-Referer'] = 'https://xactions.app';
+      headers['X-Title'] = 'XActions Extension';
+    }
+    body = { model, messages, temperature: request.temperature ?? 0.9, max_tokens: request.maxTokens || 160 };
+  }
+
+  try {
+    const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+    if (!res.ok) {
+      const detail = await res.text().catch(() => '');
+      return { error: `${provider} HTTP ${res.status}: ${detail.slice(0, 300)}` };
+    }
+    const data = await res.json();
+    const text = provider === 'anthropic'
+      ? (data.content || []).filter((c) => c.type === 'text').map((c) => c.text).join('').trim()
+      : (data.choices?.[0]?.message?.content || '').trim();
+    return { text, model: data.model || model };
+  } catch (err) {
+    return { error: `${provider} request failed: ${err.message}` };
   }
 }
 
@@ -262,6 +337,15 @@ function updateBadge() {
   chrome.action.setBadgeBackgroundColor({
     color: activeCount > 0 ? '#00ba7c' : '#1d9bf0',
   });
+}
+
+/** Snapshot for the popup's GET_STATE request (plain data, safe to post as a message). */
+function getState() {
+  return {
+    automations: state.activeAutomations,
+    globalPaused: state.globalPaused,
+    totalActions: state.totalActions,
+  };
 }
 
 async function syncState() {

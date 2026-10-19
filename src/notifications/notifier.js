@@ -1,18 +1,19 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Notification Hub
- * Send alerts to Email, Slack, Discord, and Telegram.
+ * Send alerts to Email, Slack, Discord, Telegram, and any signed webhook URL.
  *
  * Kills: Phantombuster (email alerts), Circleboom (Slack)
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 import fs from 'fs';
 import fsp from 'fs/promises';
 import path from 'path';
 import os from 'os';
+import { deliverWebhook } from './webhook.js';
 
 const CONFIG_DIR = path.join(os.homedir(), '.xactions');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
@@ -23,7 +24,7 @@ const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
 export class Notifier {
   constructor() {
-    this.config = { email: { enabled: false }, slack: { enabled: false }, discord: { enabled: false }, telegram: { enabled: false } };
+    this.config = { email: { enabled: false }, slack: { enabled: false }, discord: { enabled: false }, telegram: { enabled: false }, webhook: { enabled: false } };
   }
 
   /**
@@ -71,6 +72,9 @@ export class Notifier {
             break;
           case 'telegram':
             results.telegram = await this._sendTelegram(config, { type, title, message, severity });
+            break;
+          case 'webhook':
+            results.webhook = await this._sendWebhook(config, { type, title, message, severity, data });
             break;
         }
       } catch (error) {
@@ -212,6 +216,41 @@ export class Notifier {
 
     if (!response.ok) throw new Error(`Telegram API failed: ${response.status}`);
     return { status: 'sent', channel: 'telegram' };
+  }
+
+  /**
+   * Generic signed webhook. Config: `{ enabled, url, secret?, headers? }`.
+   * The secret falls back to XACTIONS_WEBHOOK_SECRET. Delivery, retries,
+   * signing, and the delivery log live in ./webhook.js.
+   */
+  async _sendWebhook(config, event) {
+    const { url, secret, headers } = config;
+    if (!url) return { error: 'Webhook URL not configured' };
+
+    const record = await deliverWebhook({
+      url,
+      secret,
+      headers,
+      event: event.type,
+      payload: {
+        event: event.type,
+        title: event.title,
+        message: event.message,
+        severity: event.severity,
+        data: event.data ?? null,
+        sentAt: new Date().toISOString(),
+      },
+    });
+
+    if (record.status !== 'delivered') {
+      const last = record.attempts[record.attempts.length - 1];
+      return {
+        error: `Webhook failed after ${record.attempts.length} attempt(s): ${last?.error || 'unknown error'}`,
+        channel: 'webhook',
+        deliveryId: record.id,
+      };
+    }
+    return { status: 'sent', channel: 'webhook', deliveryId: record.id, signed: record.signed };
   }
 
   // ── Config Persistence ──

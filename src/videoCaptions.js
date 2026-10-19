@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). MIT License.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 // Video Captions Uploader on X - by nichxbt
 // https://github.com/nirholas/xactions
 // Add captions/subtitles to a video when composing a tweet

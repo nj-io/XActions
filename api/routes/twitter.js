@@ -1,10 +1,11 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import express from 'express';
 import axios from 'axios';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth.js';
 import crypto from 'crypto';
+import { requireJwtSecret } from '../utils/secrets.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -29,12 +30,12 @@ function getFrontendUrl() {
 // Stateless OAuth state — encode data as a signed JWT used as the `state` param.
 // Works across serverless instances (no shared memory needed).
 function createOAuthState(data) {
-  return jwt.sign(data, process.env.JWT_SECRET || 'dev-secret', { expiresIn: '10m' });
+  return jwt.sign(data, requireJwtSecret(), { expiresIn: '10m' });
 }
 
 function parseOAuthState(state) {
   try {
-    return jwt.verify(state, process.env.JWT_SECRET || 'dev-secret');
+    return jwt.verify(state, requireJwtSecret());
   } catch {
     return null;
   }
@@ -83,6 +84,25 @@ async function exchangeCodeForUser(code, codeVerifier) {
     tokens: { access_token, refresh_token, expires_in }
   };
 }
+
+// GET /api/twitter/status
+// Documented in api/openapi.js and, until now, never served. Reports whether
+// this instance holds a usable X session and which account it belongs to,
+// without exposing the cookie itself.
+router.get('/status', authMiddleware, async (req, res) => {
+  try {
+    const { getActiveSession, listSessions } = await import('../../src/client/auth/storage.js');
+    const [active, sessions] = await Promise.all([getActiveSession(), listSessions()]);
+    res.json({
+      connected: Boolean(active?.username),
+      username: active?.username || null,
+      savedSessions: Array.isArray(sessions) ? sessions.map((s) => s.username || s).filter(Boolean) : [],
+      oauthConfigured: Boolean(process.env.TWITTER_CLIENT_ID && process.env.TWITTER_CLIENT_SECRET),
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Sign in with X — no auth required, redirects to Twitter OAuth
 router.get('/login', (req, res) => {
@@ -164,7 +184,7 @@ router.get('/callback', async (req, res) => {
 
       const token = jwt.sign(
         { userId: user.id, username: user.username },
-        process.env.JWT_SECRET || 'dev-secret',
+        requireJwtSecret(),
         { expiresIn: '7d' }
       );
 

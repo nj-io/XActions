@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * Twitter/X Relationships Scraper via HTTP (GraphQL)
  *
@@ -9,7 +9,7 @@
  * Depends on: endpoints.js, client.js, auth.js, profile.js (parseUserData)
  *
  * @author nich (@nichxbt)
- * @license MIT
+ * @license Apache-2.0
  */
 
 import {
@@ -18,6 +18,7 @@ import {
   buildGraphQLUrl,
 } from './endpoints.js';
 import { AuthError, NotFoundError } from './errors.js';
+import { bindCheckpoint } from './checkpoint.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -45,18 +46,25 @@ const PAGE_COUNT = 20;
 export function parseUserEntry(rawUser) {
   if (!rawUser || rawUser.__typename === 'UserUnavailable') return null;
 
+  // x.com moved these fields out of `legacy` into typed sub-objects (core,
+  // avatar, relationship_counts, privacy, profile_bio). Reading only `legacy`
+  // dropped the username of every user served in the new shape, and with it
+  // the user, from follower, following, liker and notification lists.
   const legacy = rawUser.legacy ?? {};
+  const core = rawUser.core ?? {};
+  const counts = rawUser.relationship_counts ?? {};
+  const avatar = rawUser.avatar?.image_url ?? legacy.profile_image_url_https ?? '';
 
   return {
     id: rawUser.rest_id ?? null,
-    username: legacy.screen_name ?? null,
-    name: legacy.name ?? null,
-    bio: legacy.description ?? null,
-    verified: rawUser.is_blue_verified ?? legacy.verified ?? false,
-    avatar: (legacy.profile_image_url_https ?? '').replace('_normal', '_400x400') || null,
-    followersCount: legacy.followers_count ?? 0,
-    followingCount: legacy.friends_count ?? 0,
-    protected: legacy.protected ?? false,
+    username: core.screen_name ?? legacy.screen_name ?? null,
+    name: core.name ?? legacy.name ?? null,
+    bio: rawUser.profile_bio?.description ?? legacy.description ?? null,
+    verified: Boolean(rawUser.is_blue_verified ?? rawUser.verification?.verified ?? legacy.verified ?? false),
+    avatar: avatar.replace('_normal', '_400x400') || null,
+    followersCount: counts.followers ?? legacy.followers_count ?? 0,
+    followingCount: counts.following ?? legacy.friends_count ?? 0,
+    protected: Boolean(rawUser.privacy?.protected ?? legacy.protected ?? false),
     platform: 'twitter',
   };
 }
@@ -208,16 +216,24 @@ async function resolveUserId(client, username) {
  * @param {object} client — TwitterHttpClient instance
  * @param {object} endpoint — `{ queryId, operationName }` from GRAPHQL map
  * @param {object} baseVariables — Variables for the first page (e.g. `{ userId }`)
- * @param {object} options — `{ limit, cursor, onProgress }`
+ * @param {object} options — `{ limit, cursor, onProgress, checkpoint }`; a
+ *   `checkpoint` from `createCheckpoint()` resumes from its saved cursor and
+ *   records the cursor after every page (see checkpoint.js)
  * @param {string} responseDataPath — Dot-path to instructions in response
  * @returns {Promise<object[]>} — Array of parsed user objects
  */
 async function scrapeUserList(client, endpoint, baseVariables, options = {}, responseDataPath) {
-  const { limit = DEFAULT_LIMIT, cursor: initialCursor = null, onProgress } = options;
+  const { limit: requestedLimit = DEFAULT_LIMIT, cursor: initialCursor = null, onProgress } = options;
   const { queryId, operationName } = endpoint;
+  const checkpoint = bindCheckpoint(options.checkpoint, {
+    cursor: initialCursor,
+    limit: requestedLimit,
+    meta: { operation: operationName, ...baseVariables },
+  });
+  const limit = checkpoint.limit;
 
   const seen = new Map(); // username → user (deduplication)
-  let nextCursor = initialCursor;
+  let nextCursor = checkpoint.cursor;
   let pageNum = 0;
 
   while (seen.size < limit) {
@@ -249,13 +265,18 @@ async function scrapeUserList(client, endpoint, baseVariables, options = {}, res
     // Report progress
     onProgress?.({ fetched: seen.size, limit, page: pageNum });
 
-    // Stop if no cursor (end of list) or no new users returned
-    if (!cursor || users.length === 0) break;
+    // Stop if no cursor (end of list) or no new users returned. A cursor that
+    // comes back unchanged means the page did not advance: because this loop
+    // deduplicates, `seen` would stop growing and the limit would never be
+    // reached, so without this guard the same request repeats forever.
+    if (!cursor || users.length === 0 || cursor === nextCursor) break;
 
     nextCursor = cursor;
     pageNum++;
+    checkpoint.record(cursor, seen.size);
   }
 
+  checkpoint.complete();
   return Array.from(seen.values()).slice(0, limit);
 }
 

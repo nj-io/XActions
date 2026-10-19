@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Bluesky Scrapers
  * AT Protocol-based scrapers for Bluesky (bsky.social)
@@ -8,7 +8,7 @@
  * 
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @see https://xactions.app
- * @license MIT
+ * @license Apache-2.0
  */
 
 // ============================================================================
@@ -75,12 +75,21 @@ async function resolveHandle(client, handle) {
  */
 async function xrpc(client, nsid, params = {}) {
   if (client.type === 'sdk') {
-    // Use the SDK agent for the request
-    const method = nsid.split('.').reduce((obj, key) => obj?.[key], client.agent.api);
-    if (typeof method === 'function') {
-      const res = await method(params);
+    // Walk the namespace (app.bsky.actor.getProfile) keeping the owner of the
+    // final property. The method must be invoked with that owner as `this`:
+    // @atproto/api's generated namespaces read `this._client` internally, so a
+    // detached `method(params)` call threw
+    // "Cannot read properties of undefined (reading '_client')" for every
+    // Bluesky scrape.
+    const path = nsid.split('.');
+    const name = path.pop();
+    const owner = path.reduce((obj, key) => obj?.[key], client.agent.api);
+
+    if (owner && typeof owner[name] === 'function') {
+      const res = await owner[name](params);
       return res.data;
     }
+
     // Fallback to generic call
     const res = await client.agent.api.app.bsky.actor.getProfile(params);
     return res.data;

@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * AI Utility Endpoints
  * 
@@ -16,7 +16,7 @@ const router = express.Router();
  * Generate unique operation ID
  */
 const generateOperationId = () => {
-  return `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+  return `ai-${Date.now()}-${crypto.randomBytes(16).toString('hex')}`;
 };
 
 /**

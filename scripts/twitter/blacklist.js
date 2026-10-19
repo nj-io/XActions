@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
  * 🚫 Blacklist Manager
@@ -35,7 +35,9 @@
  * ============================================================
  */
 
-const CONFIG = {
+// `var` (not `const`): a repeated top-level `const` paste in the same
+// DevTools tab throws "already been declared" instead of re-running.
+var CONFIG = {
   // Storage key
   storageKey: 'xactions_blacklist',
   
@@ -218,8 +220,11 @@ const CONFIG = {
       const usernames = list.map(u => u.username);
       console.log('📋 Blacklist (copy this):');
       console.log(JSON.stringify(usernames));
-      navigator.clipboard?.writeText(JSON.stringify(usernames));
-      console.log('✅ Copied to clipboard!');
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(JSON.stringify(usernames))
+          .then(() => console.log('✅ Copied to clipboard!'))
+          .catch(() => console.log('⚠️ Clipboard copy failed. Copy the JSON above manually.'));
+      }
       return usernames;
     },
     

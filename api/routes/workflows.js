@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Workflow API Routes
  * CRUD for workflows + run/history endpoints
@@ -16,12 +16,42 @@
  *   POST   /api/workflows/webhook/:webhookId — Trigger workflow via webhook
  * 
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 import express from 'express';
+import { authMiddleware } from '../middleware/auth.js';
+import { authTokenForUser } from '../services/xSession.js';
 
 const router = express.Router();
+
+// Automation routes control the owner's account, so they carry the same
+// authentication as /api/crm and /api/automations. A public deployment
+// (the repo ships Railway, Fly, Render and Docker configs) would
+// otherwise let anyone list and trigger the owner's automations.
+router.use(authMiddleware);
+
+/** Whether this user may see and run the workflow. */
+const ownsWorkflow = (req, workflow) =>
+  Boolean(workflow) && (req.user.isAdmin || workflow.userId === req.user.id);
+
+/**
+ * Continue only for the workflow's owner (or an admin); anyone else gets a
+ * 404. Every signed-in user could once read, edit, run or delete anyone's
+ * workflow.
+ */
+async function requireOwnWorkflow(req, res, next) {
+  try {
+    const workflows = await getWorkflows();
+    const workflow = await workflows.get(req.params.id);
+    if (!ownsWorkflow(req, workflow)) return res.status(404).json({ error: 'Workflow not found' });
+    req.workflow = workflow;
+    next();
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
 
 // Lazy-load workflow module to avoid circular deps
 let _workflows = null;
@@ -79,7 +109,7 @@ router.post('/', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const workflows = await getWorkflows();
-    const list = await workflows.list();
+    const list = (await workflows.list()).filter((workflow) => ownsWorkflow(req, workflow));
     res.json({ workflows: list, count: list.length });
   } catch (error) {
     console.error('❌ List workflows error:', error.message);
@@ -104,14 +134,9 @@ router.get('/actions', async (req, res) => {
 /**
  * GET /api/workflows/:id — Get a specific workflow
  */
-router.get('/:id', async (req, res) => {
+router.get('/:id', requireOwnWorkflow, async (req, res) => {
   try {
-    const workflows = await getWorkflows();
-    const workflow = await workflows.get(req.params.id);
-    if (!workflow) {
-      return res.status(404).json({ error: 'Workflow not found' });
-    }
-    res.json(workflow);
+    res.json(req.workflow);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -120,10 +145,11 @@ router.get('/:id', async (req, res) => {
 /**
  * PUT /api/workflows/:id — Update a workflow
  */
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireOwnWorkflow, async (req, res) => {
   try {
     const workflows = await getWorkflows();
-    const updated = await workflows.update(req.params.id, req.body);
+    const { userId: _ignored, ...changes } = req.body || {};
+    const updated = await workflows.update(req.params.id, changes);
     res.json(updated);
   } catch (error) {
     if (error.message.includes('not found')) {
@@ -136,7 +162,7 @@ router.put('/:id', async (req, res) => {
 /**
  * DELETE /api/workflows/:id — Delete a workflow
  */
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireOwnWorkflow, async (req, res) => {
   try {
     const workflows = await getWorkflows();
     const deleted = await workflows.remove(req.params.id);
@@ -157,7 +183,7 @@ router.delete('/:id', async (req, res) => {
  * POST /api/workflows/:id/run — Manually run a workflow
  * Body: { context?: {}, authToken?: string }
  */
-router.post('/:id/run', async (req, res) => {
+router.post('/:id/run', requireOwnWorkflow, async (req, res) => {
   try {
     const workflows = await getWorkflows();
     const workflow = await workflows.get(req.params.id);
@@ -172,7 +198,7 @@ router.post('/:id/run', async (req, res) => {
     const runPromise = workflows.run(workflow, {
       trigger: 'manual',
       initialContext: context || {},
-      authToken: authToken || req.user?.sessionCookie,
+      authToken: authToken || (await authTokenForUser(req.user?.id)),
       userId: req.user?.id || 'anonymous',
       onProgress: (event) => {
         // Could emit via Socket.IO here
@@ -210,7 +236,7 @@ router.post('/:id/run', async (req, res) => {
  * GET /api/workflows/:id/runs — Get execution history
  * Query: ?limit=20
  */
-router.get('/:id/runs', async (req, res) => {
+router.get('/:id/runs', requireOwnWorkflow, async (req, res) => {
   try {
     const workflows = await getWorkflows();
     const limit = parseInt(req.query.limit) || 20;
@@ -224,7 +250,7 @@ router.get('/:id/runs', async (req, res) => {
 /**
  * GET /api/workflows/:id/runs/:runId — Get a specific run
  */
-router.get('/:id/runs/:runId', async (req, res) => {
+router.get('/:id/runs/:runId', requireOwnWorkflow, async (req, res) => {
   try {
     const workflows = await getWorkflows();
     const run = await workflows.getRun(req.params.id, req.params.runId);

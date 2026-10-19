@@ -15,7 +15,7 @@ The A2A server exposes all 140+ XActions tools as A2A skills, supports real-time
 node src/a2a/server.js
 
 # Or via CLI
-xactions a2a start --port 3100
+node src/a2a/server.js
 
 # Verify it's running
 curl http://localhost:3100/a2a/health

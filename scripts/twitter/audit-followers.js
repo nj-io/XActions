@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
  * 🔍 Audit Followers
@@ -24,7 +24,9 @@
  * ============================================================
  */
 
-const CONFIG = {
+// `var` (not `const`): a repeated top-level `const` paste in the same
+// DevTools tab throws "already been declared" instead of re-running.
+var CONFIG = {
   // Scroll settings
   scrollDelay: 1500,
   maxScrolls: 100,
@@ -115,8 +117,8 @@ const CONFIG = {
       const following = followingMatch ? parseCount(followingMatch[1]) : 0;
       const followerCount = followersMatch ? parseCount(followersMatch[1]) : 0;
 
-      // Check for verified
-      const verified = cell.querySelector('svg[aria-label*="Verified"]') !== null;
+      // Check for verified (testid is locale-independent; aria-label kept as fallback)
+      const verified = cell.querySelector('[data-testid="icon-verified"], svg[aria-label*="Verified"]') !== null;
 
       // Check for default avatar
       const defaultAvatar = cell.querySelector('img[src*="default_profile"]') !== null;
@@ -206,13 +208,13 @@ const CONFIG = {
   console.log(`   👻 Zero followers:        ${categories.zeroFollowers.length} (${(categories.zeroFollowers.length/followers.length*100).toFixed(1)}%)`);
 
   // Quality Score
-  const qualityScore = Math.round(
-    (categories.highQuality.length * 3 + 
-     categories.influencers.length * 2 + 
+  const qualityScore = Math.min(100, Math.round(
+    (categories.highQuality.length * 3 +
+     categories.influencers.length * 2 +
      categories.verified.length * 5 +
      categories.balanced.length * 1) /
     (followers.length * 3) * 100
-  );
+  ));
 
   console.log('\n🏆 QUALITY SCORE:');
   console.log('─'.repeat(50));

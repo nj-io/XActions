@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
  * 🏷️ Like By Hashtag - XActions
@@ -79,6 +79,20 @@
     window.scrollBy(0, window.innerHeight * 0.8);
   };
 
+  // Navigate within the SPA. Assigning window.location.href triggers a full
+  // page load, which destroys this console script before it can continue.
+  const spaNavigate = (url) => {
+    try {
+      const target = new URL(url, window.location.href);
+      if (target.origin === window.location.origin) {
+        window.history.pushState({}, '', target.href);
+        window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
+        return;
+      }
+    } catch (e) {}
+    window.location.href = url;
+  };
+
   const log = {
     info: (msg) => console.log(`ℹ️ ${msg}`),
     success: (msg) => console.log(`✅ ${msg}`),
@@ -100,6 +114,14 @@
 
   const processedTweets = new Set();
 
+  // Stop switch: run window.stopLikeByHashtag() from the console to abort
+  // the loop after the tweet currently being processed.
+  let stopped = false;
+  window.stopLikeByHashtag = () => {
+    stopped = true;
+    log.warning('Stop requested. Finishing the current tweet, then exiting.');
+  };
+
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
 ║  🏷️  LIKE BY HASHTAG - XActions                          ║
@@ -111,28 +133,32 @@
   log.info(`Starting hashtag liker for: #${CONFIG.hashtags.join(', #')}`);
   log.info(`Max likes per hashtag: ${CONFIG.maxLikesPerHashtag}`);
   log.info(`Max total likes: ${CONFIG.maxTotalLikes}`);
+  log.info(`To stop early: window.stopLikeByHashtag()`);
 
   const likeTweetsOnPage = async (hashtag) => {
     let hashtagLikes = 0;
     let scrollAttempts = 0;
     let noNewTweetsCount = 0;
 
-    while (hashtagLikes < CONFIG.maxLikesPerHashtag && 
-           stats.totalLiked < CONFIG.maxTotalLikes && 
+    while (!stopped && hashtagLikes < CONFIG.maxLikesPerHashtag &&
+           stats.totalLiked < CONFIG.maxTotalLikes &&
            scrollAttempts < CONFIG.maxScrollAttempts) {
-      
+
       const tweets = document.querySelectorAll(SELECTORS.tweet);
       let foundNewTweet = false;
 
       for (const tweet of tweets) {
-        if (hashtagLikes >= CONFIG.maxLikesPerHashtag || stats.totalLiked >= CONFIG.maxTotalLikes) {
+        if (stopped || hashtagLikes >= CONFIG.maxLikesPerHashtag || stats.totalLiked >= CONFIG.maxTotalLikes) {
           break;
         }
 
-        // Generate unique tweet ID based on text content
+        // Unique tweet ID from the permalink around the timestamp (the first
+        // /status/ link can belong to a quoted tweet); text is the fallback
         const tweetText = tweet.querySelector(SELECTORS.tweetText)?.textContent || '';
-        const tweetId = tweetText.substring(0, 100);
-        
+        const timeAnchor = tweet.querySelector('time')?.closest('a[href*="/status/"]');
+        const idMatch = timeAnchor?.href.match(/\/status\/(\d+)/);
+        const tweetId = idMatch ? idMatch[1] : tweetText.substring(0, 100);
+
         if (processedTweets.has(tweetId)) {
           continue;
         }
@@ -140,8 +166,10 @@
         foundNewTweet = true;
 
         try {
-          // Skip retweets if configured
-          if (CONFIG.skipRetweets && tweet.querySelector(SELECTORS.retweetIndicator)) {
+          // Skip retweets if configured (socialContext inside an <a> = repost;
+          // a plain socialContext is a pinned post, not a repost)
+          const socialContext = tweet.querySelector(SELECTORS.retweetIndicator);
+          if (CONFIG.skipRetweets && socialContext && socialContext.closest('a') !== null) {
             stats.skipped++;
             continue;
           }
@@ -203,8 +231,8 @@
 
   const navigateToHashtag = async (hashtag) => {
     const searchUrl = `https://x.com/search?q=%23${encodeURIComponent(hashtag)}&src=typed_query&f=live`;
-    window.location.href = searchUrl;
-    
+    spaNavigate(searchUrl);
+
     // Wait for page to load
     await sleep(3000);
     
@@ -220,6 +248,7 @@
 
   // Process each hashtag
   for (const hashtag of CONFIG.hashtags) {
+    if (stopped) break;
     if (stats.totalLiked >= CONFIG.maxTotalLikes) {
       log.warning('Reached maximum total likes limit');
       break;

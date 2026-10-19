@@ -1,14 +1,14 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Plugin Manager
  * Manages plugin lifecycle: install, uninstall, enable, disable, and hook execution.
  * 
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @see https://xactions.app
- * @license MIT
+ * @license Apache-2.0
  */
 
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import {
   readPluginsConfig,
   writePluginsConfig,
@@ -63,7 +63,8 @@ export async function installPlugin(name) {
   // Install via npm if it's a package name
   if (!isLocal) {
     try {
-      execSync(`npm install ${name}`, { stdio: 'pipe', cwd: process.cwd() });
+      // No shell: the name is one argument, so it cannot carry a second command.
+      execFileSync('npm', ['install', '--', name], { stdio: 'pipe', cwd: process.cwd() });
     } catch (error) {
       throw new Error(`Failed to install "${name}": ${error.message}`);
     }
@@ -117,7 +118,7 @@ export async function removePlugin(name) {
   // Uninstall npm package if applicable
   if (entry.package && !entry.path) {
     try {
-      execSync(`npm uninstall ${entry.package}`, { stdio: 'pipe', cwd: process.cwd() });
+      execFileSync('npm', ['uninstall', '--', entry.package], { stdio: 'pipe', cwd: process.cwd() });
     } catch {
       // Non-fatal — config will be cleaned up regardless
     }

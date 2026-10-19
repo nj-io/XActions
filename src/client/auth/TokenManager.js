@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Client — Token Manager
  *
@@ -10,10 +10,11 @@
  * For authenticated requests, a CSRF token (ct0 cookie) replaces the guest token.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 import { BEARER_TOKEN } from '../api/graphqlQueries.js';
+import { randomUserAgent } from './userAgent.js';
 
 const ACTIVATE_URL = 'https://api.x.com/1.1/guest/activate.json';
 
@@ -42,6 +43,14 @@ export class TokenManager {
     this.guestTokenExpiresAt = null;
     /** @type {string|null} CSRF token for authenticated requests (from ct0 cookie) */
     this.csrfToken = null;
+    /**
+     * Browser User-Agent sent on every request. X answers a UA-less request
+     * to activate.json with a misleading HTTP 404, so this is required, not
+     * cosmetic. Pinned for the lifetime of the manager so a single session
+     * presents a consistent fingerprint.
+     * @type {string}
+     */
+    this.userAgent = randomUserAgent();
     /** @private */
     this._fetchFn = fetchFn || globalThis.fetch;
   }
@@ -59,7 +68,10 @@ export class TokenManager {
   async activateGuestToken() {
     const response = await this._fetchFn(ACTIVATE_URL, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${this.bearerToken}` },
+      headers: {
+        Authorization: `Bearer ${this.bearerToken}`,
+        'User-Agent': this.userAgent,
+      },
     });
 
     // Handle rate limiting with one retry
@@ -69,7 +81,10 @@ export class TokenManager {
 
       const retryResponse = await this._fetchFn(ACTIVATE_URL, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${this.bearerToken}` },
+        headers: {
+          Authorization: `Bearer ${this.bearerToken}`,
+          'User-Agent': this.userAgent,
+        },
       });
 
       if (!retryResponse.ok) {
@@ -118,6 +133,7 @@ export class TokenManager {
   getHeaders(authenticated = false) {
     const headers = {
       Authorization: `Bearer ${this.bearerToken}`,
+      'User-Agent': this.userAgent,
       'x-twitter-active-user': 'yes',
       'x-twitter-client-language': 'en',
       'Content-Type': 'application/json',

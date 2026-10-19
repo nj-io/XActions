@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
  * 💬 Send Direct Messages
@@ -33,7 +33,9 @@
  * ============================================================
  */
 
-const CONFIG = {
+// `var` (not `const`): a repeated top-level `const` paste in the same
+// DevTools tab throws "already been declared" instead of re-running.
+var CONFIG = {
   // Target users to message
   targetUsers: [
     // 'username1',
@@ -70,6 +72,13 @@ Best,
 
 (async function sendDirectMessage() {
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+  // Set an input's value through the native setter so React's value tracker
+  // registers the change (direct .value assignment gets ignored by React).
+  const setNativeValue = (el, value) => {
+    const desc = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'value');
+    if (desc && desc.set) desc.set.call(el, value);
+    else el.value = value;
+  };
   const randomDelay = (base) => {
     if (CONFIG.options.randomizeDelay) {
       return sleep(base + Math.random() * base * 0.5);
@@ -133,7 +142,9 @@ Best,
     // Send DM to a single user
     sendTo: async (username, customMessage = null) => {
       const cleanUsername = username.replace('@', '').toLowerCase();
-      const message = customMessage || CONFIG.messageTemplate.replace('{username}', cleanUsername);
+      // split/join instead of .replace() so every occurrence of the
+      // placeholder is substituted, not just the first one.
+      const message = customMessage || CONFIG.messageTemplate.split('{username}').join(cleanUsername);
       
       console.log(`💬 Sending DM to @${cleanUsername}...`);
       
@@ -161,17 +172,18 @@ Best,
         
         // Type username
         searchInput.focus();
-        searchInput.value = cleanUsername;
+        setNativeValue(searchInput, cleanUsername);
         searchInput.dispatchEvent(new Event('input', { bubbles: true }));
         await sleep(2000);
         
-        // Click on user
+        // Click on user - match the exact @handle so a prefix like "john"
+        // can't select "johnny" (wrong DM recipient)
         const userCells = document.querySelectorAll(SELECTORS.userCell);
+        const handleRe = new RegExp('@' + cleanUsername.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![a-zA-Z0-9_])', 'i');
         let found = false;
-        
+
         for (const cell of userCells) {
-          const cellText = cell.textContent.toLowerCase();
-          if (cellText.includes(cleanUsername)) {
+          if (handleRe.test(cell.textContent)) {
             cell.click();
             found = true;
             await sleep(1500);
@@ -248,17 +260,20 @@ Best,
       console.log('');
       
       state.isRunning = true;
-      
-      for (const username of CONFIG.targetUsers) {
+
+      for (let i = 0; i < CONFIG.targetUsers.length; i++) {
         if (!state.isRunning) break;
         if (state.stats.sent >= CONFIG.limits.messagesPerSession) {
           console.log(`🛑 Reached limit of ${CONFIG.limits.messagesPerSession} messages.`);
           break;
         }
-        
-        await window.XActions.DM.sendTo(username);
-        
-        if (state.isRunning && CONFIG.targetUsers.indexOf(username) < CONFIG.targetUsers.length - 1) {
+
+        await window.XActions.DM.sendTo(CONFIG.targetUsers[i]);
+
+        // Use the loop index, not indexOf(), so a duplicate username in
+        // targetUsers can't make this resolve to the wrong (earlier) entry
+        // and skip the delay before the real last message.
+        if (state.isRunning && i < CONFIG.targetUsers.length - 1) {
           console.log(`⏳ Waiting ${CONFIG.limits.delayBetweenMessages / 1000}s before next message...`);
           await randomDelay(CONFIG.limits.delayBetweenMessages);
         }

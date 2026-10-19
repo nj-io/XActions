@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). MIT License.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 // DetectUnfollowers.js — Find out who unfollowed you on X (Twitter)
 // https://github.com/nirholas/XActions
 //

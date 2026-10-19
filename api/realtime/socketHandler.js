@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
@@ -11,6 +11,27 @@ const prisma = new PrismaClient();
 // Store active sessions
 const activeSessions = new Map(); // odessId -> { odess, dashboard, user, status }
 const adminSockets = new Set(); // Admin sockets watching all sessions
+
+/** Whether this socket may receive a stream's events. */
+async function canWatchStream(socket, streamId) {
+  if (!socket.user || typeof streamId !== 'string') return false;
+  try {
+    const { getStreamStatus } = await import('../../src/streaming/streamManager.js');
+    const meta = await getStreamStatus(streamId);
+    return Boolean(meta) && (socket.user.isAdmin || meta.userId === socket.user.id);
+  } catch {
+    return false;
+  }
+}
+
+/** Whether this socket may receive a job's events (and its result). */
+async function canWatchJob(socket, jobId) {
+  if (!socket.user || typeof jobId !== 'string' || !jobId) return false;
+  const operation = await prisma.operation.findUnique({ where: { id: jobId } }).catch(() => null);
+  if (operation) return socket.user.isAdmin || operation.userId === socket.user.id;
+  // AI operations have no row; their 128-bit id is the capability to watch them.
+  return /^(ai|op)-/.test(jobId) && jobId.length >= 36;
+}
 
 export function initializeSocketIO(httpServer) {
   const io = new Server(httpServer, {
@@ -66,24 +87,32 @@ export function initializeSocketIO(httpServer) {
     }
 
     // ===== STREAM ROOMS =====
-    // Clients can join/leave stream rooms to receive real-time events
-    socket.on('stream:join', (streamId) => {
+    // A stream room carries that stream's events, so only its owner (or an
+    // admin) may join; any socket could once join any stream, and the shared
+    // 'streams' room received every user's events.
+    socket.on('stream:join', async (streamId) => {
+      if (!(await canWatchStream(socket, streamId))) {
+        socket.emit('stream:error', { streamId, error: 'Stream not found' });
+        return;
+      }
       socket.join(`stream:${streamId}`);
-      socket.join('streams'); // global stream room
-      console.log(`📡 Socket ${socket.id} joined stream room: ${streamId}`);
+      if (socket.user?.isAdmin) socket.join('streams');
     });
 
     socket.on('stream:leave', (streamId) => {
       socket.leave(`stream:${streamId}`);
-      console.log(`📡 Socket ${socket.id} left stream room: ${streamId}`);
     });
 
     // ===== JOB PROGRESS ROOMS =====
-    // Subscribe to a specific job's lifecycle events (active, progress, completed, failed).
-    // Usage: socket.emit('job:join', operationId)
-    socket.on('job:join', (jobId) => {
+    // Subscribe to a job's lifecycle events (active, progress, completed,
+    // failed), which carry its result: allowed for the operation's owner, or
+    // for an AI operation to whoever holds its unguessable id.
+    socket.on('job:join', async (jobId) => {
+      if (!(await canWatchJob(socket, jobId))) {
+        socket.emit('job:error', { jobId, error: 'Operation not found' });
+        return;
+      }
       socket.join(`job:${jobId}`);
-      console.log(`📡 Socket ${socket.id} joined job room: ${jobId}`);
     });
 
     socket.on('job:leave', (jobId) => {

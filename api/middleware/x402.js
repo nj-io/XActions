@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * x402 Payment Middleware for AI Agent Endpoints
  *
@@ -16,14 +16,20 @@
  * @author nichxbt
  */
 
+import { paymentGatePath } from '../utils/paymentGatePath.js';
 import {
   PAY_TO_ADDRESS,
+  PAY_TO_ADDRESS_SOLANA,
   FACILITATOR_URL,
   NETWORK,
+  SOLANA_NETWORK,
+  isEvmPayToConfigured,
   AI_OPERATION_PRICES,
   SCRIPT_PRICES,
   SCRIPT_RUN_PRICE,
   getOperationName,
+  pathForOperation,
+  operationForPath,
   SUPPORTED_NETWORKS,
   getAcceptedNetworks,
   ensureConfigValidated,
@@ -40,6 +46,60 @@ import {
 let _middleware = null;
 let _initPromise = null;
 let _initFailed = false;
+let _initFailedAt = 0;
+
+/** How long a failed initialization is remembered before it is retried. */
+const INIT_RETRY_MS = 60_000;
+
+/**
+ * Build a single route entry in the shape @x402/core v2 expects.
+ *
+ * v2 moved the payment terms behind an `accepts` key. The flat
+ * `{ price, network, payTo }` shape from v1 makes the SDK's
+ * `normalizePaymentOptions()` return `[undefined]`, and
+ * `validateRouteConfiguration()` then throws while reading
+ * `option.network` — which surfaced as a 500 on every single
+ * /api/ai/* request instead of the intended 402.
+ *
+ * Only the configured NETWORK is listed. `initialize()` throws a
+ * RouteConfigurationError if any advertised network lacks a registered
+ * scheme or facilitator support, so advertising the full
+ * getAcceptedNetworks() list here would take the whole API down the
+ * moment one facilitator dropped a chain.
+ *
+ * @param {string} price - Human price string, e.g. "$0.01"
+ * @param {string} description - Shown in the 402 payment requirements
+ * @returns {object} Route config for paymentMiddleware()
+ */
+function paidRoute(price, description) {
+  return {
+    accepts: {
+      scheme: 'exact',
+      price,
+      network: NETWORK,
+      payTo: PAY_TO_ADDRESS,
+    },
+    description,
+  };
+}
+
+/**
+ * Can this process actually take a payment on the chain it advertises?
+ *
+ * The EVM scheme is the only one registered here, so the answer is "only with
+ * an EVM receiving address". An operator who set X402_PAY_TO_ADDRESS_SOLANA and
+ * nothing else passes `isX402Configured()` (Solana alone is a valid setup for
+ * the edge deployment, which does offer Solana) and used to reach `paidRoute()`
+ * with an empty string for `payTo`. That publishes Base terms payable to
+ * nobody: every caller signs a transfer to "" and the payment fails, or worse
+ * is aimed at an address the operator does not own. Refusing to start is the
+ * only honest answer.
+ *
+ * @returns {boolean}
+ */
+function canServeConfiguredNetwork() {
+  return isEvmPayToConfigured();
+}
 
 /**
  * Build route configuration for the official x402 middleware.
@@ -49,31 +109,26 @@ function buildRouteConfig() {
   const routes = {};
 
   for (const [operation, price] of Object.entries(AI_OPERATION_PRICES)) {
-    const [category, action] = operation.split(':');
-    const routePath = `POST /api/ai/${category}/${action}`;
-
-    routes[routePath] = {
-      price,
-      network: NETWORK,
-      payTo: PAY_TO_ADDRESS,
-    };
+    // The whole operation key is the path. Reading only the first two segments
+    // here meant a three-segment route could never be protected: its price
+    // built a path that did not exist, and the real path matched no route and
+    // was served free.
+    routes[`POST ${pathForOperation(operation)}`] = paidRoute(price, `XActions ${operation}`);
   }
 
   // Script download routes
   for (const [scriptPath, price] of Object.entries(SCRIPT_PRICES)) {
-    routes[`GET /api/scripts/${scriptPath}`] = {
+    routes[`GET /api/scripts/${scriptPath}`] = paidRoute(
       price,
-      network: NETWORK,
-      payTo: PAY_TO_ADDRESS,
-    };
+      `Download the ${scriptPath} browser script`,
+    );
   }
 
   // Script run route — single endpoint, priced higher than download
-  routes['POST /api/scripts/run'] = {
-    price: SCRIPT_RUN_PRICE,
-    network: NETWORK,
-    payTo: PAY_TO_ADDRESS,
-  };
+  routes['POST /api/scripts/run'] = paidRoute(
+    SCRIPT_RUN_PRICE,
+    'Run a browser script server-side and return its result',
+  );
 
   return routes;
 }
@@ -83,6 +138,17 @@ function buildRouteConfig() {
  * XActions analytics, webhooks, and audit logging.
  */
 async function initializeMiddleware() {
+  if (!canServeConfiguredNetwork()) {
+    throw new Error(
+      `x402 cannot serve ${NETWORK}: X402_PAY_TO_ADDRESS is not a valid EVM address` +
+      (PAY_TO_ADDRESS_SOLANA
+        ? `. X402_PAY_TO_ADDRESS_SOLANA is set, but this Express middleware only registers the EVM "exact" scheme, ` +
+          `so it cannot take payment on ${SOLANA_NETWORK}. Set an EVM address too, or serve the paid endpoints from ` +
+          'the edge deployment (functions/, src/edge/x402.js), which does offer Solana.'
+        : '. Set X402_PAY_TO_ADDRESS to the wallet that should receive USDC.')
+    );
+  }
+
   const { paymentMiddleware } = await import('@x402/express');
   const { x402ResourceServer, HTTPFacilitatorClient } = await import('@x402/core/server');
   const { ExactEvmScheme } = await import('@x402/evm/exact/server');
@@ -99,10 +165,17 @@ async function initializeMiddleware() {
   ]);
 
   for (const networkId of networksToRegister) {
+    // ExactEvmScheme speaks EIP-712 and signs an EVM transferWithAuthorization.
+    // Registering it against a Solana CAIP-2 id inside a try/catch does not add
+    // Solana support; it either throws and is swallowed, or succeeds and leaves
+    // a scheme that would mis-verify a Solana payload. Solana is served by the
+    // edge deployment instead (src/edge/x402.js).
+    if (!networkId.startsWith('eip155:')) continue;
     try {
       server.register(networkId, new ExactEvmScheme());
     } catch {
-      // Ignore already-registered or unsupported network errors.
+      // Already registered, or the SDK does not know this chain: neither is
+      // fatal, because only NETWORK is ever advertised in a route.
     }
   }
 
@@ -200,8 +273,9 @@ async function initializeMiddleware() {
  */
 function extractOperation(requirements) {
   if (!requirements?.resource) return 'unknown';
-  const aiMatch = requirements.resource.match(/\/api\/ai\/([^/]+)\/([^/?]+)/);
-  if (aiMatch) return `${aiMatch[1]}:${aiMatch[2]}`;
+  const aiPath = requirements.resource.match(/(\/api\/ai\/[^?]+)/);
+  const operation = aiPath ? operationForPath(aiPath[1]) : null;
+  if (operation) return operation;
   if (requirements.resource.endsWith('/api/scripts/run')) return 'script:run';
   const scriptMatch = requirements.resource.match(/\/api\/scripts\/((?:automation|src)\/[^/?]+)/);
   if (scriptMatch) return `script:download:${scriptMatch[1]}`;
@@ -215,8 +289,9 @@ function extractOperation(requirements) {
  * Falls through gracefully if x402 is not configured (development mode).
  */
 export async function x402Middleware(req, res, next) {
-  const isAiPath = req.path.startsWith('/api/ai/');
-  const isScriptsPath = req.path.startsWith('/api/scripts/');
+  const gatePath = paymentGatePath(req.path);
+  const isAiPath = gatePath.startsWith('/api/ai/');
+  const isScriptsPath = gatePath.startsWith('/api/scripts/');
 
   if (!isAiPath && !isScriptsPath) {
     return next();
@@ -224,31 +299,40 @@ export async function x402Middleware(req, res, next) {
 
   // Free endpoints: AI health/pricing + scripts listing + session validation
   if (
-    req.path === '/api/ai/health' ||
-    req.path === '/api/ai/pricing' ||
-    req.path === '/api/ai/action/validate-session' ||
-    req.path === '/api/scripts' ||
-    req.path === '/api/scripts/'
+    gatePath === '/api/ai/health' ||
+    gatePath === '/api/ai/pricing' ||
+    gatePath === '/api/ai/action/validate-session'
   ) {
     return next();
   }
 
   // Check if x402 is configured
   if (!ensureConfigValidated()) {
-    // x402 not configured — pass through in development
+    // Not configured. Outside production this serves the paid surface free,
+    // which is what a developer wants locally and a disaster in a container
+    // that simply forgot to set NODE_ENV, so say so on every request rather
+    // than only in the log nobody reads at boot.
     if (process.env.NODE_ENV !== 'production') {
+      res.setHeader('X-Payment-Bypassed', 'x402-not-configured; NODE_ENV is not production');
       return next();
     }
-    return res.status(500).json({ error: 'Payment system not configured' });
+    return res.status(500).json({ error: 'Payment system not configured', hint: 'Set X402_PAY_TO_ADDRESS to a 0x wallet address on the server' });
   }
 
-  // Lazy-initialize middleware
+  // Lazy-initialize middleware. A failure is remembered only for
+  // INIT_RETRY_MS: the usual cause is the facilitator being briefly
+  // unreachable, and a paid API that stays 503 until someone restarts the
+  // process turns a thirty-second blip into an outage.
+  if (!_middleware && _initFailed && Date.now() - _initFailedAt > INIT_RETRY_MS) {
+    _initFailed = false;
+  }
   if (!_middleware && !_initFailed) {
     if (!_initPromise) {
       _initPromise = initializeMiddleware()
         .then(mw => { _middleware = mw; })
         .catch(err => {
           _initFailed = true;
+          _initFailedAt = Date.now();
           console.error('❌ x402 initialization failed:', err.message);
           console.log('   Install packages: npm install @x402/core @x402/evm @x402/express');
         })
@@ -277,7 +361,12 @@ export async function x402Middleware(req, res, next) {
 export function x402HealthCheck(req, res) {
   const configured = isX402Configured();
   const includeTestnet = process.env.NODE_ENV !== 'production';
-  const networks = getAcceptedNetworks(includeTestnet);
+  // Only the chain a payment can actually be made on. The full
+  // getAcceptedNetworks() table is the set of chains the protocol knows about,
+  // not the set this process will accept: every route advertises NETWORK alone,
+  // so listing eleven chains here sends an agent to sign on one of the ten that
+  // will be rejected.
+  const networks = getAcceptedNetworks(includeTestnet).filter(n => n.network === NETWORK);
   const recommendedNetwork = networks.find(n => n.recommended) || networks[0];
 
   res.json({
@@ -305,15 +394,12 @@ export function x402HealthCheck(req, res) {
       }
     },
     pricing: AI_OPERATION_PRICES,
-    endpoints: Object.keys(AI_OPERATION_PRICES).map(op => {
-      const [category, action] = op.split(':');
-      return {
-        operation: op,
-        name: getOperationName(op),
-        path: `/api/ai/${category}/${action}`,
-        price: AI_OPERATION_PRICES[op],
-      };
-    }),
+    endpoints: Object.keys(AI_OPERATION_PRICES).map(op => ({
+      operation: op,
+      name: getOperationName(op),
+      path: pathForOperation(op),
+      price: AI_OPERATION_PRICES[op],
+    })),
   });
 }
 
@@ -322,7 +408,8 @@ export function x402HealthCheck(req, res) {
  */
 export function x402Pricing(req, res) {
   const includeTestnet = process.env.NODE_ENV !== 'production';
-  const networks = getAcceptedNetworks(includeTestnet);
+  // Same rule as the health endpoint: advertise only what this process accepts.
+  const networks = getAcceptedNetworks(includeTestnet).filter(n => n.network === NETWORK);
   const recommendedNetwork = networks.find(n => n.recommended) || networks[0];
 
   res.json({

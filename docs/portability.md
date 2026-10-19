@@ -60,6 +60,7 @@ src/portability/
 ├── exporter.js        → Full account export orchestrator with checkpoint resume
 ├── archive-viewer.js  → Self-contained HTML archive generator
 ├── importer.js        → Bluesky & Mastodon migration (user matching via Dice coefficient)
+├── twitter-archive.js → Official X data export (zip or folder) importer, summary, export bridge
 ├── differ.js          → Export comparison engine (followers, tweets, engagement)
 └── index.js           → Barrel re-exports
 
@@ -165,6 +166,105 @@ Content-Type: application/json
 > "Export @nichxbt's full account to JSON and generate an HTML archive"
 
 The AI agent calls `x_export_account` with `{ username: "nichxbt", formats: ["json"], authToken: "..." }`.
+
+---
+
+## Import your X archive
+
+You do not need to scrape your own account. X will hand you everything as a zip (**Settings > Your account > Download an archive of your data**; it arrives a day or so later). `importTwitterArchive` reads that download, either the `.zip` itself or the folder you extracted it to, and returns the same normalised records the rest of the portability toolkit works with. Zips are streamed entry by entry, so a multi-gigabyte archive with years of media is fine on a laptop: only one `data/*.js` section file is held in memory at a time, and media files are indexed, not read.
+
+```js
+import {
+  importTwitterArchive,
+  summarizeArchive,
+  formatArchiveReport,
+  exportArchive,
+  openArchiveMedia,
+} from './src/portability/index.js';
+import { pipeline } from 'node:stream/promises';
+import { createWriteStream } from 'node:fs';
+
+const archive = await importTwitterArchive('twitter-2026-01-01-abc123.zip', {
+  onProgress: (p) => process.stderr.write(`${p.phase} ${p.file}\n`),
+});
+
+console.log(formatArchiveReport(summarizeArchive(archive)));
+
+// tweets, likes, following, followers, blocks, mutes, dms, lists, media, account, profile
+const replies = archive.tweets.filter((t) => t.inReplyTo);
+console.log(`${replies.length} of ${archive.tweets.length} tweets are replies`);
+
+// Write it out in the same layout `export` produces (JSON, CSV, Markdown, HTML viewer)
+const { dir } = await exportArchive(archive, { outputDir: 'exports/me_archive' });
+console.log(`open ${dir}/index.html`);
+
+// Pull a photo straight out of the zip
+const first = archive.media[0];
+await pipeline(await openArchiveMedia(archive, first.path), createWriteStream(first.file));
+```
+
+Save that as `archive.mjs` in the repo root and run `node archive.mjs` (from an installed package, import from `xactions/src/portability/index.js`).
+
+### What you get
+
+| Field | Shape |
+|-------|-------|
+| `account` | `{ id, username, name, email, createdAt, createdVia }` |
+| `profile` | `{ username, name, bio, website, location, avatarUrl, headerUrl }` |
+| `tweets[]` | `{ id, text, createdAt, url, inReplyTo: { tweetId, userId, username } \| null, retweeted, media: [{ id, type, url, previewUrl, file }], metrics: { likes, retweets }, hashtags, mentions, links, lang, source }` plus the flat `timestamp`, `likes`, `retweets` fields the exporter and differ read |
+| `likes[]` | `{ id, text, url }` |
+| `following[]`, `followers[]`, `blocks[]`, `mutes[]` | `{ id, url }` (the archive only carries account ids) |
+| `dms[]` | one entry per conversation: `{ id, kind: 'direct' \| 'group', participants, messageCount, firstMessageAt, lastMessageAt, messages: [{ id, senderId, recipientId, text, createdAt, media, links, reactions }], events }` |
+| `lists[]` | `{ kind: 'created' \| 'member' \| 'subscribed', name, url, description }` |
+| `media[]` | `{ path, file, dir, size, tweetId, kind }` for every file under `data/*_media/` |
+| `sections` | `{ present, missing }` so you can tell an empty section from one the archive does not include |
+
+Multi-part files (`tweets.js`, `tweets-part1.js`, ...) are merged in part order. Pass `sections: ['tweets', 'likes']` to skip everything else, which is the fast path on a large archive.
+
+### Summary report
+
+`summarizeArchive(archive)` returns counts per section, the tweet date range, tweets per year, the busiest year, top hashtags and mentions, and likes and retweets received. `formatArchiveReport(summary)` renders it as terminal text:
+
+```
+X archive for @nichxbt (zip)
+Account created: 2019-03-01
+Tweets span:     2024-01-01 to 2025-03-16
+
+Tweets       5 (3 original, 1 replies, 1 retweets, 2 with media)
+Likes        2
+Following    3
+...
+Top hashtags
+  #xactions  3
+```
+
+### Migrate straight from the archive
+
+`migrate` accepts `source: 'twitterArchive'`; it imports the archive, writes `tweets.json` and `following.json` to `exportDir`, then runs the normal dry-run or live flow:
+
+```js
+import { migrate } from './src/portability/index.js';
+
+const summary = await migrate({
+  platform: 'bluesky',
+  source: 'twitterArchive',
+  archivePath: 'twitter-2026-01-01-abc123.zip',
+  exportDir: 'exports/me_archive',
+  dryRun: true,
+});
+```
+
+### From the command line
+
+All three flows are on the CLI as `xactions archive`, with no code to write:
+
+```bash
+xactions archive summary twitter-2026-01-01-abc123.zip            # the report above, or --json
+xactions archive export twitter-2026-01-01-abc123.zip --out exports/me --formats json,csv,md,html
+xactions archive migrate twitter-2026-01-01-abc123.zip --to bluesky # dry run; add --execute --handle --password to post
+```
+
+`export` writes the same layout `xactions export` produces, so `xactions diff` and `xactions migrate` accept the directory. A spinner reports each section as it is scanned; under `--json` on a pipe it stays silent. Flags and sample output: [cli-reference.md](cli-reference.md#archive-the-x-data-export-without-scraping).
 
 ---
 

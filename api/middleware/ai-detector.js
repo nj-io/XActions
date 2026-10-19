@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * AI Agent Detection Middleware
  * 
@@ -81,7 +81,7 @@ const PROGRAMMATIC_HEADERS = [
  */
 export function isAIAgent(req) {
   // Explicit AI endpoint - always AI
-  if (req.path.startsWith('/api/ai/')) {
+  if (req.path.toLowerCase().startsWith('/api/ai/')) {
     return true;
   }
   

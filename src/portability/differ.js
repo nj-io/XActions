@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Export Differ
  * Compares two account exports and generates a diff report.
@@ -7,7 +7,7 @@
  * Outputs: summary JSON + readable Markdown report.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 import { promises as fs } from 'fs';

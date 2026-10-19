@@ -1,24 +1,37 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * Video Extractor Service
- * 
- * Extracts video URLs from X/Twitter tweets using multiple strategies:
- * 1. Guest Token + GraphQL API (lightweight, no browser needed)
- * 2. FixTweet / fxtwitter API (reliable third-party fallback)
- * 3. Puppeteer browser automation (last resort)
- * 
+ *
+ * Extracts video URLs from X/Twitter tweets. The network-only lanes live in
+ * src/video/edgeExtractor.js so the Express API and the Cloudflare Pages
+ * Functions behind xactions.app/video run the exact same extraction code:
+ *
+ *   1. Twitter syndication endpoint  (no auth)          -> shared
+ *   2. fxtwitter API                 (no auth)          -> shared
+ *   3. Guest token + GraphQL         (TWITTER_BEARER_TOKEN) -> shared
+ *   4. Puppeteer browser automation  (last resort)      -> here, server only
+ *
  * @module api/services/videoExtractor
  * @author nichxbt
  */
+
+import {
+  extractTweetVideo,
+  getQualityLabel,
+  parseTweetUrl,
+  VideoExtractionError,
+} from '../../src/video/edgeExtractor.js';
+
+export { parseTweetUrl, VideoExtractionError };
 
 // ============================================================================
 // Constants
 // ============================================================================
 
-// Twitter's public bearer token — load from env to avoid leaking in source control
+// Twitter's public bearer token, loaded from env so it is never in source
+// control. Set it to unlock the GraphQL lane; the two lanes above it need no
+// credentials at all.
 const BEARER_TOKEN = process.env.TWITTER_BEARER_TOKEN || '';
-
-const GRAPHQL_TWEET_DETAIL = 'https://api.x.com/graphql/sBoAB5nqJTOyR9sZ5qVLsw/TweetResultByRestId';
 
 const DEFAULT_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36',
@@ -29,338 +42,6 @@ const DEFAULT_HEADERS = {
 };
 
 const EXTRACTION_TIMEOUT = 15000;
-
-// ============================================================================
-// URL Validation
-// ============================================================================
-
-const TWEET_URL_RE = /^https?:\/\/(?:www\.)?(?:twitter\.com|x\.com)\/(\w+)\/status\/(\d+)/;
-
-/**
- * Parse and validate a tweet URL
- * @param {string} url
- * @returns {{ username: string, tweetId: string } | null}
- */
-export function parseTweetUrl(url) {
-  if (!url || typeof url !== 'string') return null;
-  const match = url.trim().match(TWEET_URL_RE);
-  if (!match) return null;
-  return { username: match[1], tweetId: match[2] };
-}
-
-// ============================================================================
-// Strategy 1: Guest Token + GraphQL API
-// ============================================================================
-
-let cachedGuestToken = null;
-let guestTokenExpiry = 0;
-
-/**
- * Obtain a guest token from Twitter's activation endpoint.
- * Tokens are cached for 2 hours (they typically last ~3h).
- */
-async function getGuestToken() {
-  if (cachedGuestToken && Date.now() < guestTokenExpiry) {
-    return cachedGuestToken;
-  }
-
-  const response = await fetch('https://api.x.com/1.1/guest/activate.json', {
-    method: 'POST',
-    headers: {
-      ...DEFAULT_HEADERS,
-      'Authorization': `Bearer ${BEARER_TOKEN}`,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Guest token request failed: HTTP ${response.status}`);
-  }
-
-  const data = await response.json();
-  if (!data.guest_token) {
-    throw new Error('No guest_token in activation response');
-  }
-
-  cachedGuestToken = data.guest_token;
-  guestTokenExpiry = Date.now() + 2 * 60 * 60 * 1000; // 2 hours
-  return cachedGuestToken;
-}
-
-/**
- * Extract video via Twitter's GraphQL API using a guest token.
- * This is the fastest and most reliable method.
- */
-async function extractViaGraphQL(tweetId, username) {
-  const guestToken = await getGuestToken();
-
-  const variables = JSON.stringify({
-    tweetId,
-    withCommunity: false,
-    includePromotedContent: false,
-    withVoice: false,
-  });
-  const features = JSON.stringify({
-    creator_subscriptions_tweet_preview_api_enabled: true,
-    premium_content_api_read_enabled: true,
-    communities_web_enable_tweet_community_results_fetch: true,
-    c9s_tweet_anatomy_moderator_badge_enabled: true,
-    responsive_web_grok_analyze_button_fetch_trends_enabled: false,
-    responsive_web_grok_analyze_post_followups_enabled: false,
-    responsive_web_jetfuel_frame: false,
-    responsive_web_grok_share_attachment_enabled: false,
-    responsive_web_grok_annotations_enabled: false,
-    articles_preview_enabled: true,
-    responsive_web_edit_tweet_api_enabled: true,
-    graphql_is_translatable_rweb_tweet_is_translatable_enabled: true,
-    view_counts_everywhere_api_enabled: true,
-    longform_notetweets_consumption_enabled: true,
-    responsive_web_twitter_article_tweet_consumption_enabled: true,
-    content_disclosure_indicator_enabled: true,
-    content_disclosure_ai_generated_indicator_enabled: true,
-    responsive_web_grok_show_grok_translated_post: false,
-    responsive_web_grok_analysis_button_from_backend: false,
-    post_ctas_fetch_enabled: true,
-    freedom_of_speech_not_reach_fetch_enabled: true,
-    standardized_nudges_misinfo: true,
-    tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled: true,
-    longform_notetweets_rich_text_read_enabled: true,
-    longform_notetweets_inline_media_enabled: true,
-    profile_label_improvements_pcf_label_in_post_enabled: true,
-    responsive_web_profile_redirect_enabled: true,
-    rweb_tipjar_consumption_enabled: true,
-    verified_phone_label_enabled: false,
-    responsive_web_grok_image_annotation_enabled: false,
-    responsive_web_grok_imagine_annotation_enabled: false,
-    responsive_web_grok_community_note_auto_translation_is_enabled: false,
-    responsive_web_graphql_skip_user_profile_image_extensions_enabled: false,
-    responsive_web_graphql_timeline_navigation_enabled: true,
-    responsive_web_enhance_cards_enabled: false,
-  });
-  const fieldToggles = JSON.stringify({ withArticleRichContentState: true, withArticlePlainText: false, withArticleSummaryText: false, withArticleVoiceOver: false, withGrokAnalyze: false, withDisallowedReplyControls: false, withPayments: false, withAuxiliaryUserLabels: false });
-
-  const url = `${GRAPHQL_TWEET_DETAIL}?variables=${encodeURIComponent(variables)}&features=${encodeURIComponent(features)}&fieldToggles=${encodeURIComponent(fieldToggles)}`;
-
-  const response = await fetch(url, {
-    headers: {
-      ...DEFAULT_HEADERS,
-      'Authorization': `Bearer ${BEARER_TOKEN}`,
-      'x-guest-token': guestToken,
-      'x-twitter-active-user': 'yes',
-      'x-twitter-client-language': 'en',
-    },
-  });
-
-  if (response.status === 403 || response.status === 401) {
-    // Guest token expired or invalidated — clear cache and rethrow
-    cachedGuestToken = null;
-    guestTokenExpiry = 0;
-    throw new Error(`GraphQL auth failed: HTTP ${response.status}`);
-  }
-
-  if (!response.ok) {
-    throw new Error(`GraphQL request failed: HTTP ${response.status}`);
-  }
-
-  const json = await response.json();
-
-  // Navigate the deeply nested GraphQL response
-  const result = json?.data?.tweetResult?.result;
-  if (!result) {
-    throw new Error('Tweet not found in GraphQL response');
-  }
-
-  // Handle tombstone / unavailable tweets
-  const typename = result.__typename;
-  if (typename === 'TweetTombstone') {
-    throw new Error('Tweet is unavailable (deleted or private)');
-  }
-
-  // The tweet data may be wrapped in a "tweet" property for some visibility types
-  const tweetData = result.tweet || result;
-  const legacy = tweetData.legacy || {};
-  const core = tweetData.core?.user_results?.result?.legacy || {};
-
-  // Extract text
-  const tweetText = legacy.full_text || '';
-  const authorName = core.name || username;
-
-  // Extract media (videos)
-  const media = legacy.extended_entities?.media || legacy.entities?.media || [];
-  const videos = [];
-  let thumbnailUrl = null;
-  let durationMs = null;
-
-  for (const item of media) {
-    if (item.type !== 'video' && item.type !== 'animated_gif') continue;
-
-    // Thumbnail
-    if (!thumbnailUrl && item.media_url_https) {
-      thumbnailUrl = item.media_url_https;
-    }
-
-    const videoInfo = item.video_info;
-    if (!videoInfo?.variants) continue;
-
-    // Duration
-    if (videoInfo.duration_millis && !durationMs) {
-      durationMs = videoInfo.duration_millis;
-    }
-
-    for (const variant of videoInfo.variants) {
-      if (variant.content_type !== 'video/mp4') continue;
-      if (!variant.url) continue;
-
-      const resMatch = variant.url.match(/\/(\d+)x(\d+)\//);
-      const width = resMatch ? parseInt(resMatch[1]) : 0;
-      const height = resMatch ? parseInt(resMatch[2]) : 0;
-
-      videos.push({
-        url: variant.url,
-        quality: getQualityLabel(width, height),
-        width,
-        height,
-        bitrate: variant.bitrate || 0,
-        contentType: 'video/mp4',
-      });
-    }
-  }
-
-  if (videos.length === 0) {
-    throw new Error('No video found in GraphQL response');
-  }
-
-  // Sort highest quality first
-  videos.sort((a, b) => {
-    const aScore = (a.width * a.height) || a.bitrate;
-    const bScore = (b.width * b.height) || b.bitrate;
-    return bScore - aScore;
-  });
-
-  return {
-    videos,
-    thumbnail: thumbnailUrl || null,
-    duration: durationMs || null,
-    author: authorName,
-    username,
-    tweetId,
-    text: tweetText || null,
-  };
-}
-
-// ============================================================================
-// Strategy 2: FixTweet / fxtwitter API
-// ============================================================================
-
-/**
- * Extract video via the fxtwitter API (open-source Twitter embed fixer).
- * Reliable fallback when guest token / GraphQL strategy fails.
- */
-async function extractViaFxTwitter(tweetId, username) {
-  // fxtwitter provides a JSON API at api.fxtwitter.com
-  const url = `https://api.fxtwitter.com/${username}/status/${tweetId}`;
-
-  const response = await fetch(url, {
-    headers: {
-      'User-Agent': 'XActions/1.0 (+https://github.com/nirholas/XActions)',
-      'Accept': 'application/json',
-    },
-    signal: AbortSignal.timeout(10000),
-  });
-
-  if (!response.ok) {
-    throw new Error(`fxtwitter API failed: HTTP ${response.status}`);
-  }
-
-  const data = await response.json();
-  const tweet = data?.tweet;
-  if (!tweet) {
-    throw new Error('No tweet data in fxtwitter response');
-  }
-
-  // fxtwitter puts media in tweet.media.videos or tweet.media.all
-  const mediaItems = tweet.media?.videos || tweet.media?.all?.filter(m => m.type === 'video') || [];
-  const videos = [];
-  let thumbnailUrl = tweet.media?.videos?.[0]?.thumbnail_url || null;
-  let durationMs = null;
-
-  for (const item of mediaItems) {
-    if (!thumbnailUrl && item.thumbnail_url) {
-      thumbnailUrl = item.thumbnail_url;
-    }
-    if (item.duration && !durationMs) {
-      durationMs = Math.round(item.duration * 1000);
-    }
-
-    // fxtwitter may provide a single URL or multiple variants
-    if (item.url) {
-      const resMatch = item.url.match(/\/(\d+)x(\d+)\//);
-      const width = item.width || (resMatch ? parseInt(resMatch[1]) : 0);
-      const height = item.height || (resMatch ? parseInt(resMatch[2]) : 0);
-
-      videos.push({
-        url: item.url,
-        quality: getQualityLabel(width, height),
-        width,
-        height,
-        bitrate: item.bitrate || 0,
-        contentType: 'video/mp4',
-      });
-    }
-
-    // Check for format variants
-    if (Array.isArray(item.variants)) {
-      for (const variant of item.variants) {
-        if (variant.content_type !== 'video/mp4' && variant.type !== 'video/mp4') continue;
-        if (!variant.url) continue;
-
-        const resMatch = variant.url.match(/\/(\d+)x(\d+)\//);
-        const width = resMatch ? parseInt(resMatch[1]) : 0;
-        const height = resMatch ? parseInt(resMatch[2]) : 0;
-
-        videos.push({
-          url: variant.url,
-          quality: getQualityLabel(width, height),
-          width,
-          height,
-          bitrate: variant.bitrate || 0,
-          contentType: 'video/mp4',
-        });
-      }
-    }
-  }
-
-  if (videos.length === 0) {
-    throw new Error('No video found in fxtwitter response');
-  }
-
-  // Deduplicate by base URL
-  const seen = new Set();
-  const unique = [];
-  for (const v of videos) {
-    const base = v.url.split('?')[0];
-    if (!seen.has(base)) {
-      seen.add(base);
-      unique.push(v);
-    }
-  }
-
-  // Sort highest quality first
-  unique.sort((a, b) => {
-    const aScore = (a.width * a.height) || a.bitrate;
-    const bScore = (b.width * b.height) || b.bitrate;
-    return bScore - aScore;
-  });
-
-  return {
-    videos: unique,
-    thumbnail: thumbnailUrl || null,
-    duration: durationMs || null,
-    author: tweet.author?.name || username,
-    username,
-    tweetId,
-    text: tweet.text || null,
-  };
-}
 
 // ============================================================================
 // Strategy 3: Puppeteer (last resort)
@@ -679,83 +360,45 @@ function extractVideoInfoFromJson(obj, results) {
 }
 
 // ============================================================================
-// Quality Label Helper
-// ============================================================================
-
-function getQualityLabel(width, height) {
-  const maxDim = Math.max(width, height);
-  if (maxDim >= 3840) return '4K';
-  if (maxDim >= 2560) return '1440p';
-  if (maxDim >= 1920) return '1080p';
-  if (maxDim >= 1280) return '720p';
-  if (maxDim >= 640) return '480p';
-  if (maxDim >= 480) return '360p';
-  if (maxDim > 0) return `${maxDim}p`;
-  return 'unknown';
-}
-
-// ============================================================================
 // Main Extraction (multi-strategy with fallback chain)
 // ============================================================================
 
 /**
- * Extract video info from a tweet URL.
- * 
- * Tries strategies in order:
- * 1. Guest Token + GraphQL API (fast, no browser)
- * 2. fxtwitter API (reliable third-party)
- * 3. Puppeteer browser automation (heavy, last resort)
- * 
- * @param {string} tweetUrl — Full tweet URL (x.com or twitter.com)
- * @returns {Promise<Object>} — { videos, thumbnail, duration, author, text }
+ * Extract every downloadable video variant from a tweet.
+ *
+ * Runs the shared network lanes first, then falls back to Puppeteer, which is
+ * the only lane that can read a tweet the public endpoints refuse to serve.
+ *
+ * @param {string} tweetUrl Full tweet URL (x.com or twitter.com)
+ * @returns {Promise<Object>} { videos, thumbnail, duration, author, username, tweetId, text, source }
  */
 export async function extractVideo(tweetUrl) {
   const parsed = parseTweetUrl(tweetUrl);
   if (!parsed) {
-    throw new Error('Invalid tweet URL. Expected: https://x.com/user/status/123');
+    throw new VideoExtractionError('Invalid tweet URL. Expected: https://x.com/user/status/123', 400);
   }
 
-  const { username, tweetId } = parsed;
-  const errors = [];
-
-  // Strategy 1: Guest Token + GraphQL
+  let sharedError;
   try {
-    console.log('🎬 Trying GraphQL API extraction...');
-    const result = await extractViaGraphQL(tweetId, username);
-    console.log(`✅ GraphQL extraction succeeded: ${result.videos.length} variant(s)`);
+    console.log('🎬 Trying the shared network lanes...');
+    const result = await extractTweetVideo(tweetUrl, { bearerToken: BEARER_TOKEN });
+    console.log(`✅ ${result.source} extraction succeeded: ${result.videos.length} variant(s)`);
     return result;
   } catch (err) {
-    console.warn('⚠️ GraphQL extraction failed:', err.message);
-    errors.push(`GraphQL: ${err.message}`);
+    console.warn('⚠️ Network lanes failed:', err.message);
+    sharedError = err;
   }
 
-  // Strategy 2: fxtwitter API
-  try {
-    console.log('🎬 Trying fxtwitter API extraction...');
-    const result = await extractViaFxTwitter(tweetId, username);
-    console.log(`✅ fxtwitter extraction succeeded: ${result.videos.length} variant(s)`);
-    return result;
-  } catch (err) {
-    console.warn('⚠️ fxtwitter extraction failed:', err.message);
-    errors.push(`fxtwitter: ${err.message}`);
-  }
-
-  // Strategy 3: Puppeteer (last resort)
   try {
     console.log('🎬 Trying Puppeteer extraction...');
-    const result = await extractViaPuppeteer(tweetId, username);
+    const result = await extractViaPuppeteer(parsed.tweetId, parsed.username);
     console.log(`✅ Puppeteer extraction succeeded: ${result.videos.length} variant(s)`);
     return result;
   } catch (err) {
     console.warn('⚠️ Puppeteer extraction failed:', err.message);
-    errors.push(`Puppeteer: ${err.message}`);
+    const details = [...(sharedError.details || []), `puppeteer: ${err.message}`];
+    throw new VideoExtractionError(sharedError.message, sharedError.status || 502, details);
   }
-
-  // All strategies failed
-  throw new Error(
-    `No video found in this tweet. Make sure the tweet contains a video (not a GIF or image). ` +
-    `Details: ${errors.join(' | ')}`
-  );
 }
 
 // ============================================================================

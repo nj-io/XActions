@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
  * 📈 Followers Growth Tracker
@@ -24,7 +24,10 @@
  * ============================================================
  */
 
-const CONFIG = {
+// `var` (not `const`): this script's whole point is "run it periodically" in
+// the same tab, and DevTools throws "already been declared" on a repeated
+// top-level `const` paste - which would silently break that workflow.
+var CONFIG = {
   // Storage key prefix
   storageKey: 'xactions_growth_tracker',
   
@@ -258,12 +261,13 @@ const CONFIG = {
       }
       
       chart.push('       └' + '─'.repeat(recent.length));
-      chart.push('        ' + recent.map((h, i) => i % 3 === 0 ? formatDate(h.date).slice(0, 3) : '   ').join('').slice(0, recent.length));
+      // One column per entry: a 3-char label every 3rd entry lines up with its column
+      chart.push('        ' + recent.map((h, i) => i % 3 === 0 ? formatDate(h.date).slice(0, 3).padEnd(3) : '').join('').slice(0, recent.length + 2));
       
       chart.forEach(line => console.log(line));
     }
 
-    console.log('\n─'.repeat(50));
+    console.log('\n' + '─'.repeat(50));
   } else {
     console.log('\n📸 First snapshot saved!');
     console.log('   Run this script again later to see growth metrics.');

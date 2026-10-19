@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * AI Push Notification Endpoints
  *
@@ -9,11 +9,12 @@
 
 import express from 'express';
 import crypto from 'crypto';
+import { assertPublicUrl } from '../../services/processors/messaging.processors.js';
 
 const router = express.Router();
 
 const generateOperationId = () =>
-  `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+  `ai-${Date.now()}-${crypto.randomBytes(16).toString('hex')}`;
 
 const errorResponse = (res, statusCode, error, message, extras = {}) =>
   res.status(statusCode).json({
@@ -36,18 +37,22 @@ router.use((req, res, next) => next());
  */
 router.post('/send', async (req, res) => {
   const { webhookUrl, event, data, channel = 'webhook' } = req.body;
+  const schema = {
+    webhookUrl: { type: 'string', description: 'HTTPS endpoint: your webhook, or a Slack or Discord incoming-webhook URL' },
+    event: { type: 'string', description: 'Event name (e.g., new_follower, mention)' },
+    data: { type: 'object', description: 'Payload to send. For slack and discord, data.message and data.title set the text.' },
+    channel: { type: 'string', enum: ['webhook', 'slack', 'discord'], default: 'webhook' },
+  };
 
-  if (!webhookUrl && channel === 'webhook') {
+  if (!['webhook', 'slack', 'discord'].includes(channel)) {
     return res.status(400).json({
       error: 'INVALID_INPUT',
-      message: 'webhookUrl is required for webhook notifications',
-      schema: {
-        webhookUrl: { type: 'string', description: 'HTTPS webhook endpoint' },
-        event: { type: 'string', description: 'Event name (e.g., new_follower, mention)' },
-        data: { type: 'object', description: 'Payload to send' },
-        channel: { type: 'string', enum: ['webhook', 'email', 'slack'], default: 'webhook' },
-      },
+      message: 'channel must be webhook, slack or discord. Email is not offered here: it needs an SMTP server and a recipient this endpoint has no way to take.',
+      schema,
     });
+  }
+  if (!webhookUrl) {
+    return res.status(400).json({ error: 'INVALID_INPUT', message: `webhookUrl is required for ${channel} notifications`, schema });
   }
 
   const operationId = generateOperationId();
@@ -89,6 +94,12 @@ router.post('/test', async (req, res) => {
   }
 
   try {
+    await assertPublicUrl(webhookUrl, 'webhookUrl');
+  } catch (error) {
+    return errorResponse(res, 400, 'INVALID_INPUT', error.message, { retryable: false });
+  }
+
+  try {
     const response = await fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-XActions-Event': 'test', 'User-Agent': 'XActions/1.0' },
@@ -99,6 +110,8 @@ router.post('/test', async (req, res) => {
         source: 'xactions-ai-api',
       }),
       signal: AbortSignal.timeout(10000),
+      // A redirect could lead anywhere, including hosts the check above refused.
+      redirect: 'manual',
     });
 
     return successResponse(res, {

@@ -1,6 +1,6 @@
 {
   "name": "xactions",
-  "version": "3.1.0",
+  "version": "3.5.0",
   "description": "XActions - The Complete X/Twitter Automation Toolkit. Scrapers, MCP server for AI agents, CLI, and browser scripts. No API required. Open source by @nichxbt. Don't Panic.",
   "homepage": "https://xactions.app",
   "repository": {
@@ -27,7 +27,9 @@
     "./mcp": "./src/mcp/server.js",
     "./cli": "./src/cli/index.js",
     "./client": "./src/client/index.js",
-    "./spaces": "./src/spaces/agent.js"
+    "./spaces": "./src/spaces/agent.js",
+    "./portability": "./src/portability/index.js",
+    "./media": "./src/media/index.js"
   },
   "bin": {
     "xactions": "./src/cli/index.js",
@@ -47,6 +49,7 @@
     "db:studio": "prisma studio",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "test:x402": "vitest run tests/x402.test.js",
     "test:x402:integration": "vitest run tests/x402-integration.test.js",
     "test:x402:all": "vitest run tests/x402*.test.js",
@@ -54,9 +57,22 @@
     "test:payment": "node scripts/test-x402-payment.js",
     "audit": "node scripts/audit-console-errors.js",
     "audit:verbose": "node scripts/audit-console-errors.js --verbose",
+    "docs:audit": "node scripts/audit-docs.mjs",
+    "docs:scripts": "node scripts/build-browser-scripts-doc.mjs",
+    "docs:check": "node scripts/build-browser-scripts-doc.mjs --check && node scripts/sync-registry.mjs --check && node scripts/build-ask-index.mjs --check && node scripts/audit-docs.mjs && node scripts/check-x402-routes.mjs",
+    "check:licenses": "node scripts/normalize-license-headers.mjs && node scripts/add-license-notices.mjs",
+    "ask:index": "node scripts/build-ask-index.mjs",
+    "ask:index:check": "node scripts/build-ask-index.mjs --check",
+    "check:endpoints": "node scripts/check-endpoints.mjs",
+    "sync:endpoints": "node scripts/sync-x-endpoints.mjs",
+    "sync:endpoints:check": "node scripts/sync-x-endpoints.mjs --check",
+    "sync:user-agents": "node scripts/sync-user-agents.mjs",
+    "sync:user-agents:check": "node scripts/sync-user-agents.mjs --check",
     "deploy": "bash scripts/deploy.sh",
     "deploy:railway": "bash scripts/deploy.sh railway",
+    "build:cloudflare": "node scripts/build-cloudflare.mjs",
     "deploy:cloudflare": "bash scripts/deploy.sh cloudflare",
+    "deploy:pages": "bash deploy/cloudflare/build.sh && wrangler pages deploy pages-out --project-name xactions --branch main --commit-dirty=true",
     "deploy:fly": "bash scripts/deploy.sh fly",
     "deploy:docker": "bash scripts/deploy.sh docker",
     "docker:up": "docker compose up -d --build",
@@ -71,66 +87,82 @@
     "video:render:tweet": "node site/video/render.mjs TweetVideo",
     "video:render:thread": "node site/video/render.mjs ThreadVideo",
     "video:render:analytics": "node site/video/render.mjs AnalyticsDashboard",
-    "video:render:promo": "node site/video/render.mjs PromoVideo"
+    "video:render:promo": "node site/video/render.mjs PromoVideo",
+    "site:docs": "node scripts/build-all-docs.js && node scripts/fix-doc-links.js",
+    "site:index": "node scripts/build-index-pages.mjs",
+    "site:scripts": "node scripts/build-script-pages.js",
+    "site:sitemap": "node scripts/build-sitemap.js",
+    "site:build": "npm run site:docs && npm run site:index && npm run site:scripts && npm run site:sitemap && bash deploy/cloudflare/build.sh",
+    "site:deploy": "npm run site:build && npx wrangler pages deploy pages-out --project-name xactions",
+    "lint": "eslint .",
+    "registry:sync": "node scripts/sync-registry.mjs",
+    "check:x402": "node scripts/check-x402-routes.mjs",
+    "deploy:gcp": "bash deploy/gcp/deploy.sh"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@prisma/client": "^5.7.1",
+    "axios": "^1.15.2",
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^13.0.3",
+    "bull": "^4.12.0",
+    "chalk": "^6.0.1",
+    "commander": "^15.0.0",
+    "compression": "^1.8.1",
+    "cors": "^2.8.5",
+    "dotenv": "^18.0.4",
+    "exceljs": "^4.4.0",
+    "express": "^4.21.2",
+    "express-rate-limit": "^8.7.0",
+    "express-validator": "^7.0.1",
+    "helmet": "^7.1.0",
+    "inquirer": "^14.2.2",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.1",
+    "node-cron": "^4.6.0",
+    "nodemailer": "^10.0.10",
+    "ora": "^8.0.0",
+    "prisma": "^5.7.1",
+    "puppeteer": "^25.11.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "redis": "^4.6.11",
+    "socket.io": "^4.7.5",
+    "stripe": "^22.6.2",
+    "undici": "^7.30.0",
+    "yauzl": "^3.4.0"
+  },
+  "optionalDependencies": {
+    "@atproto/api": "^0.23.1",
+    "@x402/core": "^2.8.0",
+    "@x402/evm": "^2.8.0",
+    "@x402/express": "^2.8.0",
+    "ioredis": "^6.0.0",
+    "viem": "^2.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@remotion/bundler": "^4.0.428",
     "@remotion/cli": "^4.0.428",
     "@remotion/player": "^4.0.428",
     "@remotion/renderer": "^4.0.428",
-    "axios": "^1.6.2",
-    "bcryptjs": "^2.4.3",
-    "better-sqlite3": "^11.10.0",
-    "bull": "^4.12.0",
-    "chalk": "^5.3.0",
-    "commander": "^12.0.0",
-    "compression": "^1.8.1",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "exceljs": "^4.4.0",
-    "express": "^4.18.2",
-    "express-rate-limit": "^7.1.5",
-    "express-validator": "^7.0.1",
-    "googleapis": "^171.4.0",
-    "helmet": "^7.1.0",
-    "inquirer": "^9.2.0",
-    "jsonwebtoken": "^9.0.2",
-    "morgan": "^1.10.0",
-    "node-cron": "^3.0.3",
-    "nodemailer": "^6.9.16",
-    "ora": "^8.0.0",
-    "prisma": "^5.7.1",
-    "puppeteer": "^24.34.0",
-    "puppeteer-extra": "^3.3.6",
-    "puppeteer-extra-plugin-stealth": "^2.11.2",
-    "redis": "^4.6.11",
-    "remotion": "^4.0.428",
-    "socket.io": "^4.7.5",
-    "stripe": "^14.10.0"
-  },
-  "optionalDependencies": {
-    "@atproto/api": "^0.13.35",
-    "@x402/core": "^2.8.0",
-    "@x402/evm": "^2.8.0",
-    "@x402/express": "^2.8.0",
-    "viem": "^2.0.0",
-    "xspace-agent": "^0.1.0"
-  },
-  "devDependencies": {
-    "jsdom": "^28.1.0",
-    "marked": "^17.0.3",
+    "@vitest/coverage-v8": "^5.0.2",
+    "archiver": "^8.0.0",
+    "eslint": "^10.9.1",
+    "globals": "^17.11.0",
+    "jsdom": "^30.1.2",
+    "marked": "^18.0.13",
     "nodemon": "^3.0.2",
-    "supertest": "^6.3.4",
-    "vitest": "^4.0.18"
+    "remotion": "^4.0.428",
+    "supertest": "^7.3.0",
+    "vitest": "^5.0.2"
   },
   "author": {
     "name": "nich",
     "url": "https://github.com/nirholas",
     "twitter": "@nichxbt"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "keywords": [
     "xactions",
     "twitter",
@@ -176,6 +208,46 @@
     "x-algorithm"
   ],
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.12"
+  },
+  "files": [
+    "src",
+    "types",
+    "api/config/x402-config.js",
+    "skills",
+    ".claude-plugin",
+    "THIRD-PARTY-NOTICES.md"
+  ],
+  "mcpName": "io.github.nirholas/xactions",
+  "overrides": {
+    "uuid": "^11.1.1"
+  },
+  "peerDependencies": {
+    "cheerio": ">=1.0.0",
+    "crawlee": ">=3.0.0",
+    "googleapis": "^171.4.0",
+    "got-scraping": ">=4.0.0",
+    "playwright": ">=1.40.0",
+    "selenium-webdriver": ">=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "cheerio": {
+      "optional": true
+    },
+    "crawlee": {
+      "optional": true
+    },
+    "googleapis": {
+      "optional": true
+    },
+    "got-scraping": {
+      "optional": true
+    },
+    "playwright": {
+      "optional": true
+    },
+    "selenium-webdriver": {
+      "optional": true
+    }
   }
 }

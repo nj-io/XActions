@@ -1,80 +1,208 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>24/7 LLM-Powered Thought Leadership Agent — Architecture &amp; Implementation Guide | XActions</title>
-  <meta name="description" content="How to run automated algorithm cultivation and content creation continuously with AI intelligence.">
-  <meta name="keywords" content="xactions, twitter automation, x automation, free, open source, llm, powered, thought, leader, 24/7, llm-powered, leadership, agent, architecture, implementation">
-  <meta name="author" content="nich (@nichxbt)">
-  <meta name="robots" content="index, follow">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>24/7 LLM-Powered Thought Leadership Agent — Architecture &amp; Implementation Guide — XActions Docs</title>
+<meta name="description" content="How to run automated algorithm cultivation and content creation continuously with AI intelligence.">
+<meta name="keywords" content="xactions, twitter automation, x automation, free, open source, llm, powered, thought, leader, 24/7, llm-powered, leadership, agent, architecture, implementation">
+<meta name="author" content="nich (@nichxbt)">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="color-scheme" content="light dark">
 
-  <meta property="og:type" content="article">
-  <meta property="og:title" content="24/7 LLM-Powered Thought Leadership Agent — Architecture &amp; Implementation Guide — XActions">
-  <meta property="og:description" content="How to run automated algorithm cultivation and content creation continuously with AI intelligence.">
-  <meta property="og:url" content="https://xactions.app/docs/research/llm-powered-thought-leader">
-  <meta property="og:site_name" content="XActions">
+<meta property="og:type" content="article">
+<meta property="og:title" content="24/7 LLM-Powered Thought Leadership Agent — Architecture &amp; Implementation Guide — XActions">
+<meta property="og:description" content="How to run automated algorithm cultivation and content creation continuously with AI intelligence.">
+<meta property="og:url" content="https://xactions.app/docs/research/llm-powered-thought-leader">
+<meta property="og:image" content="https://xactions.app/og-docs.png">
+<meta property="og:site_name" content="XActions">
 
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="24/7 LLM-Powered Thought Leadership Agent — Architecture &amp; Implementation Guide — XActions">
-  <meta name="twitter:description" content="How to run automated algorithm cultivation and content creation continuously with AI intelligence.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@nichxbt">
+<meta name="twitter:title" content="24/7 LLM-Powered Thought Leadership Agent — Architecture &amp; Implementation Guide — XActions">
+<meta name="twitter:description" content="How to run automated algorithm cultivation and content creation continuously with AI intelligence.">
+<meta name="twitter:image" content="https://xactions.app/og-docs.png">
 
-  <link rel="canonical" href="https://xactions.app/docs/research/llm-powered-thought-leader">
-  <link rel="manifest" href="/manifest.json">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link rel="canonical" href="https://xactions.app/docs/research/llm-powered-thought-leader">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link rel="stylesheet" href="/docs/assets/docs.css">
 
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "TechArticle",
-    "headline": "24/7 LLM-Powered Thought Leadership Agent — Architecture & Implementation Guide | XActions",
-    "description": "How to run automated algorithm cultivation and content creation continuously with AI intelligence.",
-    "url": "https://xactions.app/docs/research/llm-powered-thought-leader",
-    "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
-    "datePublished": "2026-02-25",
-    "dateModified": "2026-02-25",
-    "mainEntityOfPage": "https://xactions.app/docs/research/llm-powered-thought-leader",
-    "articleSection": "Research & Architecture",
-    "keywords": "xactions, twitter automation, x automation, free, open source, llm, powered, thought, leader, 24/7, llm-powered, leadership, agent, architecture, implementation"
-  }
-  </script>
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Docs", "item": "https://xactions.app/docs" },
-      { "@type": "ListItem", "position": 3, "name": "Research & Architecture", "item": "https://xactions.app/docs/research" },
-      { "@type": "ListItem", "position": 4, "name": "24/7 LLM-Powered Thought Leadership Agent — Architecture & Implementation Guide", "item": "https://xactions.app/docs/research/llm-powered-thought-leader" }
-    ]
-  }
-  </script>
+<script>
+/* Applied before first paint so a dark-theme reader never sees a white flash. */
+(function(){try{var t=localStorage.getItem('xactions-theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();
+</script>
 
-  <link rel="stylesheet" href="/css/common.css">
-  <link rel="stylesheet" href="/css/docs.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "24/7 LLM-Powered Thought Leadership Agent — Architecture & Implementation Guide — XActions Docs",
+  "description": "How to run automated algorithm cultivation and content creation continuously with AI intelligence.",
+  "url": "https://xactions.app/docs/research/llm-powered-thought-leader",
+  "image": "https://xactions.app/og-docs.png",
+  "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
+  "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+  "isAccessibleForFree": true,
+  "license": "https://www.apache.org/licenses/LICENSE-2.0",
+  "mainEntityOfPage": "https://xactions.app/docs/research/llm-powered-thought-leader",
+  "articleSection": "Research & Architecture",
+  "keywords": "xactions, twitter automation, x automation, free, open source, llm, powered, thought, leader, 24/7, llm-powered, leadership, agent, architecture, implementation"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
+    { "@type": "ListItem", "position": 2, "name": "Docs", "item": "https://xactions.app/docs" },
+    { "@type": "ListItem", "position": 3, "name": "Research & Architecture", "item": "https://xactions.app/docs" },
+    { "@type": "ListItem", "position": 4, "name": "24/7 LLM-Powered Thought Leadership Agent — Architecture & Implementation Guide", "item": "https://xactions.app/docs/research/llm-powered-thought-leader" }
+  ]
+}
+</script>
 </head>
 <body>
-  <div class="layout">
-    <aside class="sidebar-left" aria-label="Main navigation"></aside>
+<a class="skip-link" href="#main">Skip to content</a>
 
-    <main class="main-content">
-      <header class="main-header">
-        <h1>🔬 24/7 LLM-Powered Thought Leadership Agent — Architecture &amp; Implementation Guide</h1>
-        <div class="breadcrumb">
-          <a href="https://xactions.app">Home</a> › <a href="https://xactions.app/docs">Docs</a> › <a href="https://xactions.app/docs/research">Research &amp; Architecture</a> › 24/7 LLM-Powered Thought Leadership Agent — Architecture &amp; Implementation Guide
-        </div>
-      </header>
+<header class="topbar">
+  <button class="icon-btn menu-toggle" data-menu-toggle aria-expanded="false" aria-label="Open navigation">☰</button>
+  <a class="topbar__brand" href="/">⚡ XActions</a>
+  <div class="topbar__spacer"></div>
+  <button class="search-trigger" data-search-trigger aria-label="Search documentation">
+    <span aria-hidden="true">🔍</span><span class="search-trigger__label">Search docs</span><kbd>⌘K</kbd>
+  </button>
+  <nav class="topbar__nav" aria-label="Main">
+    <a class="topbar__link" href="/docs" aria-current="page">Docs</a>
+    <a class="topbar__link" href="/tutorials">Tutorials</a>
+    <a class="topbar__link" href="/examples">Examples</a>
+    <a class="topbar__link" href="https://github.com/nirholas/XActions" target="_blank" rel="noopener">GitHub</a>
+  </nav>
+  <button class="icon-btn" data-theme-toggle aria-label="Switch theme">☾</button>
+</header>
 
-      <article class="article">
-        <span class="cat-badge">Research &amp; Architecture</span>
-        <h1>24/7 LLM-Powered Thought Leadership Agent — Architecture &amp; Implementation Guide</h1>
+<div class="scrim" data-scrim></div>
+
+<div class="layout">
+  <aside class="sidebar" aria-label="Documentation sections">
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Guides &amp; Reference</div>
+      <a class="sidebar__link" href="/docs/guides/scheduler">⏰ Scheduler &amp; Webhook Triggers</a>
+      <a class="sidebar__link" href="/docs/guides/a2a-api-reference">A2A API Reference — XActions</a>
+      <a class="sidebar__link" href="/docs/guides/a2a-protocol">A2A Protocol — XActions</a>
+      <a class="sidebar__link" href="/docs/guides/portability">Account Portability — Export, Migrate &amp; Diff</a>
+      <a class="sidebar__link" href="/docs/guides/algorithm-builder">Algorithm Builder — 24/7 Niche Growth Automation</a>
+      <a class="sidebar__link" href="/docs">+ 72 more…</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Tutorials</div>
+      <a class="sidebar__link" href="/docs/learn/your-first-scrape">Tutorial 01 — Your first scrape</a>
+      <a class="sidebar__link" href="/docs/learn/mcp-with-claude">Tutorial 02 — Claude that can use X</a>
+      <a class="sidebar__link" href="/docs/learn/clean-up-your-following">Tutorial 03 — Clean up your following list</a>
+      <a class="sidebar__link" href="/docs/learn/build-a-brand-monitor">Tutorial 04 — Build a brand monitor</a>
+      <a class="sidebar__link" href="/docs/learn/competitive-intelligence">05: Read any account like an analyst</a>
+      <a class="sidebar__link" href="/docs/learn/everything-is-json">06: Everything is JSON</a>
+      <a class="sidebar__link" href="/docs/learn/your-x-archive">07: Read your own X archive</a>
+      <a class="sidebar__link" href="/docs/learn/readme">Tutorials</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Developer Guides</div>
+      <a class="sidebar__link" href="/docs/guides/developer/contributing-features">Adding New Features</a>
+      <a class="sidebar__link" href="/docs/guides/developer/agent-troubleshooting">Agent Troubleshooting Guide</a>
+      <a class="sidebar__link" href="/docs/guides/developer/browser-script-patterns">Browser Script Patterns</a>
+      <a class="sidebar__link" href="/docs/guides/developer/selectors">X/Twitter DOM Selectors Reference</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Architecture</div>
+      <a class="sidebar__link" href="/docs/architecture/http-scraper">HTTP-Based Scraper — Architecture &amp; Implementation Plan</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Browser Automation</div>
+      <a class="sidebar__link" href="/docs/automation/advanced-techniques">Advanced Automation Techniques</a>
+      <a class="sidebar__link" href="/docs/automation/getting-started-browser">Getting Started with Browser Automation</a>
+      <a class="sidebar__link" href="/docs/automation/actions-reference">XActions Actions Library Reference (`actions.js`)</a>
+      <a class="sidebar__link" href="/docs/automation/scripts-reference">XActions Automation Scripts — Complete Reference</a>
+      <a class="sidebar__link" href="/docs/automation/core-reference">XActions Core Module Reference (`core.js`)</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Research &amp; Architecture</div>
+      <a class="sidebar__link" href="/docs/research/llm-powered-thought-leader" aria-current="page">24/7 LLM-Powered Thought Leadership Agent — Architecture &amp; Implementation Guide</a>
+      <a class="sidebar__link" href="/docs/research/algorithm-cultivation">Algorithmic Feed Cultivation: A Technical Research Paper on Automated Thought Leadership via Platform Signal Training</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Case Studies</div>
+      <a class="sidebar__link" href="/docs/case-studies/robust-dom-extraction">Robust DOM Extraction: A Case Study in Browser Automation Resilience</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Agent Skills</div>
+      <a class="sidebar__link" href="/docs/skills/account-backup">Account Backup &amp; Data Export</a>
+      <a class="sidebar__link" href="/docs/skills/account-tools">Account Tools (Miscellaneous)</a>
+      <a class="sidebar__link" href="/docs/skills/algorithm-cultivation">Algorithm Cultivation &amp; Thought Leadership</a>
+      <a class="sidebar__link" href="/docs/skills/analytics-insights">Analytics &amp; Insights</a>
+      <a class="sidebar__link" href="/docs/skills/articles-longform">Articles &amp; Longform</a>
+      <a class="sidebar__link" href="/docs">+ 45 more…</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Skill References</div>
+      <a class="sidebar__link" href="/docs/skills/algorithm-cultivation-algorithm-internals">Algorithm Internals &amp; Architecture</a>
+      <a class="sidebar__link" href="/docs/skills/analytics-insights-script-configs">Analytics Script Configs</a>
+      <a class="sidebar__link" href="/docs/skills/blocking-muting-management-script-details">Blocking &amp; Muting Script Details</a>
+      <a class="sidebar__link" href="/docs/skills/algorithm-cultivation-browser-scripts">Browser Scripts Reference</a>
+      <a class="sidebar__link" href="/docs/skills/content-posting-script-configs">Content Posting Script Configs</a>
+      <a class="sidebar__link" href="/docs">+ 4 more…</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Claude Prompt Library</div>
+      <a class="sidebar__link" href="/docs/prompts/mcp-setup-and-first-commands">Tutorial: Setting Up XActions MCP Server with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/unfollow-non-followers-cleanup">Tutorial: Unfollow Non-Followers &amp; Follower Cleanup with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/growth-automation-suite">Tutorial: Growth Automation Suite — Grow Your X Account on Autopilot</a>
+      <a class="sidebar__link" href="/docs/prompts/scraping-research-analysis">Tutorial: Tweet Scraping, Profile Analysis &amp; Research with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/content-posting-threads-scheduling">Tutorial: Content Posting, Threads, Polls &amp; Scheduling with Claude</a>
+      <a class="sidebar__link" href="/docs">+ 19 more…</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Project Info</div>
+      <a class="sidebar__link" href="/docs/project/contributing">Contributing to XActions</a>
+      <a class="sidebar__link" href="/docs/project/changelog">Changelog</a>
+      <a class="sidebar__link" href="/docs/project/roadmap">Roadmap</a>
+      <a class="sidebar__link" href="/docs/project/security">Security Policy</a>
+      <a class="sidebar__link" href="/docs/project/code_of_conduct">Contributor Covenant Code of Conduct</a>
+      <a class="sidebar__link" href="/docs/project/readme">Quick start</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Extensions &amp; Plugins</div>
+      <a class="sidebar__link" href="/docs/extras/scripts">Chrome DevTools Console Scripts</a>
+      <a class="sidebar__link" href="/docs/extras/examples">Examples</a>
+      <a class="sidebar__link" href="/docs/extras/integrations-n8n">n8n-nodes-xactions</a>
+      <a class="sidebar__link" href="/docs/extras/extension">XActions Browser Extension</a>
+      <a class="sidebar__link" href="/docs/extras/src-plugins-excel">XActions Excel Plugin</a>
+      <a class="sidebar__link" href="/docs/extras/src-plugins-google-sheets">XActions Google Sheets Plugin</a>
+      <a class="sidebar__link" href="/docs/extras/src-plugins-template">xactions-plugin-example</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Launch &amp; Releases</div>
+      <a class="sidebar__link" href="/docs/launch/v310-launch-content">XActions v3.1.0 — Launch Content</a>
+    </div>
+  </aside>
+
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="https://xactions.app">Home</a> <span aria-hidden="true">›</span> <a href="https://xactions.app/docs">Docs</a> <span aria-hidden="true">›</span> <a href="https://xactions.app/docs">Research &amp; Architecture</a> <span aria-hidden="true">›</span> <span>24/7 LLM-Powered Thought Leadership Agent — Architecture &amp; Implementation Guide</span>
+    </nav>
+
+    <span class="eyebrow">🔬 Research &amp; Architecture</span>
+
+    <article class="prose">
+<h1 id="247-llm-powered-thought-leadership-agent--architecture-amp-implementation-guide">24/7 LLM-Powered Thought Leadership Agent — Architecture &amp; Implementation Guide</h1>
 <blockquote>
 <p>How to run automated algorithm cultivation and content creation continuously with AI intelligence.</p>
 </blockquote>
-<h2>Architecture Diagram</h2>
+<hr>
+<h2 id="overview">Overview</h2>
+<p>This document describes the architecture for running the XActions Thought Leader system <strong>24/7</strong> with <strong>LLM/AI model support</strong> built in. Instead of pasting scripts into a browser console, this system uses headless browser automation (Puppeteer/Playwright) orchestrated by a Node.js agent that leverages LLMs for intelligent decision-making.</p>
+<hr>
+<h2 id="architecture-diagram">Architecture Diagram</h2>
 <pre><code>┌──────────────────────────────────────────────────────────────────────────────┐
 │                         THOUGHT LEADER AGENT                                  │
 │                                                                                │
@@ -134,7 +262,7 @@
 └──────────────────────────────────────────────────────────────────────────────┘
 </code></pre>
 <hr>
-<h2>Technology Stack</h2>
+<h2 id="technology-stack">Technology Stack</h2>
 <table>
 <thead>
 <tr>
@@ -180,8 +308,8 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Component Details</h2>
-<h3>1. Orchestrator (<code>thoughtLeaderAgent.js</code>)</h3>
+<h2 id="component-details">Component Details</h2>
+<h3 id="1-orchestrator-thoughtleaderagentjs">1. Orchestrator (<code>thoughtLeaderAgent.js</code>)</h3>
 <p>The main event loop that coordinates all other components:</p>
 <pre><code class="language-javascript">// Pseudocode — see src/agents/thoughtLeaderAgent.js for full implementation
 import { BrowserDriver } from &#39;./browserDriver.js&#39;;
@@ -281,7 +409,7 @@ class ThoughtLeaderAgent {
   }
 }
 </code></pre>
-<h3>2. Browser Driver (<code>browserDriver.js</code>)</h3>
+<h3 id="2-browser-driver-browserdriverjs">2. Browser Driver (<code>browserDriver.js</code>)</h3>
 <p>Wraps Puppeteer with X.com-specific actions:</p>
 <pre><code class="language-javascript">import puppeteer from &#39;puppeteer-extra&#39;;
 import StealthPlugin from &#39;puppeteer-extra-plugin-stealth&#39;;
@@ -402,7 +530,7 @@ class BrowserDriver {
   }
 }
 </code></pre>
-<h3>3. LLM Brain (<code>llmBrain.js</code>)</h3>
+<h3 id="3-llm-brain-llmbrainjs">3. LLM Brain (<code>llmBrain.js</code>)</h3>
 <p>Tiered model routing for cost efficiency:</p>
 <pre><code class="language-javascript">class LLMBrain {
   constructor(config) {
@@ -496,7 +624,7 @@ class BrowserDriver {
   }
 }
 </code></pre>
-<h3>4. Scheduler (<code>scheduler.js</code>)</h3>
+<h3 id="4-scheduler-schedulerjs">4. Scheduler (<code>scheduler.js</code>)</h3>
 <p>Circadian rhythm with realistic variance:</p>
 <pre><code class="language-javascript">class Scheduler {
   constructor(config) {
@@ -573,8 +701,8 @@ class BrowserDriver {
 }
 </code></pre>
 <hr>
-<h2>Deployment Options</h2>
-<h3>Option A: Docker (Recommended)</h3>
+<h2 id="deployment-options">Deployment Options</h2>
+<h3 id="option-a-docker-recommended">Option A: Docker (Recommended)</h3>
 <pre><code class="language-dockerfile">FROM node:20-slim
 
 # Install Chrome dependencies
@@ -611,7 +739,7 @@ services:
     mem_limit: 2g
     cpus: &#39;1.0&#39;
 </code></pre>
-<h3>Option B: PM2 (Direct VPS)</h3>
+<h3 id="option-b-pm2-direct-vps">Option B: PM2 (Direct VPS)</h3>
 <pre><code class="language-javascript">// ecosystem.config.js
 module.exports = {
   apps: [{
@@ -626,7 +754,7 @@ module.exports = {
   }],
 };
 </code></pre>
-<h3>Option C: Railway/Fly.io</h3>
+<h3 id="option-c-railwayflyio">Option C: Railway/Fly.io</h3>
 <p>Both are supported natively by the project. Deploy with:</p>
 <pre><code class="language-bash"># Railway
 railway up
@@ -635,8 +763,8 @@ railway up
 fly deploy
 </code></pre>
 <hr>
-<h2>Cost Estimates</h2>
-<h3>LLM Costs (Monthly)</h3>
+<h2 id="cost-estimates">Cost Estimates</h2>
+<h3 id="llm-costs-monthly">LLM Costs (Monthly)</h3>
 <table>
 <thead>
 <tr>
@@ -688,7 +816,7 @@ fly deploy
 <li><strong>$0/month</strong> for LLM costs</li>
 <li>Requires machine with 16GB+ RAM (for 7B model) or GPU (for 70B)</li>
 </ul>
-<h3>Infrastructure Costs</h3>
+<h3 id="infrastructure-costs">Infrastructure Costs</h3>
 <table>
 <thead>
 <tr>
@@ -719,7 +847,7 @@ fly deploy
 </tbody></table>
 <p><strong>Total all-in cost: $8-15/month</strong> for a fully autonomous 24/7 thought leadership agent.</p>
 <hr>
-<h2>Session Management</h2>
+<h2 id="session-management">Session Management</h2>
 <p>The most critical piece for 24/7 operation is maintaining authenticated sessions:</p>
 <pre><code class="language-javascript">class SessionManager {
   constructor(cookiePath = &#39;data/session.json&#39;) {
@@ -764,8 +892,8 @@ fly deploy
 <li>All subsequent runs use saved cookies</li>
 </ol>
 <hr>
-<h2>Monitoring &amp; Alerts</h2>
-<h3>Webhook Notifications</h3>
+<h2 id="monitoring-amp-alerts">Monitoring &amp; Alerts</h2>
+<h3 id="webhook-notifications">Webhook Notifications</h3>
 <pre><code class="language-javascript">const notify = async (event, data) =&gt; {
   if (!process.env.WEBHOOK_URL) return;
   await fetch(process.env.WEBHOOK_URL, {
@@ -787,7 +915,7 @@ fly deploy
 </code></pre>
 <p>Supports: Discord webhooks, Slack, Telegram bots, email via SMTP, or custom endpoints.</p>
 <hr>
-<h2>Security Considerations</h2>
+<h2 id="security-considerations">Security Considerations</h2>
 <ol>
 <li><strong>Credentials</strong>: Never store passwords. Use cookie-based session persistence only.</li>
 <li><strong>API keys</strong>: Use environment variables, never commit to code.</li>
@@ -797,7 +925,7 @@ fly deploy
 <li><strong>Access</strong>: Restrict SSH/admin access to the deployment server.</li>
 </ol>
 <hr>
-<h2>Getting Started</h2>
+<h2 id="getting-started">Getting Started</h2>
 <pre><code class="language-bash"># 1. Install dependencies
 npm install puppeteer-extra puppeteer-extra-plugin-stealth better-sqlite3
 
@@ -820,67 +948,75 @@ docker compose -f docker-compose.agent.yml up -d
 <hr>
 <p><em>See the full research paper at <code>docs/research/algorithm-cultivation.md</code> and the build prompts at <code>prompts/09-algorithm-cultivation-system.md</code>.</em></p>
 
+    </article>
 
-        <div class="cta-box">
-          <h3>⚡ Explore XActions</h3>
-          <p>100% free and open-source. No API keys, no fees, no signup.</p>
-          <a href="/docs">Browse All Documentation</a>
-        </div>
-      </article>
-    </main>
+    <div class="page-meta">
+      <span>3 min read</span>
+      <a href="https://github.com/nirholas/XActions/edit/main/docs/research/llm-powered-thought-leader.md" target="_blank" rel="noopener">Edit this page</a>
+      <a href="https://github.com/nirholas/XActions/issues/new?title=Docs%3A%2024%2F7%20LLM-Powered%20Thought%20Leadership%20Agent%20%E2%80%94%20Architecture%20%26%20Implementation%20Guide" target="_blank" rel="noopener">Report a problem</a>
+    </div>
 
-    <aside class="sidebar-right">
-      <div class="sidebar-card">
-        <h3>📖 In This Section</h3>
-                <a href="/docs/research/algorithm-cultivation">🔬 Algorithmic Feed Cultivation: A Technical Research Paper on Automated Thought Leadership via Platform Signal Training</a>
-      </div>
-      <div class="sidebar-card">
-        <h3>🔗 Quick Links</h3>
-        <a href="/docs">All Documentation</a>
-        <a href="/features">All 43+ Features</a>
-        <a href="/tutorials">Tutorials</a>
-        <a href="/ai">AI Integration</a>
-        <a href="/mcp">MCP Server</a>
-        <a href="https://github.com/nirholas/XActions" rel="noopener">GitHub</a>
-      </div>
-    </aside>
+    <nav class="page-nav" aria-label="Previous and next">
+      <span></span>
+      <a class="page-nav__link page-nav__link--next" href="/docs/research/algorithm-cultivation"><span class="page-nav__dir">Next →</span><span class="page-nav__title">Algorithmic Feed Cultivation: A Technical Research Paper on Automated Thought Leadership via Platform Signal Training</span></a>
+    </nav>
+
+    <div class="callout">
+      <h3>⚡ Free and open source</h3>
+      <p>No API keys, no monthly fees, no signup. Star the repo if it saved you a subscription.</p>
+      <a class="btn" href="https://github.com/nirholas/XActions" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+  </main>
+
+  <aside class="toc" data-toc aria-label="On this page">
+    <div class="toc__heading">On this page</div>
+  </aside>
+</div>
+
+<dialog class="search-dialog" data-search-dialog aria-label="Search documentation">
+  <input class="search-dialog__input" data-search-input type="search" placeholder="Search the documentation…" aria-label="Search query" autocomplete="off" spellcheck="false">
+  <div class="search-dialog__results" data-search-results role="listbox" aria-label="Search results"></div>
+  <div class="search-dialog__footer">
+    <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+    <span><kbd>↵</kbd> open</span>
+    <span><kbd>esc</kbd> close</span>
   </div>
+</dialog>
 
-  <footer class="site-footer">
-    <div class="footer-content">
-      <div class="footer-section">
-        <h4>XActions</h4>
-        <p>100% Free & Open Source X/Twitter Automation</p>
-        <p>Created by <a href="https://x.com/nichxbt" rel="noopener">@nichxbt</a></p>
-      </div>
-      <div class="footer-section">
-        <h4>Product</h4>
-        <a href="/features">Features</a>
-        <a href="/pricing">Pricing</a>
-        <a href="/run">Run Scripts</a>
-        <a href="/dashboard">Dashboard</a>
-        <a href="/analytics">Analytics</a>
-      </div>
-      <div class="footer-section">
-        <h4>AI & Developers</h4>
-        <a href="/ai">AI Integration</a>
-        <a href="/ai-api">AI API (x402)</a>
-        <a href="/mcp">MCP Server</a>
-        <a href="/docs">Documentation</a>
-        <a href="/tutorials">Tutorials</a>
-      </div>
-      <div class="footer-section">
-        <h4>Community</h4>
-        <a href="https://github.com/nirholas/XActions" rel="noopener">GitHub</a>
-        <a href="/about">About</a>
-        <a href="/terms">Terms</a>
-        <a href="/privacy">Privacy</a>
-      </div>
+<footer class="site-footer">
+  <div class="site-footer__inner">
+    <div>
+      <h4>XActions</h4>
+      <p>Free, open-source X/Twitter automation.</p>
+      <p>Built by <a href="https://x.com/nichxbt" target="_blank" rel="noopener">@nichxbt</a></p>
     </div>
-    <div class="footer-bottom">
-      <p>© 2024-2026 XActions. MIT License. No API fees. No limits.</p>
+    <div>
+      <h4>Learn</h4>
+      <a href="/docs/learn/your-first-scrape">Your first scrape</a>
+      <a href="/docs/learn/mcp-with-claude">MCP with Claude</a>
+      <a href="/examples">Examples</a>
+      <a href="/docs/guides/troubleshooting">Troubleshooting</a>
     </div>
-  </footer>
-<script src="/js/sidebar.js"></script>
+    <div>
+      <h4>Reference</h4>
+      <a href="/docs/guides/cli-reference">CLI</a>
+      <a href="/docs/guides/api-reference">API</a>
+      <a href="/docs/guides/mcp-setup">MCP server</a>
+      <a href="/docs/guides/browser-scripts">Browser scripts</a>
+    </div>
+    <div>
+      <h4>Project</h4>
+      <a href="https://github.com/nirholas/XActions" target="_blank" rel="noopener">GitHub</a>
+      <a href="/docs/project/contributing">Contributing</a>
+      <a href="/docs/project/changelog">Changelog</a>
+      <a href="/docs/project/security">Security</a>
+    </div>
+  </div>
+  <div class="site-footer__bottom">
+    <p>© 2024–2026 XActions. Apache-2.0 licensed. No API fees.</p>
+  </div>
+</footer>
+
+<script src="/docs/assets/docs.js" defer></script>
 </body>
 </html>

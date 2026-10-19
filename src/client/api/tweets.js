@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Client — Tweets API
  *
@@ -6,13 +6,18 @@
  * All functions take an HTTP client as the first parameter.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 import { GRAPHQL_ENDPOINTS, DEFAULT_FEATURES, buildGraphQLUrl } from './graphqlQueries.js';
 import { Tweet } from '../models/Tweet.js';
 import { NotFoundError, ScraperError } from '../errors.js';
-import { parseTimelineEntries, parseTweetEntry, parseModuleEntry } from './parsers.js';
+import {
+  parseTimelineEntries,
+  parseTweetEntry,
+  parseModuleEntry,
+  USER_TIMELINE_PATHS,
+} from './parsers.js';
 
 /** @private Random delay between paginated requests */
 function randomDelay(min = 1000, max = 2000) {
@@ -109,7 +114,7 @@ export async function* getTweets(http, userId, count = 40) {
 
     const { entries, cursor: nextCursor } = parseTimelineEntries(
       data,
-      'data.user.result.timeline_v2.timeline',
+      USER_TIMELINE_PATHS,
     );
 
     let foundAny = false;
@@ -158,7 +163,7 @@ export async function* getTweetsAndReplies(http, userId, count = 40) {
 
     const { entries, cursor: nextCursor } = parseTimelineEntries(
       data,
-      'data.user.result.timeline_v2.timeline',
+      USER_TIMELINE_PATHS,
     );
 
     let foundAny = false;
@@ -219,7 +224,7 @@ export async function* getLikedTweets(http, userId, count = 40) {
 
     const { entries, cursor: nextCursor } = parseTimelineEntries(
       data,
-      'data.user.result.timeline_v2.timeline',
+      USER_TIMELINE_PATHS,
     );
 
     let foundAny = false;

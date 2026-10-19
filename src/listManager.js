@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). MIT License.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 // Manage Lists on X - by nichxbt
 // https://github.com/nirholas/xactions
 // Create, manage, and populate X lists programmatically

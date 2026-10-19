@@ -334,5 +334,5 @@ pm2 stop xactions-agent
 - **[Config Reference](agent-config-reference.md)** — Every configuration option explained
 - **[API Reference](agent-api-reference.md)** — REST API for monitoring and control
 - **[Architecture](agent-architecture.md)** — Deep dive into how every module works
-- **[Content Calendar](agent-content-calendar.md)** — Weekly content planning system
+- **[Content Calendar](content-calendar.md)** — Weekly content planning system
 - **[Advanced Features](agent-advanced.md)** — Multi-account, engagement networks, and more

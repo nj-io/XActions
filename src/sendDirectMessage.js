@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). MIT License.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 // Send Direct Messages on X - by nichxbt
 // https://github.com/nirholas/xactions
 // Send personalized DMs to a list of users

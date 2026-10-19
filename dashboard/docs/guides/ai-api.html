@@ -1,92 +1,308 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>XActions AI API Documentation | XActions</title>
-  <meta name="description" content="Free &amp; open-source API for AI agents. Use locally with Puppeteer (free, no limits) or self-host the remote API with optional x402 micropayments.">
-  <meta name="keywords" content="xactions, twitter automation, x automation, free, open source, api, documentation, guides &amp; reference">
-  <meta name="author" content="nich (@nichxbt)">
-  <meta name="robots" content="index, follow">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>XActions AI API Documentation — XActions Docs</title>
+<meta name="description" content="Free &amp; open-source API for AI agents. Use locally with Puppeteer (free, no limits) or self-host the remote API with optional x402 micropayments.">
+<meta name="keywords" content="xactions, twitter automation, x automation, free, open source, api, documentation, guides &amp; reference">
+<meta name="author" content="nich (@nichxbt)">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="color-scheme" content="light dark">
 
-  <meta property="og:type" content="article">
-  <meta property="og:title" content="XActions AI API Documentation — XActions">
-  <meta property="og:description" content="Free &amp; open-source API for AI agents. Use locally with Puppeteer (free, no limits) or self-host the remote API with optional x402 micropayments.">
-  <meta property="og:url" content="https://xactions.app/docs/guides/ai-api">
-  <meta property="og:site_name" content="XActions">
+<meta property="og:type" content="article">
+<meta property="og:title" content="XActions AI API Documentation — XActions">
+<meta property="og:description" content="Free &amp; open-source API for AI agents. Use locally with Puppeteer (free, no limits) or self-host the remote API with optional x402 micropayments.">
+<meta property="og:url" content="https://xactions.app/docs/guides/ai-api">
+<meta property="og:image" content="https://xactions.app/og-docs.png">
+<meta property="og:site_name" content="XActions">
 
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="XActions AI API Documentation — XActions">
-  <meta name="twitter:description" content="Free &amp; open-source API for AI agents. Use locally with Puppeteer (free, no limits) or self-host the remote API with optional x402 micropayments.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@nichxbt">
+<meta name="twitter:title" content="XActions AI API Documentation — XActions">
+<meta name="twitter:description" content="Free &amp; open-source API for AI agents. Use locally with Puppeteer (free, no limits) or self-host the remote API with optional x402 micropayments.">
+<meta name="twitter:image" content="https://xactions.app/og-docs.png">
 
-  <link rel="canonical" href="https://xactions.app/docs/guides/ai-api">
-  <link rel="manifest" href="/manifest.json">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link rel="canonical" href="https://xactions.app/docs/guides/ai-api">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link rel="stylesheet" href="/docs/assets/docs.css">
 
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "TechArticle",
-    "headline": "XActions AI API Documentation | XActions",
-    "description": "Free & open-source API for AI agents. Use locally with Puppeteer (free, no limits) or self-host the remote API with optional x402 micropayments.",
-    "url": "https://xactions.app/docs/guides/ai-api",
-    "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
-    "datePublished": "2026-02-25",
-    "dateModified": "2026-02-25",
-    "mainEntityOfPage": "https://xactions.app/docs/guides/ai-api",
-    "articleSection": "Guides & Reference",
-    "keywords": "xactions, twitter automation, x automation, free, open source, api, documentation, guides & reference"
-  }
-  </script>
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Docs", "item": "https://xactions.app/docs" },
-      { "@type": "ListItem", "position": 3, "name": "Guides & Reference", "item": "https://xactions.app/docs/guides" },
-      { "@type": "ListItem", "position": 4, "name": "XActions AI API Documentation", "item": "https://xactions.app/docs/guides/ai-api" }
-    ]
-  }
-  </script>
+<script>
+/* Applied before first paint so a dark-theme reader never sees a white flash. */
+(function(){try{var t=localStorage.getItem('xactions-theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();
+</script>
 
-  <link rel="stylesheet" href="/css/common.css">
-  <link rel="stylesheet" href="/css/docs.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "XActions AI API Documentation — XActions Docs",
+  "description": "Free & open-source API for AI agents. Use locally with Puppeteer (free, no limits) or self-host the remote API with optional x402 micropayments.",
+  "url": "https://xactions.app/docs/guides/ai-api",
+  "image": "https://xactions.app/og-docs.png",
+  "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
+  "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+  "isAccessibleForFree": true,
+  "license": "https://www.apache.org/licenses/LICENSE-2.0",
+  "mainEntityOfPage": "https://xactions.app/docs/guides/ai-api",
+  "articleSection": "Guides & Reference",
+  "keywords": "xactions, twitter automation, x automation, free, open source, api, documentation, guides & reference"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
+    { "@type": "ListItem", "position": 2, "name": "Docs", "item": "https://xactions.app/docs" },
+    { "@type": "ListItem", "position": 3, "name": "Guides & Reference", "item": "https://xactions.app/docs" },
+    { "@type": "ListItem", "position": 4, "name": "XActions AI API Documentation", "item": "https://xactions.app/docs/guides/ai-api" }
+  ]
+}
+</script>
 </head>
 <body>
-  <div class="layout">
-    <aside class="sidebar-left" aria-label="Main navigation"></aside>
+<a class="skip-link" href="#main">Skip to content</a>
 
-    <main class="main-content">
-      <header class="main-header">
-        <h1>📖 XActions AI API Documentation</h1>
-        <div class="breadcrumb">
-          <a href="https://xactions.app">Home</a> › <a href="https://xactions.app/docs">Docs</a> › <a href="https://xactions.app/docs/guides">Guides &amp; Reference</a> › XActions AI API Documentation
-        </div>
-      </header>
+<header class="topbar">
+  <button class="icon-btn menu-toggle" data-menu-toggle aria-expanded="false" aria-label="Open navigation">☰</button>
+  <a class="topbar__brand" href="/">⚡ XActions</a>
+  <div class="topbar__spacer"></div>
+  <button class="search-trigger" data-search-trigger aria-label="Search documentation">
+    <span aria-hidden="true">🔍</span><span class="search-trigger__label">Search docs</span><kbd>⌘K</kbd>
+  </button>
+  <nav class="topbar__nav" aria-label="Main">
+    <a class="topbar__link" href="/docs" aria-current="page">Docs</a>
+    <a class="topbar__link" href="/tutorials">Tutorials</a>
+    <a class="topbar__link" href="/examples">Examples</a>
+    <a class="topbar__link" href="https://github.com/nirholas/XActions" target="_blank" rel="noopener">GitHub</a>
+  </nav>
+  <button class="icon-btn" data-theme-toggle aria-label="Switch theme">☾</button>
+</header>
 
-      <article class="article">
-        <span class="cat-badge">Guides &amp; Reference</span>
-        <h1>🤖 XActions AI API Documentation</h1>
+<div class="scrim" data-scrim></div>
+
+<div class="layout">
+  <aside class="sidebar" aria-label="Documentation sections">
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Guides &amp; Reference</div>
+      <a class="sidebar__link" href="/docs/guides/scheduler">⏰ Scheduler &amp; Webhook Triggers</a>
+      <a class="sidebar__link" href="/docs/guides/a2a-api-reference">A2A API Reference — XActions</a>
+      <a class="sidebar__link" href="/docs/guides/a2a-protocol">A2A Protocol — XActions</a>
+      <a class="sidebar__link" href="/docs/guides/portability">Account Portability — Export, Migrate &amp; Diff</a>
+      <a class="sidebar__link" href="/docs/guides/algorithm-builder">Algorithm Builder — 24/7 Niche Growth Automation</a>
+      <a class="sidebar__link" href="/docs/guides/analytics-advanced">Analytics &amp; Sentiment Analysis</a>
+      <a class="sidebar__link" href="/docs/guides/architecture">Architecture</a>
+      <a class="sidebar__link" href="/docs/guides/ask">Ask XActions</a>
+      <a class="sidebar__link" href="/docs/guides/audience-overlap">Audience Overlap Analysis</a>
+      <a class="sidebar__link" href="/docs/guides/spaces-agent">Autonomous Space Agent</a>
+      <a class="sidebar__link" href="/docs/guides/browser-extension">Browser Extension</a>
+      <a class="sidebar__link" href="/docs/guides/browser-scripts">Browser Scripts</a>
+      <a class="sidebar__link" href="/docs/guides/bulk-operations">Bulk Operations</a>
+      <a class="sidebar__link" href="/docs/guides/configuration">Configuration</a>
+      <a class="sidebar__link" href="/docs/guides/content-calendar">Content Calendar</a>
+      <a class="sidebar__link" href="/docs/guides/control-panel">Control Panel — Browser Automation UI</a>
+      <a class="sidebar__link" href="/docs/guides/dashboard">Dashboard</a>
+      <a class="sidebar__link" href="/docs/guides/database">Database Schema</a>
+      <a class="sidebar__link" href="/docs/guides/deployment">Deployment Guide</a>
+      <a class="sidebar__link" href="/docs/guides/engagement-booster">Engagement Booster — Smart Tweet Engagement</a>
+      <a class="sidebar__link" href="/docs/guides/engage">Engagement sweeps: like, repost, and reply across a whole feed</a>
+      <a class="sidebar__link" href="/docs/guides/evergreen-recycler">Evergreen Content Recycler</a>
+      <a class="sidebar__link" href="/docs/guides/examples">Examples</a>
+      <a class="sidebar__link" href="/docs/guides/follower-crm">Follower CRM</a>
+      <a class="sidebar__link" href="/docs/guides/getting-started">Getting Started with XActions</a>
+      <a class="sidebar__link" href="/docs/guides/history-store">History Store &amp; Auto-Snapshots</a>
+      <a class="sidebar__link" href="/docs/guides/media-archive">Media archive</a>
+      <a class="sidebar__link" href="/docs/guides/monitoring">Monitoring Guide</a>
+      <a class="sidebar__link" href="/docs/guides/notifications">Notifications</a>
+      <a class="sidebar__link" href="/docs/guides/x402">Paying for XActions: x402 and MCP</a>
+      <a class="sidebar__link" href="/docs/guides/plugins">Plugin System</a>
+      <a class="sidebar__link" href="/docs/guides/streaming">Real-Time Streaming</a>
+      <a class="sidebar__link" href="/docs/guides/streams">Real-time Streams — Live Twitter Monitoring</a>
+      <a class="sidebar__link" href="/docs/guides/reputation-audit">Reputation audit: AI-score your own timeline, get a shareable card</a>
+      <a class="sidebar__link" href="/docs/guides/rss-monitor">Rss Monitor</a>
+      <a class="sidebar__link" href="/docs/guides/scrapers">Scrapers</a>
+      <a class="sidebar__link" href="/docs/guides/scraping-infrastructure">Scraping Infrastructure</a>
+      <a class="sidebar__link" href="/docs/guides/scraping">Scraping Infrastructure</a>
+      <a class="sidebar__link" href="/docs/guides/analytics">Sentiment Analysis &amp; Reputation Monitoring</a>
+      <a class="sidebar__link" href="/docs/guides/skills">Skills Reference</a>
+      <a class="sidebar__link" href="/docs/guides/social-graph">Social Graph</a>
+      <a class="sidebar__link" href="/docs/guides/graph">Social Graph — Network Analysis &amp; Visualization</a>
+      <a class="sidebar__link" href="/docs/guides/graph-system">Social Graph System</a>
+      <a class="sidebar__link" href="/docs/guides/stealth-scraping">Stealth Scraping &amp; Proxy Rotation</a>
+      <a class="sidebar__link" href="/docs/guides/search-sweep">Sweep an X search: delete, like, repost, or reply to every result</a>
+      <a class="sidebar__link" href="/docs/guides/scheduling">Task Scheduling</a>
+      <a class="sidebar__link" href="/docs/guides/teams">Team Management</a>
+      <a class="sidebar__link" href="/docs/guides/cryptocurrency-api-guide">The Complete Guide to Cryptocurrency APIs in 2026</a>
+      <a class="sidebar__link" href="/docs/guides/mcp-remote">The hosted MCP server</a>
+      <a class="sidebar__link" href="/docs/guides/agents">Thought Leader Agent</a>
+      <a class="sidebar__link" href="/docs/guides/agent-advanced">Thought Leader Agent — Advanced Features</a>
+      <a class="sidebar__link" href="/docs/guides/agent-api-reference">Thought Leader Agent — API Reference</a>
+      <a class="sidebar__link" href="/docs/guides/agent-architecture">Thought Leader Agent — Architecture</a>
+      <a class="sidebar__link" href="/docs/guides/agent-config-reference">Thought Leader Agent — Configuration Reference</a>
+      <a class="sidebar__link" href="/docs/guides/agent-getting-started">Thought Leader Agent — Getting Started</a>
+      <a class="sidebar__link" href="/docs/guides/agent-system">Thought Leader Agent System</a>
+      <a class="sidebar__link" href="/docs/guides/troubleshooting">Troubleshooting</a>
+      <a class="sidebar__link" href="/docs/guides/price-correlation">Tweet-Price Correlation</a>
+      <a class="sidebar__link" href="/docs/guides/usage">Usage</a>
+      <a class="sidebar__link" href="/docs/guides/video-downloader">Video Downloader</a>
+      <a class="sidebar__link" href="/docs/guides/video">Video Engine — Programmatic Video Generation</a>
+      <a class="sidebar__link" href="/docs/guides/video-generation">Video Generation</a>
+      <a class="sidebar__link" href="/docs/guides/workflows">Workflow Engine</a>
+      <a class="sidebar__link" href="/docs/guides/x-developer-api-crypto-guide-2026">X Developer API in 2026: The Complete Guide for Crypto Builders</a>
+      <a class="sidebar__link" href="/docs/guides/dom-selectors">X/Twitter DOM Selector Reference</a>
+      <a class="sidebar__link" href="/docs/guides/ai-api" aria-current="page">XActions AI API Documentation</a>
+      <a class="sidebar__link" href="/docs/guides/api-reference">XActions API Reference</a>
+      <a class="sidebar__link" href="/docs/guides/automation">XActions Automation Framework Guide</a>
+      <a class="sidebar__link" href="/docs/guides/cli-reference">XActions CLI Reference</a>
+      <a class="sidebar__link" href="/docs/guides/xactions-reference">XActions Complete Function Reference</a>
+      <a class="sidebar__link" href="/docs/guides/readme">XActions Documentation</a>
+      <a class="sidebar__link" href="/docs/guides/extension-api">XActions Extension — Internal API Reference</a>
+      <a class="sidebar__link" href="/docs/guides/extension">XActions Extension — User Guide</a>
+      <a class="sidebar__link" href="/docs/guides/growth_strategy">XActions Growth Strategy: 76 → 100,000 Stars</a>
+      <a class="sidebar__link" href="/docs/guides/mcp-setup">XActions MCP Server Setup Guide</a>
+      <a class="sidebar__link" href="/docs/guides/rest-api">XActions REST API Reference</a>
+      <a class="sidebar__link" href="/docs/guides/feature_inventory">XActions v3.5.0: Complete Feature Inventory</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Tutorials</div>
+      <a class="sidebar__link" href="/docs/learn/your-first-scrape">Tutorial 01 — Your first scrape</a>
+      <a class="sidebar__link" href="/docs/learn/mcp-with-claude">Tutorial 02 — Claude that can use X</a>
+      <a class="sidebar__link" href="/docs/learn/clean-up-your-following">Tutorial 03 — Clean up your following list</a>
+      <a class="sidebar__link" href="/docs/learn/build-a-brand-monitor">Tutorial 04 — Build a brand monitor</a>
+      <a class="sidebar__link" href="/docs/learn/competitive-intelligence">05: Read any account like an analyst</a>
+      <a class="sidebar__link" href="/docs/learn/everything-is-json">06: Everything is JSON</a>
+      <a class="sidebar__link" href="/docs/learn/your-x-archive">07: Read your own X archive</a>
+      <a class="sidebar__link" href="/docs/learn/readme">Tutorials</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Developer Guides</div>
+      <a class="sidebar__link" href="/docs/guides/developer/contributing-features">Adding New Features</a>
+      <a class="sidebar__link" href="/docs/guides/developer/agent-troubleshooting">Agent Troubleshooting Guide</a>
+      <a class="sidebar__link" href="/docs/guides/developer/browser-script-patterns">Browser Script Patterns</a>
+      <a class="sidebar__link" href="/docs/guides/developer/selectors">X/Twitter DOM Selectors Reference</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Architecture</div>
+      <a class="sidebar__link" href="/docs/architecture/http-scraper">HTTP-Based Scraper — Architecture &amp; Implementation Plan</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Browser Automation</div>
+      <a class="sidebar__link" href="/docs/automation/advanced-techniques">Advanced Automation Techniques</a>
+      <a class="sidebar__link" href="/docs/automation/getting-started-browser">Getting Started with Browser Automation</a>
+      <a class="sidebar__link" href="/docs/automation/actions-reference">XActions Actions Library Reference (`actions.js`)</a>
+      <a class="sidebar__link" href="/docs/automation/scripts-reference">XActions Automation Scripts — Complete Reference</a>
+      <a class="sidebar__link" href="/docs/automation/core-reference">XActions Core Module Reference (`core.js`)</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Research &amp; Architecture</div>
+      <a class="sidebar__link" href="/docs/research/llm-powered-thought-leader">24/7 LLM-Powered Thought Leadership Agent — Architecture &amp; Implementation Guide</a>
+      <a class="sidebar__link" href="/docs/research/algorithm-cultivation">Algorithmic Feed Cultivation: A Technical Research Paper on Automated Thought Leadership via Platform Signal Training</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Case Studies</div>
+      <a class="sidebar__link" href="/docs/case-studies/robust-dom-extraction">Robust DOM Extraction: A Case Study in Browser Automation Resilience</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Agent Skills</div>
+      <a class="sidebar__link" href="/docs/skills/account-backup">Account Backup &amp; Data Export</a>
+      <a class="sidebar__link" href="/docs/skills/account-tools">Account Tools (Miscellaneous)</a>
+      <a class="sidebar__link" href="/docs/skills/algorithm-cultivation">Algorithm Cultivation &amp; Thought Leadership</a>
+      <a class="sidebar__link" href="/docs/skills/analytics-insights">Analytics &amp; Insights</a>
+      <a class="sidebar__link" href="/docs/skills/articles-longform">Articles &amp; Longform</a>
+      <a class="sidebar__link" href="/docs">+ 45 more…</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Skill References</div>
+      <a class="sidebar__link" href="/docs/skills/algorithm-cultivation-algorithm-internals">Algorithm Internals &amp; Architecture</a>
+      <a class="sidebar__link" href="/docs/skills/analytics-insights-script-configs">Analytics Script Configs</a>
+      <a class="sidebar__link" href="/docs/skills/blocking-muting-management-script-details">Blocking &amp; Muting Script Details</a>
+      <a class="sidebar__link" href="/docs/skills/algorithm-cultivation-browser-scripts">Browser Scripts Reference</a>
+      <a class="sidebar__link" href="/docs/skills/content-posting-script-configs">Content Posting Script Configs</a>
+      <a class="sidebar__link" href="/docs">+ 4 more…</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Claude Prompt Library</div>
+      <a class="sidebar__link" href="/docs/prompts/mcp-setup-and-first-commands">Tutorial: Setting Up XActions MCP Server with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/unfollow-non-followers-cleanup">Tutorial: Unfollow Non-Followers &amp; Follower Cleanup with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/growth-automation-suite">Tutorial: Growth Automation Suite — Grow Your X Account on Autopilot</a>
+      <a class="sidebar__link" href="/docs/prompts/scraping-research-analysis">Tutorial: Tweet Scraping, Profile Analysis &amp; Research with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/content-posting-threads-scheduling">Tutorial: Content Posting, Threads, Polls &amp; Scheduling with Claude</a>
+      <a class="sidebar__link" href="/docs">+ 19 more…</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Project Info</div>
+      <a class="sidebar__link" href="/docs/project/contributing">Contributing to XActions</a>
+      <a class="sidebar__link" href="/docs/project/changelog">Changelog</a>
+      <a class="sidebar__link" href="/docs/project/roadmap">Roadmap</a>
+      <a class="sidebar__link" href="/docs/project/security">Security Policy</a>
+      <a class="sidebar__link" href="/docs/project/code_of_conduct">Contributor Covenant Code of Conduct</a>
+      <a class="sidebar__link" href="/docs/project/readme">Quick start</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Extensions &amp; Plugins</div>
+      <a class="sidebar__link" href="/docs/extras/scripts">Chrome DevTools Console Scripts</a>
+      <a class="sidebar__link" href="/docs/extras/examples">Examples</a>
+      <a class="sidebar__link" href="/docs/extras/integrations-n8n">n8n-nodes-xactions</a>
+      <a class="sidebar__link" href="/docs/extras/extension">XActions Browser Extension</a>
+      <a class="sidebar__link" href="/docs/extras/src-plugins-excel">XActions Excel Plugin</a>
+      <a class="sidebar__link" href="/docs/extras/src-plugins-google-sheets">XActions Google Sheets Plugin</a>
+      <a class="sidebar__link" href="/docs/extras/src-plugins-template">xactions-plugin-example</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Launch &amp; Releases</div>
+      <a class="sidebar__link" href="/docs/launch/v310-launch-content">XActions v3.1.0 — Launch Content</a>
+    </div>
+  </aside>
+
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="https://xactions.app">Home</a> <span aria-hidden="true">›</span> <a href="https://xactions.app/docs">Docs</a> <span aria-hidden="true">›</span> <a href="https://xactions.app/docs">Guides &amp; Reference</a> <span aria-hidden="true">›</span> <span>XActions AI API Documentation</span>
+    </nav>
+
+    <span class="eyebrow">📖 Guides &amp; Reference</span>
+
+    <article class="prose">
+<h1 id="-xactions-ai-api-documentation">🤖 XActions AI API Documentation</h1>
 <p>Free &amp; open-source API for AI agents. Use locally with Puppeteer (free, no limits) or self-host the remote API with optional x402 micropayments.</p>
-<p>---|--------|------|<br>| <strong>🆓 Local (default)</strong> | Browser scripts, CLI, Node.js library, local MCP server | <strong>FREE</strong> |<br>| <strong>☁️ Remote (self-hosted)</strong> | Self-hosted API for remote AI agent access | <strong>FREE</strong> (optionally supports x402 micropayments) |</p>
+<hr>
+<h2 id="-overview">📋 Overview</h2>
+<p>XActions is <strong>100% free</strong> for all users:</p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Access</th>
+<th>Cost</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>🆓 Local (default)</strong></td>
+<td>Browser scripts, CLI, Node.js library, local MCP server</td>
+<td><strong>FREE</strong></td>
+</tr>
+<tr>
+<td><strong>☁️ Remote (self-hosted)</strong></td>
+<td>Self-hosted API for remote AI agent access</td>
+<td><strong>FREE</strong> (optionally supports x402 micropayments)</td>
+</tr>
+</tbody></table>
 <blockquote>
 <p><strong>Note:</strong> x402 micropayments are entirely optional. They&#39;re only relevant if you self-host the XActions API and want to monetize remote access for AI agents.</p>
 </blockquote>
 <hr>
-<h2>🔐 Authentication</h2>
+<h2 id="-authentication">🔐 Authentication</h2>
 <p>All API requests require your X/Twitter session cookie (<code>auth_token</code>) to perform actions on your behalf.</p>
-<h3>Getting Your Session Cookie</h3>
+<h3 id="getting-your-session-cookie">Getting Your Session Cookie</h3>
 <ol>
-<li>Log into <a href="https://x.com">x.com</a></li>
+<li>Log into <a target="_blank" rel="noopener noreferrer" href="https://x.com">x.com</a></li>
 <li>Open Developer Tools (F12)</li>
 <li>Go to Application → Cookies → x.com</li>
 <li>Find <code>auth_token</code> and copy its value</li>
 </ol>
-<h3>Using the Session Cookie</h3>
+<h3 id="using-the-session-cookie">Using the Session Cookie</h3>
 <p>Include it in the <code>X-Session-Cookie</code> header:</p>
 <pre><code class="language-http">X-Session-Cookie: your_auth_token_here
 </code></pre>
@@ -94,9 +310,9 @@
 <p>⚠️ <strong>Security Warning:</strong> Never share your session cookie. It provides full access to your X account.</p>
 </blockquote>
 <hr>
-<h2>💳 x402 Payment Flow (Optional)</h2>
+<h2 id="-x402-payment-flow-optional">💳 x402 Payment Flow (Optional)</h2>
 <p>If you enable x402 on your self-hosted API, the protocol handles HTTP-native micropayments. No API keys needed—agents sign payments with an Ethereum wallet.</p>
-<h3>How It Works</h3>
+<h3 id="how-it-works">How It Works</h3>
 <pre><code>┌─────────┐                      ┌─────────┐
 │  Client │                      │  Server │
 └────┬────┘                      └────┬────┘
@@ -118,8 +334,8 @@
      │ ◄───────────────────────────── │
      │                                │
 </code></pre>
-<h3>Step-by-Step</h3>
-<h4>1. Make Initial Request</h4>
+<h3 id="step-by-step">Step-by-Step</h3>
+<h4 id="1-make-initial-request">1. Make Initial Request</h4>
 <pre><code class="language-javascript">const response = await fetch(&#39;https://api.xactions.app/api/ai/scrape/profile&#39;, {
   method: &#39;POST&#39;,
   headers: {
@@ -129,7 +345,7 @@
   body: JSON.stringify({ username: &#39;elonmusk&#39; })
 });
 </code></pre>
-<h4>2. Receive 402 Response</h4>
+<h4 id="2-receive-402-response">2. Receive 402 Response</h4>
 <pre><code class="language-http">HTTP/1.1 402 Payment Required
 X-Payment-Required: eyJhbW91bnQiOiIxMDAwMDAw...
 Content-Type: application/json
@@ -143,7 +359,7 @@ Content-Type: application/json
   &quot;validUntil&quot;: &quot;2026-01-25T12:00:00Z&quot;
 }
 </code></pre>
-<h4>3. Sign Payment</h4>
+<h4 id="3-sign-payment">3. Sign Payment</h4>
 <p>Using ethers.js or similar:</p>
 <pre><code class="language-javascript">import { Wallet } from &#39;ethers&#39;;
 
@@ -164,7 +380,7 @@ const signedPayment = btoa(JSON.stringify({
   payer: wallet.address
 }));
 </code></pre>
-<h4>4. Retry with Payment</h4>
+<h4 id="4-retry-with-payment">4. Retry with Payment</h4>
 <pre><code class="language-javascript">const paidResponse = await fetch(&#39;https://api.xactions.app/api/ai/scrape/profile&#39;, {
   method: &#39;POST&#39;,
   headers: {
@@ -177,7 +393,7 @@ const signedPayment = btoa(JSON.stringify({
 
 const data = await paidResponse.json();
 </code></pre>
-<h3>Supported Chains</h3>
+<h3 id="supported-chains">Supported Chains</h3>
 <table>
 <thead>
 <tr>
@@ -202,15 +418,15 @@ const data = await paidResponse.json();
 <td>Alternative</td>
 </tr>
 </tbody></table>
-<h3>Supported Tokens</h3>
+<h3 id="supported-tokens">Supported Tokens</h3>
 <ul>
 <li><strong>ETH</strong> - Native currency</li>
 <li><strong>USDC</strong> - Stablecoin (recommended)</li>
 </ul>
 <hr>
-<h2>💰 Pricing</h2>
+<h2 id="-pricing">💰 Pricing</h2>
 <p>All prices in USD. Actual payment in ETH or USDC.</p>
-<h3>Scraping Endpoints</h3>
+<h3 id="scraping-endpoints">Scraping Endpoints</h3>
 <table>
 <thead>
 <tr>
@@ -245,7 +461,7 @@ const data = await paidResponse.json();
 <td>Search tweets</td>
 </tr>
 </tbody></table>
-<h3>Action Endpoints</h3>
+<h3 id="action-endpoints">Action Endpoints</h3>
 <table>
 <thead>
 <tr>
@@ -275,7 +491,7 @@ const data = await paidResponse.json();
 <td>Auto-like session</td>
 </tr>
 </tbody></table>
-<h3>Monitoring Endpoints</h3>
+<h3 id="monitoring-endpoints">Monitoring Endpoints</h3>
 <table>
 <thead>
 <tr>
@@ -296,8 +512,8 @@ const data = await paidResponse.json();
 </tr>
 </tbody></table>
 <hr>
-<h2>📡 API Endpoints</h2>
-<h3>Scrape Profile</h3>
+<h2 id="-api-endpoints">📡 API Endpoints</h2>
+<h3 id="scrape-profile">Scrape Profile</h3>
 <p>Get detailed profile information for any X/Twitter user.</p>
 <p><strong>Endpoint:</strong> <code>POST /api/ai/scrape/profile</code></p>
 <p><strong>Cost:</strong> $0.001</p>
@@ -325,7 +541,7 @@ const data = await paidResponse.json();
 }
 </code></pre>
 <hr>
-<h3>Scrape Followers</h3>
+<h3 id="scrape-followers">Scrape Followers</h3>
 <p>Scrape a user&#39;s followers list.</p>
 <p><strong>Endpoint:</strong> <code>POST /api/ai/scrape/followers</code></p>
 <p><strong>Cost:</strong> $0.01 per 100 followers</p>
@@ -354,7 +570,7 @@ const data = await paidResponse.json();
 }
 </code></pre>
 <hr>
-<h3>Scrape Following</h3>
+<h3 id="scrape-following">Scrape Following</h3>
 <p>Scrape accounts a user follows.</p>
 <p><strong>Endpoint:</strong> <code>POST /api/ai/scrape/following</code></p>
 <p><strong>Cost:</strong> $0.01 per 100</p>
@@ -382,7 +598,7 @@ const data = await paidResponse.json();
 }
 </code></pre>
 <hr>
-<h3>Scrape Tweets</h3>
+<h3 id="scrape-tweets">Scrape Tweets</h3>
 <p>Scrape recent tweets from a user&#39;s profile.</p>
 <p><strong>Endpoint:</strong> <code>POST /api/ai/scrape/tweets</code></p>
 <p><strong>Cost:</strong> $0.005 per 50 tweets</p>
@@ -413,7 +629,7 @@ const data = await paidResponse.json();
 }
 </code></pre>
 <hr>
-<h3>Search Tweets</h3>
+<h3 id="search-tweets">Search Tweets</h3>
 <p>Search for tweets matching a query.</p>
 <p><strong>Endpoint:</strong> <code>POST /api/ai/scrape/search</code></p>
 <p><strong>Cost:</strong> $0.01 per search</p>
@@ -448,7 +664,7 @@ const data = await paidResponse.json();
 }
 </code></pre>
 <hr>
-<h3>Unfollow Non-Followers</h3>
+<h3 id="unfollow-non-followers">Unfollow Non-Followers</h3>
 <p>Mass unfollow accounts that don&#39;t follow you back.</p>
 <p><strong>Endpoint:</strong> <code>POST /api/ai/action/unfollow-non-followers</code></p>
 <p><strong>Cost:</strong> $0.05</p>
@@ -475,7 +691,7 @@ const data = await paidResponse.json();
 }
 </code></pre>
 <hr>
-<h3>Unfollow Everyone</h3>
+<h3 id="unfollow-everyone">Unfollow Everyone</h3>
 <p>Unfollow all accounts.</p>
 <p><strong>Endpoint:</strong> <code>POST /api/ai/action/unfollow-everyone</code></p>
 <p><strong>Cost:</strong> $0.10</p>
@@ -497,7 +713,7 @@ const data = await paidResponse.json();
 }
 </code></pre>
 <hr>
-<h3>Detect Unfollowers</h3>
+<h3 id="detect-unfollowers">Detect Unfollowers</h3>
 <p>Find accounts that recently unfollowed you.</p>
 <p><strong>Endpoint:</strong> <code>POST /api/ai/action/detect-unfollowers</code></p>
 <p><strong>Cost:</strong> $0.02</p>
@@ -529,7 +745,7 @@ const data = await paidResponse.json();
 }
 </code></pre>
 <hr>
-<h3>Monitor Account</h3>
+<h3 id="monitor-account">Monitor Account</h3>
 <p>Track changes to any public account.</p>
 <p><strong>Endpoint:</strong> <code>POST /api/ai/monitor/account</code></p>
 <p><strong>Cost:</strong> $0.01 per check</p>
@@ -558,7 +774,7 @@ const data = await paidResponse.json();
 }
 </code></pre>
 <hr>
-<h2>🚨 Error Codes</h2>
+<h2 id="-error-codes">🚨 Error Codes</h2>
 <table>
 <thead>
 <tr>
@@ -613,7 +829,7 @@ const data = await paidResponse.json();
 <td>Server error, please retry</td>
 </tr>
 </tbody></table>
-<h3>Error Response Format</h3>
+<h3 id="error-response-format">Error Response Format</h3>
 <pre><code class="language-json">{
   &quot;success&quot;: false,
   &quot;error&quot;: {
@@ -624,7 +840,7 @@ const data = await paidResponse.json();
 }
 </code></pre>
 <hr>
-<h2>⏱️ Rate Limits</h2>
+<h2 id="-rate-limits">⏱️ Rate Limits</h2>
 <p>To protect your X account from detection:</p>
 <table>
 <thead>
@@ -657,8 +873,8 @@ const data = await paidResponse.json();
 <li>Space out large scraping jobs</li>
 </ul>
 <hr>
-<h2>💻 Code Examples</h2>
-<h3>Python</h3>
+<h2 id="-code-examples">💻 Code Examples</h2>
+<h3 id="python">Python</h3>
 <pre><code class="language-python">import requests
 import json
 from eth_account import Account
@@ -742,7 +958,7 @@ client = XActionsClient(
 profile = client.get_profile(&quot;elonmusk&quot;)
 print(profile)
 </code></pre>
-<h3>JavaScript/Node.js</h3>
+<h3 id="javascriptnodejs">JavaScript/Node.js</h3>
 <pre><code class="language-javascript">import { Wallet } from &#39;ethers&#39;;
 
 class XActionsClient {
@@ -820,7 +1036,7 @@ const client = new XActionsClient(
 const profile = await client.getProfile(&#39;elonmusk&#39;);
 console.log(profile);
 </code></pre>
-<h3>cURL</h3>
+<h3 id="curl">cURL</h3>
 <pre><code class="language-bash"># Step 1: Make initial request (will return 402)
 curl -X POST https://api.xactions.app/api/ai/scrape/profile \
   -H &quot;Content-Type: application/json&quot; \
@@ -838,9 +1054,9 @@ curl -X POST https://api.xactions.app/api/ai/scrape/profile \
   -d &#39;{&quot;username&quot;: &quot;elonmusk&quot;}&#39;
 </code></pre>
 <hr>
-<h2>🤖 MCP Integration</h2>
+<h2 id="-mcp-integration">🤖 MCP Integration</h2>
 <p>For AI assistants like Claude, use the MCP server with remote mode:</p>
-<h3>Claude Desktop Configuration</h3>
+<h3 id="claude-desktop-configuration">Claude Desktop Configuration</h3>
 <pre><code class="language-json">{
   &quot;mcpServers&quot;: {
     &quot;xactions&quot;: {
@@ -855,7 +1071,7 @@ curl -X POST https://api.xactions.app/api/ai/scrape/profile \
   }
 }
 </code></pre>
-<h3>Environment Variables</h3>
+<h3 id="environment-variables">Environment Variables</h3>
 <table>
 <thead>
 <tr>
@@ -880,7 +1096,7 @@ curl -X POST https://api.xactions.app/api/ai/scrape/profile \
 <td>Your X/Twitter auth_token cookie</td>
 </tr>
 </tbody></table>
-<h3>Local vs Remote Mode</h3>
+<h3 id="local-vs-remote-mode">Local vs Remote Mode</h3>
 <table>
 <thead>
 <tr>
@@ -911,19 +1127,20 @@ curl -X POST https://api.xactions.app/api/ai/scrape/profile \
 </tr>
 </tbody></table>
 <hr>
-<h2>🆓 Free Alternatives</h2>
+<h2 id="-free-alternatives">🆓 Free Alternatives</h2>
 <p>If you don&#39;t need the remote API, use XActions for free:</p>
-<h3>Browser Scripts</h3>
-<p>Copy-paste scripts directly in your browser console.<br>→ <a href="/features">View all scripts</a></p>
-<h3>CLI Tool</h3>
+<h3 id="browser-scripts">Browser Scripts</h3>
+<p>Copy-paste scripts directly in your browser console.
+→ <a href="/docs/guides/browser-scripts">View all scripts</a></p>
+<h3 id="cli-tool">CLI Tool</h3>
 <pre><code class="language-bash">npm install -g xactions
 xactions unfollow --non-followers
 </code></pre>
-<h3>Node.js Library</h3>
+<h3 id="nodejs-library">Node.js Library</h3>
 <pre><code class="language-javascript">import { unfollowNonFollowers } from &#39;xactions&#39;;
 await unfollowNonFollowers({ cookie: &#39;...&#39; });
 </code></pre>
-<h3>Local MCP Server</h3>
+<h3 id="local-mcp-server">Local MCP Server</h3>
 <pre><code class="language-json">{
   &quot;mcpServers&quot;: {
     &quot;xactions&quot;: {
@@ -938,14 +1155,14 @@ await unfollowNonFollowers({ cookie: &#39;...&#39; });
 }
 </code></pre>
 <hr>
-<h2>📞 Support</h2>
+<h2 id="-support">📞 Support</h2>
 <ul>
-<li><strong>GitHub Issues:</strong> <a href="https://github.com/nirholas/XActions/issues">github.com/nirholas/XActions/issues</a></li>
-<li><strong>Twitter/X:</strong> <a href="https://x.com/nichxbt">@nichxbt</a></li>
+<li><strong>GitHub Issues:</strong> <a target="_blank" rel="noopener noreferrer" href="https://github.com/nirholas/XActions/issues">github.com/nirholas/XActions/issues</a></li>
+<li><strong>Twitter/X:</strong> <a target="_blank" rel="noopener noreferrer" href="https://x.com/nichxbt">@nichxbt</a></li>
 <li><strong>Documentation:</strong> <a href="https://xactions.app/docs">xactions.app/docs</a></li>
 </ul>
 <hr>
-<h2>📜 Terms</h2>
+<h2 id="-terms">📜 Terms</h2>
 <p>By using the AI API, you agree to:</p>
 <ul>
 <li>Use your own X/Twitter session cookie</li>
@@ -955,74 +1172,75 @@ await unfollowNonFollowers({ cookie: &#39;...&#39; });
 </ul>
 <p>The API is provided as-is. We&#39;re not responsible for actions taken on your X account.</p>
 
+    </article>
 
-        <div class="cta-box">
-          <h3>⚡ Explore XActions</h3>
-          <p>100% free and open-source. No API keys, no fees, no signup.</p>
-          <a href="/docs">Browse All Documentation</a>
-        </div>
-      </article>
-    </main>
+    <div class="page-meta">
+      <span>5 min read</span>
+      <a href="https://github.com/nirholas/XActions/edit/main/docs/ai-api.md" target="_blank" rel="noopener">Edit this page</a>
+      <a href="https://github.com/nirholas/XActions/issues/new?title=Docs%3A%20XActions%20AI%20API%20Documentation" target="_blank" rel="noopener">Report a problem</a>
+    </div>
 
-    <aside class="sidebar-right">
-      <div class="sidebar-card">
-        <h3>📖 In This Section</h3>
-                <a href="/docs/guides/getting-started">📖 Getting Started with XActions</a>
-        <a href="/docs/guides/usage">📖 Usage</a>
-        <a href="/docs/guides/automation">📖 XActions Automation Framework Guide</a>
-        <a href="/docs/guides/monitoring">📖 Monitoring Guide</a>
-        <a href="/docs/guides/cli-reference">📖 XActions CLI Reference</a>
-        <a href="/docs/guides/api-reference">📖 XActions — API Reference</a>
-        <a href="/docs/guides/deployment">📖 Deployment Guide</a>
-        <a href="/docs/guides/dom-selectors">📖 X/Twitter DOM Selector Reference</a>
-      </div>
-      <div class="sidebar-card">
-        <h3>🔗 Quick Links</h3>
-        <a href="/docs">All Documentation</a>
-        <a href="/features">All 43+ Features</a>
-        <a href="/tutorials">Tutorials</a>
-        <a href="/ai">AI Integration</a>
-        <a href="/mcp">MCP Server</a>
-        <a href="https://github.com/nirholas/XActions" rel="noopener">GitHub</a>
-      </div>
-    </aside>
+    <nav class="page-nav" aria-label="Previous and next">
+      <a class="page-nav__link" href="/docs/guides/dom-selectors"><span class="page-nav__dir">← Previous</span><span class="page-nav__title">X/Twitter DOM Selector Reference</span></a>
+      <a class="page-nav__link page-nav__link--next" href="/docs/guides/api-reference"><span class="page-nav__dir">Next →</span><span class="page-nav__title">XActions API Reference</span></a>
+    </nav>
+
+    <div class="callout">
+      <h3>⚡ Free and open source</h3>
+      <p>No API keys, no monthly fees, no signup. Star the repo if it saved you a subscription.</p>
+      <a class="btn" href="https://github.com/nirholas/XActions" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+  </main>
+
+  <aside class="toc" data-toc aria-label="On this page">
+    <div class="toc__heading">On this page</div>
+  </aside>
+</div>
+
+<dialog class="search-dialog" data-search-dialog aria-label="Search documentation">
+  <input class="search-dialog__input" data-search-input type="search" placeholder="Search the documentation…" aria-label="Search query" autocomplete="off" spellcheck="false">
+  <div class="search-dialog__results" data-search-results role="listbox" aria-label="Search results"></div>
+  <div class="search-dialog__footer">
+    <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+    <span><kbd>↵</kbd> open</span>
+    <span><kbd>esc</kbd> close</span>
   </div>
+</dialog>
 
-  <footer class="site-footer">
-    <div class="footer-content">
-      <div class="footer-section">
-        <h4>XActions</h4>
-        <p>100% Free & Open Source X/Twitter Automation</p>
-        <p>Created by <a href="https://x.com/nichxbt" rel="noopener">@nichxbt</a></p>
-      </div>
-      <div class="footer-section">
-        <h4>Product</h4>
-        <a href="/features">Features</a>
-        <a href="/pricing">Pricing</a>
-        <a href="/run">Run Scripts</a>
-        <a href="/dashboard">Dashboard</a>
-        <a href="/analytics">Analytics</a>
-      </div>
-      <div class="footer-section">
-        <h4>AI & Developers</h4>
-        <a href="/ai">AI Integration</a>
-        <a href="/ai-api">AI API (x402)</a>
-        <a href="/mcp">MCP Server</a>
-        <a href="/docs">Documentation</a>
-        <a href="/tutorials">Tutorials</a>
-      </div>
-      <div class="footer-section">
-        <h4>Community</h4>
-        <a href="https://github.com/nirholas/XActions" rel="noopener">GitHub</a>
-        <a href="/about">About</a>
-        <a href="/terms">Terms</a>
-        <a href="/privacy">Privacy</a>
-      </div>
+<footer class="site-footer">
+  <div class="site-footer__inner">
+    <div>
+      <h4>XActions</h4>
+      <p>Free, open-source X/Twitter automation.</p>
+      <p>Built by <a href="https://x.com/nichxbt" target="_blank" rel="noopener">@nichxbt</a></p>
     </div>
-    <div class="footer-bottom">
-      <p>© 2024-2026 XActions. MIT License. No API fees. No limits.</p>
+    <div>
+      <h4>Learn</h4>
+      <a href="/docs/learn/your-first-scrape">Your first scrape</a>
+      <a href="/docs/learn/mcp-with-claude">MCP with Claude</a>
+      <a href="/examples">Examples</a>
+      <a href="/docs/guides/troubleshooting">Troubleshooting</a>
     </div>
-  </footer>
-<script src="/js/sidebar.js"></script>
+    <div>
+      <h4>Reference</h4>
+      <a href="/docs/guides/cli-reference">CLI</a>
+      <a href="/docs/guides/api-reference">API</a>
+      <a href="/docs/guides/mcp-setup">MCP server</a>
+      <a href="/docs/guides/browser-scripts">Browser scripts</a>
+    </div>
+    <div>
+      <h4>Project</h4>
+      <a href="https://github.com/nirholas/XActions" target="_blank" rel="noopener">GitHub</a>
+      <a href="/docs/project/contributing">Contributing</a>
+      <a href="/docs/project/changelog">Changelog</a>
+      <a href="/docs/project/security">Security</a>
+    </div>
+  </div>
+  <div class="site-footer__bottom">
+    <p>© 2024–2026 XActions. Apache-2.0 licensed. No API fees.</p>
+  </div>
+</footer>
+
+<script src="/docs/assets/docs.js" defer></script>
 </body>
 </html>

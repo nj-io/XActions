@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * Admin routes for license management and payment monitoring
  * 
@@ -184,6 +184,37 @@ router.post('/licenses/:key/validate', authenticateToken, requireAdmin, async (r
     console.error('❌ Validate license error:', error);
     res.status(500).json({ error: 'Failed to validate license' });
   }
+});
+
+/**
+ * GET /api/admin/stats
+ * Instance-wide operational stats: uptime, memory, payment totals, and the
+ * configured surfaces. Documented in api/openapi.js and, until now, never
+ * served. Admin-only, same JWT gate as the licence endpoints.
+ */
+router.get('/stats', authenticateToken, requireAdmin, (req, res) => {
+  const memory = process.memoryUsage();
+  res.json({
+    success: true,
+    instance: {
+      uptimeSeconds: Math.round(process.uptime()),
+      node: process.version,
+      environment: process.env.NODE_ENV || 'development',
+      memory: {
+        rssBytes: memory.rss,
+        heapUsedBytes: memory.heapUsed,
+        heapTotalBytes: memory.heapTotal,
+      },
+    },
+    payments: getPaymentStats(),
+    configured: {
+      database: Boolean(process.env.DATABASE_URL),
+      redis: Boolean(process.env.REDIS_HOST),
+      stripe: Boolean(process.env.STRIPE_SECRET_KEY),
+      x402: Boolean(process.env.X402_PAY_TO_ADDRESS),
+    },
+    generatedAt: new Date().toISOString(),
+  });
 });
 
 /**

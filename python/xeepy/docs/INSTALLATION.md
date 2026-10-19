@@ -249,4 +249,4 @@ pip uninstall xeepy
 
 - Read the [CLI Reference](CLI_REFERENCE.md)
 - Check out [Examples](EXAMPLES.md)
-- Configure your [settings](CONFIGURATION.md)
+- Configure your settings with the environment variables above

@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). MIT License.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 // Mention Users in Posts on X - by nichxbt
 // https://github.com/nirholas/xactions
 // Compose a post mentioning multiple users with auto @mentions

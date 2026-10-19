@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
  * 🏘️ Join Communities from List
@@ -25,7 +25,10 @@
  * ============================================================
  */
 
-const CONFIG = {
+// `var` (not `const`): this script explicitly asks you to re-paste it across
+// page navigations to resume, and a repeated top-level `const` paste in the
+// same tab throws "already been declared" instead of resuming.
+var CONFIG = {
   // Community IDs to join (get from URL: x.com/i/communities/1234567890)
   communities: [
     // '1234567890123456789',
@@ -55,7 +58,7 @@ const CONFIG = {
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   
   // DOM Selectors
-  const $joinButton = 'button[aria-label^="Join"]';
+  const $joinButton = 'button[aria-label^="Join"]:not([aria-label^="Joined"])';
   const $joinedButton = 'button[aria-label^="Joined"]';
   const $pendingButton = 'button[aria-label^="Pending"]';
   
@@ -150,6 +153,7 @@ const CONFIG = {
     // Navigate to community if not there
     if (currentId !== communityId) {
       console.log(`📍 Navigating to community ${index + 1}/${CONFIG.communities.length}: ${communityId}`);
+      console.log('💡 Re-paste this script after the page loads to continue (progress is saved).');
       window.location.href = `https://x.com/i/communities/${communityId}`;
       return;
     }

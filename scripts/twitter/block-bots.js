@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
  * 🤖 Block Bots
@@ -24,7 +24,9 @@
  * ============================================================
  */
 
-const CONFIG = {
+// `var` (not `const`): a repeated top-level `const` paste in the same
+// DevTools tab throws "already been declared" instead of re-running.
+var CONFIG = {
   // Scroll settings
   scrollDelay: 1500,
   maxScrolls: 50,
@@ -259,19 +261,6 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be blocked      
   if (suspectedBots.length > 20) {
     console.log(`\n... and ${suspectedBots.length - 20} more`);
   }
-
-  // Block function
-  const blockUser = async (username) => {
-    // Navigate to user's profile
-    const profileUrl = `https://x.com/${username}`;
-    
-    // For now, we'll use the API approach via the more menu
-    // In practice, blocking from the followers list is complex
-    // This is a simplified version
-    
-    console.log(`   Would block @${username}...`);
-    return true;
-  };
 
   if (CONFIG.dryRun) {
     console.log('\n' + '═'.repeat(60));

@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions A2A — Public API (barrel export)
  *
@@ -7,7 +7,7 @@
  * executed directly with `node src/a2a/index.js`.
  *
  * @author nich (@nichxbt)
- * @license MIT
+ * @license Apache-2.0
  */
 
 // ── Re-exports ──────────────────────────────────────────────────────────────
@@ -21,7 +21,8 @@ export { PushNotificationServer, PushNotificationClient, SubscriptionManager } f
 export { createAuthMiddleware, generateApiKey, verifyApiKey, createJWT, verifyJWT, storeCredential, applyAuth, PERMISSIONS } from './auth.js';
 export { AgentRegistry, SkillMatcher, TrustScorer, createDiscovery } from './discovery.js';
 export { TaskDecomposer, Delegator, Orchestrator, createOrchestrator } from './orchestrator.js';
-export { createA2AServer } from './server.js';
+import { createA2AServer } from './server.js';
+export { createA2AServer };
 
 // ── Convenience Factory ─────────────────────────────────────────────────────
 

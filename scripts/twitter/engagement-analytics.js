@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
  * 📊 Engagement Analytics
@@ -24,7 +24,10 @@
  * ============================================================
  */
 
-const CONFIG = {
+// `var` (not `const`): DevTools keeps top-level `const` bindings alive across
+// separate pastes, so re-running this script in the same tab would throw
+// "already been declared" and never execute.
+var CONFIG = {
   // Number of posts to analyze
   maxPosts: 50,
   

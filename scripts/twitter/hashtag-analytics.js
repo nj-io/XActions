@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
  * #️⃣ Hashtag Analytics
@@ -24,7 +24,9 @@
  * ============================================================
  */
 
-const CONFIG = {
+// `var` (not `const`): a repeated top-level `const` paste in the same
+// DevTools tab throws "already been declared" instead of re-running.
+var CONFIG = {
   // Number of posts to analyze
   maxPosts: 100,
   
@@ -208,7 +210,7 @@ const CONFIG = {
   console.log(`   Avg engagement WITH hashtags:    ${formatNum(avgWithHashtags)}`);
   console.log(`   Avg engagement WITHOUT hashtags: ${formatNum(avgWithoutHashtags)}`);
   
-  if (avgWithHashtags > avgWithoutHashtags) {
+  if (avgWithHashtags > avgWithoutHashtags && avgWithoutHashtags > 0) {
     const improvement = ((avgWithHashtags - avgWithoutHashtags) / avgWithoutHashtags * 100).toFixed(0);
     console.log(`   📈 Hashtags improve engagement by ${improvement}%`);
   } else if (avgWithoutHashtags > avgWithHashtags) {

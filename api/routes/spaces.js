@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth.js';
@@ -28,7 +28,7 @@ router.get('/live', async (req, res) => {
       operationId: operation.id,
       userId: req.user.id,
       authMethod: req.user.authMethod || 'oauth',
-      config: { topic, limit: parseInt(limit), sessionCookie: req.user.sessionCookie },
+      config: { topic, limit: parseInt(limit) },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Spaces fetch queued' });
@@ -57,7 +57,7 @@ router.get('/scheduled', async (req, res) => {
       operationId: operation.id,
       userId: req.user.id,
       authMethod: req.user.authMethod || 'oauth',
-      config: { limit: parseInt(limit), sessionCookie: req.user.sessionCookie },
+      config: { limit: parseInt(limit) },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Scheduled Spaces fetch queued' });
@@ -87,7 +87,7 @@ router.get('/scrape', async (req, res) => {
       operationId: operation.id,
       userId: req.user.id,
       authMethod: req.user.authMethod || 'oauth',
-      config: { url, sessionCookie: req.user.sessionCookie },
+      config: { url },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Space scrape queued' });

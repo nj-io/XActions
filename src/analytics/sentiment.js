@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Sentiment Analysis Engine
  * 
@@ -6,7 +6,7 @@
  * Optional LLM mode via OpenRouter API for nuanced analysis.
  * 
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 // ============================================================================
@@ -37,7 +37,7 @@ const LEXICON = {
   'interesting': 1, 'hope': 1, 'thanks': 1, 'thank': 1,
 
   // Mild negative (-1)
-  'meh': -1, 'boring': -1, 'slow': -1, 'mediocre': -1, 'overrated': -1,
+  'meh': -1, 'boring': -1, 'mediocre': -1, 'overrated': -1,
   'underwhelming': -1, 'concerned': -1, 'doubt': -1, 'uncertain': -1,
 
   // Moderate negative (-2/-3)

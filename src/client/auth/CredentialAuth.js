@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Client — Credential-Based Authentication
  *
@@ -9,12 +9,13 @@
  * multiple "subtasks" — each step sends data and receives the next subtask to complete.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 import { BEARER_TOKEN } from '../api/graphqlQueries.js';
 import { AuthenticationError } from '../errors.js';
 import { updateJarFromResponse, extractCsrfToken } from './CookieParser.js';
+import { randomUserAgent } from './userAgent.js';
 
 const LOGIN_URL = 'https://api.x.com/1.1/onboarding/task.json';
 
@@ -201,6 +202,8 @@ export class CredentialAuth {
     const headers = {
       Authorization: `Bearer ${BEARER_TOKEN}`,
       'Content-Type': 'application/json',
+      // X rejects UA-less requests to its internal API with a misleading 404.
+      'User-Agent': randomUserAgent(),
       'x-guest-token': guestToken,
       'x-twitter-active-user': 'yes',
       'x-twitter-client-language': 'en',

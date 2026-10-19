@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Mastodon Scrapers
  * REST API-based scrapers for Mastodon (any instance)
@@ -8,7 +8,7 @@
  * 
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @see https://xactions.app
- * @license MIT
+ * @license Apache-2.0
  */
 
 // ============================================================================
@@ -30,6 +30,34 @@ export function createClient(options = {}) {
     instance,
     accessToken: options.accessToken || null,
   };
+}
+
+/**
+ * Strip HTML tags and decode the entities Mastodon leaves behind.
+ *
+ * Mastodon serves bios and post bodies as HTML fragments. Removing the tags
+ * without decoding entities leaves raw `&amp;`, `&quot;`, and `&#39;` in what
+ * is supposed to be plain text, which then shows up verbatim in exports,
+ * dashboards, and anything that cross-posts the result.
+ *
+ * @param {string|null|undefined} html
+ * @returns {string|null} Plain text, or null when there was nothing to convert
+ */
+function toPlainText(html) {
+  if (!html) return null;
+
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>\s*<p>/gi, '\n\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .trim();
 }
 
 /**
@@ -106,7 +134,7 @@ export async function scrapeProfile(client, username) {
     name: account.display_name || null,
     username: account.acct || null,
     id: account.id || null,
-    bio: account.note ? account.note.replace(/<[^>]*>/g, '') : null,
+    bio: toPlainText(account.note),
     avatar: account.avatar || null,
     header: account.header || null,
     followers: account.followers_count ?? null,
@@ -118,7 +146,7 @@ export async function scrapeProfile(client, username) {
     locked: account.locked || false,
     fields: (account.fields || []).map((f) => ({
       name: f.name,
-      value: f.value?.replace(/<[^>]*>/g, '') || '',
+      value: toPlainText(f.value) || '',
     })),
     platform: 'mastodon',
     instance: client.instance,
@@ -152,7 +180,7 @@ export async function scrapeFollowers(client, username, options = {}) {
         username: f.acct,
         id: f.id,
         name: f.display_name || null,
-        bio: f.note ? f.note.replace(/<[^>]*>/g, '') : null,
+        bio: toPlainText(f.note),
         avatar: f.avatar || null,
         url: f.url || null,
         bot: f.bot || false,
@@ -198,7 +226,7 @@ export async function scrapeFollowing(client, username, options = {}) {
         username: f.acct,
         id: f.id,
         name: f.display_name || null,
-        bio: f.note ? f.note.replace(/<[^>]*>/g, '') : null,
+        bio: toPlainText(f.note),
         avatar: f.avatar || null,
         url: f.url || null,
         bot: f.bot || false,
@@ -374,7 +402,7 @@ function normalizeStatus(status, instance) {
 
   return {
     id: status.id,
-    text: status.content ? status.content.replace(/<[^>]*>/g, '') : null,
+    text: toPlainText(status.content),
     timestamp: status.created_at || null,
     likes: status.favourites_count ?? 0,
     reposts: status.reblogs_count ?? 0,

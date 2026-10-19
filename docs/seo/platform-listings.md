@@ -30,7 +30,7 @@
   - [ ] Add up to 20 topics (Settings → Topics)
   - [ ] Set description: "⚡ The Complete X/Twitter Automation Toolkit — Scrapers, MCP server for AI agents, CLI, browser scripts. No API fees."
   - [ ] Upload social preview image (1280×640px) at Settings → Social preview
-  - [ ] Verify LICENSE file renders properly (should show "MIT")
+  - [ ] Verify LICENSE file renders properly (should show "Apache 2.0")
   - [ ] Pin important discussions/issues
   - [ ] Add "Releases" with detailed changelogs
 
@@ -175,11 +175,11 @@ XActions is the complete X/Twitter automation platform — 100% free and open-so
 
 Features include: mass unfollow non-followers, profile/follower/tweet scraping, auto-liker, auto-commenter, keyword-based auto-follow, account monitoring, video downloader, social graph analysis, thread composer, and more.
 
-XActions includes an MCP (Model Context Protocol) server with 20+ tools, making it compatible with Claude Desktop, GPT-4, Cursor, and other AI agents. The CLI tool (`xactions`) provides all features from the terminal.
+XActions includes an MCP (Model Context Protocol) server with 154 tools, making it compatible with Claude Desktop, GPT-4, Cursor, and other AI agents. The CLI tool (`xactions`) provides all features from the terminal.
 
 No Twitter API required — XActions uses browser automation, so there are no API fees, no developer account needed, and no monthly charges. Scripts run locally in your browser; your credentials never leave your device.
 
-Tech stack: Node.js, Express, Prisma, Puppeteer, Redis. MIT licensed.
+Tech stack: Node.js, Express, Prisma, Puppeteer, Redis. Apache 2.0 licensed.
 ```
 
 ---

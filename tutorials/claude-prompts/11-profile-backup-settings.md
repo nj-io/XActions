@@ -113,7 +113,7 @@ Protect your account with full backup using `src/backupAccount.js`:
 
 3. **How to run the backup:**
    - Via browser console: paste the backup script
-   - Via CLI: `xactions backup --format json`
+   - Via CLI: `xactions export-data backup.json`
    - Via MCP: Export individual components
 
 4. **Backup schedule recommendation:**

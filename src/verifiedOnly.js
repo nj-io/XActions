@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). MIT License.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 // Verified-Only Replies — by nichxbt
 // https://github.com/nirholas/XActions
 // Toggle "only verified users can reply" on your posts and check verification status.

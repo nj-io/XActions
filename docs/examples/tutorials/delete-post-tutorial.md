@@ -8,7 +8,8 @@
 - **Backup first** -- deletion is permanent. Consider using `src/backupAccount.js` before deleting.
 
 ## Quick Start
-1. Navigate to your profile page: `https://x.com/YOUR_USERNAME`
+1. Navigate to your own profile: `https://x.com/YOUR_USERNAME`. Its tabs work too,
+   so `https://x.com/YOUR_USERNAME/with_replies` is the right place to clear replies.
 2. Open DevTools (F12) and go to the Console tab
 3. Copy the contents of `src/bulkDeleteTweets.js`
 4. Edit the `CONFIG` section (filters, dryRun)
@@ -42,7 +43,7 @@ filters: {
 |--------|---------|-------------|
 | `maxDeletes` | `Infinity` | Stop after this many deletions |
 | `scrollCycles` | `100` | Maximum scroll attempts |
-| `dryRun` | `true` | **Starts true!** Preview before deleting. |
+| `dryRun` | `false` | Deletes for real. Set it to `true` for a preview run that removes nothing. |
 | `confirmEvery` | `50` | Pause for confirmation every N deletes (0 = never) |
 | `exportDeleted` | `true` | Save deleted tweet data before removal |
 | `exportOnComplete` | `true` | Auto-download JSON when done |
@@ -51,10 +52,14 @@ filters: {
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `minDelay` | `1500` | Minimum ms between deletions |
-| `maxDelay` | `3500` | Maximum ms between deletions |
-| `scrollDelay` | `2000` | Delay after scrolling |
-| `menuDelay` | `800` | Wait after clicking menu |
+| `minDelay` | `3000` | Minimum ms between deletions |
+| `maxDelay` | `7000` | Maximum ms between deletions |
+| `scrollDelay` | `4000` | Delay after scrolling, so the next page of posts renders |
+| `menuDelay` | `1200` | Wait after clicking menu |
+
+X throttles bursts of deletions and starts failing them silently, so the
+defaults are unhurried. Lower them and you trade completed deletions for
+speed you will not get.
 
 ## Step-by-Step Guide
 
@@ -75,7 +80,7 @@ const CONFIG = {
     containsKeywords: ['exact text of the tweet to delete'],
   },
   maxDeletes: 1,
-  dryRun: true,
+  dryRun: true,   // preview; set false to delete
 };
 ```
 
@@ -90,7 +95,7 @@ const CONFIG = {
     maxLikes: 5,          // With 5 or fewer likes
     excludePinned: true,
   },
-  dryRun: true,           // Preview first!
+  dryRun: true,           // Preview first! false deletes for real.
 };
 ```
 
@@ -142,9 +147,9 @@ const CONFIG = {
 
 ### Step-by-Step Workflow
 
-**Step 1: Always Dry Run First**
+**Step 1: Dry Run First**
 
-Set `dryRun: true` (the default). Paste the script:
+Set `dryRun: true` (it ships as `false`, which deletes for real). Paste the script:
 
 ```
 BULK DELETE TWEETS
@@ -215,7 +220,7 @@ A JSON file is auto-downloaded with all deleted tweets:
 
 ## Tips & Tricks
 
-- **Always start with `dryRun: true`.** Deletion is permanent.
+- **Set `dryRun: true` for the first pass on a new filter.** Deletion is permanent, and the default is a real run.
 - **Export first** using `src/backupAccount.js` to save your tweets before deleting.
 - **Use `excludeKeywords`** to protect important tweets (e.g., `['thread', 'announcement', 'milestone']`).
 - **`excludePinned: true`** (default) prevents accidentally deleting your pinned tweet.
@@ -228,7 +233,8 @@ A JSON file is auto-downloaded with all deleted tweets:
 
 | Problem | Solution |
 |---------|----------|
-| "Navigate to your profile page first!" | Go to `x.com/YOUR_USERNAME` |
+| "Run this on your profile timeline" | You are on a feed, a single post, or a section like `/home`. Open `x.com/YOUR_USERNAME` (or one of its tabs). |
+| "This is @someone's profile" | You are viewing another account. The script only deletes posts on the account you are signed in as. |
 | "No confirm dialog" | X may have changed the delete confirmation UI |
 | Script stops with consecutive errors | The three-dot menu or delete option selectors may need updating |
 | Not all tweets deleted | Reload the page and re-run. Some tweets load lazily. |

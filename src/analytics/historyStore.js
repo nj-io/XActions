@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Historical Analytics Database
  * Time-series storage for account metrics, tweet performance, and engagement trends.
@@ -7,7 +7,7 @@
  * Kills: Social Blade, Followerwonk (historical tracking)
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 import Database from 'better-sqlite3';

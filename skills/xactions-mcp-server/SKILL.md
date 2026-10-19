@@ -1,7 +1,7 @@
 ---
 name: xactions-mcp-server
-description: Free MCP server providing 68+ tools for AI agents to automate X/Twitter. Scrapes profiles, followers, tweets. Posts, follows, likes, retweets, downloads videos, analyzes sentiment, monitors brands, manages DMs, runs workflows, and more. Uses local Puppeteer -- no API keys or payments required. Compatible with Claude Desktop, Cursor, Windsurf, VS Code. Use when setting up or using AI agent Twitter automation via MCP.
-license: MIT
+description: Free MCP server providing 154 tools for AI agents to automate X/Twitter. Scrapes profiles, followers, tweets. Posts, follows, likes, retweets, downloads videos, analyzes sentiment, monitors brands, manages DMs, runs workflows, and more. Uses local Puppeteer -- no API keys or payments required. Compatible with Claude Desktop, Cursor, Windsurf, VS Code. Use when setting up or using AI agent Twitter automation via MCP.
+license: Apache-2.0
 compatibility: Requires Node.js 18+. Works with Claude Desktop, Cursor, Windsurf, VS Code, and MCP-compatible clients.
 metadata:
   author: nichxbt
@@ -10,7 +10,7 @@ metadata:
 
 # XActions MCP Server
 
-The definitive free Twitter/X MCP server. 68+ tools for AI agents.
+The definitive free Twitter/X MCP server. 154 tools for AI agents.
 
 ## Quick Start
 
@@ -59,7 +59,7 @@ xactions mcp-config --client vscode --write
 `x_get_profile`, `x_get_followers`, `x_get_following`, `x_get_non_followers`, `x_get_tweets`, `x_search_tweets`, `x_get_thread`, `x_download_video`
 
 ### Actions
-`x_follow`, `x_unfollow`, `x_unfollow_non_followers`, `x_post_tweet`, `x_like`, `x_retweet`, `x_delete_tweet`, `x_reply`, `x_bookmark`, `x_get_bookmarks`, `x_clear_bookmarks`, `x_auto_like`
+`x_follow`, `x_unfollow`, `x_unfollow_non_followers`, `x_post_tweet`, `x_like`, `x_retweet`, `x_delete_tweet`, `x_reply`, `x_bookmark`, `x_get_bookmarks`, `x_clear_bookmarks`, `x_auto_like`, `x_engage`
 
 ### Analysis
 `x_detect_unfollowers`, `x_best_time_to_post`, `x_analyze_sentiment`, `x_monitor_reputation`, `x_reputation_report`, `x_competitor_analysis`, `x_brand_monitor`

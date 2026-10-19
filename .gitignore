@@ -1,13 +1,90 @@
-# Gitignore for LobeHub
-################################################################
+# ═══════════════════════════════════════════════════════════════════════════════
+# XActions
+#
+# This file used to be a copy of LobeHub's, carrying Umi, dumi, Serwist and
+# `packages/lobe-ui` rules that match nothing here, while missing the one class of
+# file this project must never commit: a saved X session. Rules are grouped by why
+# they exist, so the next person can tell which ones are load-bearing.
+# ═══════════════════════════════════════════════════════════════════════════════
 
-# System files
+# ─── Credentials and sessions ──────────────────────────────────────────────────
+# XActions logs into X with real cookies. Anything matched here is a live login:
+# whoever reads it can post as the account. These come first because they are the
+# rules with a blast radius.
+.xactions/
+cookies.json
+*.cookies.json
+cookies.txt
+storage-state.json
+session.json
+*.session.json
+query-ids.json
+mcp-drafts.json
+.x402-wallets.json
+.x402-buyer.json
+vertex-ai-key.json
+*.pem
+
+# ─── Environment ───────────────────────────────────────────────────────────────
+.env
+.env.local
+.env*.local
+.env.development
+.env.production
+.env.sentry-build-plugin
+.dev.vars
+
+# ─── Dependencies ──────────────────────────────────────────────────────────────
+node_modules/
+bun.lockb
+.pnpm-store/
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# ─── Build output ──────────────────────────────────────────────────────────────
+dist/
+dist-cloudflare/
+build/
+es/
+/lib/
+.next/
+pages-out/
+*.tsbuildinfo
+next-env.d.ts
+
+# ─── Test and lint caches ──────────────────────────────────────────────────────
+coverage/
+.coverage/
+.nyc_output/
+.eslintcache
+.stylelintcache
+test-output/
+e2e/reports/
+audit-report.json
+
+# ─── Local data ────────────────────────────────────────────────────────────────
+# data/ is tracked for its .gitkeep; its contents are runtime scrape output.
+data/*
+!data/.gitkeep
+*.db
+*.sqlite
+*.sqlite3
+dump.rdb
+logs/
+*.log
+
+# ─── Deploy tooling ────────────────────────────────────────────────────────────
+.vercel
+.wrangler/
+
+# ─── Editor and OS ─────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 ehthumbs.db
 Desktop.ini
-
-# Linux/Ubuntu system files
 *~
 *.swp
 *.swo
@@ -16,8 +93,6 @@ Desktop.ini
 .Trash-*
 .nfs*
 .gvfs-fuse-daemon-*
-
-# IDE and editors
 .idea/
 *.sublime-*
 .history/
@@ -25,109 +100,30 @@ Desktop.ini
 *.code-workspace
 .vscode/sessions.json
 
-# Temporary files
+# Stray editor and agent backups (never commit or publish)
+*.backup
+*.bak
+*.orig
+*.rej
+
+# ─── Temporary ─────────────────────────────────────────────────────────────────
 .temp/
 temp/
 tmp/
 *.tmp
 *.temp
-*.log
 *.cache
 .cache/
 
-# Environment files
-.env
-.env.local
-.env*.local
-.env.development
-.env.production
-venv/
-.venv/
-
-# SaaS Platform Additions
-node_modules/
-*.db
-*.sqlite
-dump.rdb
-dist/
-build/
-
-# Dependencies
-node_modules/
-bun.lockb
-.pnpm-store/
-
-# Build outputs
-dist/
-es/
-/lib/
-.next/
-logs/
-test-output/
-*.tsbuildinfo
-next-env.d.ts
-
-# Framework specific
-# Umi
-.umi/
-.umi-production/
-.umi-test/
-.dumi/tmp*/
-
-# Vercel
-.vercel/
-
-# Testing and CI
-coverage/
-.coverage/
-.nyc_output/
-.eslintcache
-.stylelintcache
-
-# Service Worker
-# Serwist
-public/sw*
-public/swe-worker*
-
-# Generated files
-public/*.js
-# SEO files (tracked in version control)
-# public/sitemap.xml - tracked
-# public/robots.txt - tracked
-# public/manifest.json - tracked
-
-# Git hooks
-.husky/prepare-commit-msg
-
-# Documents and media
-*.patch
-*.pdf
-
-# Cloud service keys
-vertex-ai-key.json
-
-# AI coding tools
+# ─── AI coding tools ───────────────────────────────────────────────────────────
+# Local agent state only. AGENTS.md, CLAUDE.md and GEMINI.md are tracked on
+# purpose: they are how a coding agent learns this repository, so they ship with it.
 .local/
 .claude/
+.serena/
 .mcp.json
-
 CLAUDE.local.md
+.husky/prepare-commit-msg
 
-# MCP tools
-.serena/**
-
-# Misc
-./packages/lobe-ui
-*.ppt*
-*.doc*
-*.xls*
-
-prd
-GEMINI.md
-e2e/reports
-
-# Sentry Config File
-.env.sentry-build-plugin
-.vercel
-
-audit-report.json
+# GCP deploy secrets (never commit)
+deploy/gcp/.env.gcp

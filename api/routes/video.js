@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * Video Download API Routes
  * 
@@ -11,7 +11,8 @@
 
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
-import { extractVideo, parseTweetUrl } from '../services/videoExtractor.js';
+import { extractVideo, parseTweetUrl, VideoExtractionError } from '../services/videoExtractor.js';
+import { assertMediaUrl, downloadFilename } from '../../src/video/edgeExtractor.js';
 
 const router = Router();
 
@@ -103,16 +104,12 @@ router.post('/extract', async (req, res) => {
   } catch (error) {
     console.error('❌ Video extraction error:', error.message);
 
-    if (error.message.includes('No video found')) {
-      return res.status(404).json({ error: error.message });
-    }
-
-    if (error.message.includes('Invalid tweet URL')) {
-      return res.status(400).json({ error: error.message });
+    if (error instanceof VideoExtractionError) {
+      return res.status(error.status).json({ error: error.message });
     }
 
     return res.status(500).json({
-      error: error.message || 'Failed to extract video. The tweet may be private, deleted, or rate-limited.',
+      error: 'Failed to extract video. Please try again.',
     });
   }
 });
@@ -133,24 +130,16 @@ router.get('/download', async (req, res) => {
       return res.status(400).json({ error: 'Missing required query param: url' });
     }
 
-    // Validate the URL points to Twitter's video CDN using proper URL parsing
-    let parsedUrl;
+    // Validate the URL points to Twitter's video CDN. Shared with the edge
+    // function so both surfaces allow exactly the same hosts.
+    let media;
     try {
-      parsedUrl = new URL(decodeURIComponent(url));
-    } catch {
-      return res.status(400).json({ error: 'Invalid URL format.' });
+      media = assertMediaUrl(url);
+    } catch (error) {
+      return res.status(error.status || 400).json({ error: error.message });
     }
 
-    const allowedHosts = ['video.twimg.com', 'pbs.twimg.com'];
-    if (!allowedHosts.includes(parsedUrl.hostname)) {
-      return res.status(400).json({ error: 'Invalid video URL. Must be a Twitter video CDN URL.' });
-    }
-
-    if (parsedUrl.protocol !== 'https:') {
-      return res.status(400).json({ error: 'Only HTTPS URLs are allowed.' });
-    }
-
-    const decodedUrl = parsedUrl.href;
+    const decodedUrl = media.href;
 
     // Fetch the video from Twitter's CDN
     const videoResponse = await fetch(decodedUrl, {
@@ -167,9 +156,7 @@ router.get('/download', async (req, res) => {
     }
 
     // Sanitize user-supplied params before embedding in Content-Disposition
-    const safeAuthor = (author || 'video').replace(/[^\w-]/g, '_').slice(0, 50);
-    const safeTweetId = (tweetId || String(Date.now())).replace(/[^\w-]/g, '_').slice(0, 30);
-    const filename = `${safeAuthor}_${safeTweetId}.mp4`;
+    const filename = downloadFilename(author, tweetId);
     res.setHeader('Content-Type', videoResponse.headers.get('content-type') || 'video/mp4');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
 

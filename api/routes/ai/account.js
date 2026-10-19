@@ -1,20 +1,27 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * AI Account Endpoints
  *
- * Account backup, data download, follower audits, delegate access,
- * identity verification, contact uploads, multi-account support.
+ * Account backup, follower audits, delegate listing, identity verification
+ * status, multi-account listing, join dates, sessions, connected apps and
+ * profile QR codes.
+ *
+ * Not offered, because X does not let a session do them: requesting the data
+ * archive (X asks for the password and a code it sends by email or SMS),
+ * uploading an address book (only X's mobile apps sync contacts) and
+ * appealing a suspension (a Help Center form outside the logged-in session).
  *
  * @module api/routes/ai/account
  */
 
 import express from 'express';
 import crypto from 'crypto';
+import { queueFailure } from '../../utils/queueResponse.js';
 
 const router = express.Router();
 
 const generateOperationId = () =>
-  `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+  `ai-${Date.now()}-${crypto.randomBytes(16).toString('hex')}`;
 
 /** @param {import('express').Request} req @param {import('express').Response} res @returns {string | null} */
 const requireSession = (req, res) => {
@@ -25,7 +32,7 @@ const requireSession = (req, res) => {
 
 /** @param {import('express').Response} res @param {string} operationId @param {string} type @param {Record<string, unknown>} config */
 const queueOperation = async (res, operationId, type, config) => {
-  try { const { queueJob } = await import('../../services/jobQueue.js'); await queueJob({ id: operationId, type, config, status: 'queued' }); } catch { /* queue unavailable */ }
+  try { const { queueJob } = await import('../../services/jobQueue.js'); await queueJob({ id: operationId, type, config, status: 'queued' }); } catch (err) { return queueFailure(res, err); }
   return res.json({ success: true, operationId, status: 'queued', statusUrl: `/api/ai/action/status/${operationId}` });
 };
 
@@ -36,12 +43,6 @@ router.post('/backup', async (req, res) => {
   return queueOperation(res, generateOperationId(), 'accountBackup', { session, include, format });
 });
 
-/** POST /api/ai/account/download-data */
-router.post('/download-data', async (req, res) => {
-  const session = requireSession(req, res); if (!session) return;
-  return queueOperation(res, generateOperationId(), 'downloadData', { session });
-});
-
 /** POST /api/ai/account/audit-followers */
 router.post('/audit-followers', async (req, res) => {
   const session = requireSession(req, res); if (!session) return;
@@ -49,30 +50,34 @@ router.post('/audit-followers', async (req, res) => {
   return queueOperation(res, generateOperationId(), 'auditFollowers', { session, username, limit, checkBots });
 });
 
-/** POST /api/ai/account/delegate-access */
+/**
+ * POST /api/ai/account/delegate-access
+ * Lists the members the account has delegated access to. Inviting or removing
+ * a delegate is done on x.com, where the invitee must accept.
+ */
 router.post('/delegate-access', async (req, res) => {
   const session = requireSession(req, res); if (!session) return;
-  const { action = 'list', targetUsername, permissions } = req.body;
-  return queueOperation(res, generateOperationId(), 'delegateAccess', { session, action, targetUsername, permissions });
+  const { action = 'list' } = req.body;
+  if (action !== 'list') return res.status(400).json({ success: false, error: 'UNSUPPORTED_ACTION', message: 'Only action "list" is supported. Invite or remove delegates at https://x.com/settings/delegate.' });
+  return queueOperation(res, generateOperationId(), 'delegateAccess', { session, action });
 });
 
-/** POST /api/ai/account/verify-identity */
+/**
+ * POST /api/ai/account/verify-identity
+ * Reports whether the account has passed X ID verification. The verification
+ * itself (a government ID and selfie check) can only be completed by the
+ * account holder in X's own flow.
+ */
 router.post('/verify-identity', async (req, res) => {
   const session = requireSession(req, res); if (!session) return;
   return queueOperation(res, generateOperationId(), 'verifyIdentity', { session });
 });
 
-/** POST /api/ai/account/upload-contacts */
-router.post('/upload-contacts', async (req, res) => {
-  const session = requireSession(req, res); if (!session) return;
-  const { contacts } = req.body;
-  return queueOperation(res, generateOperationId(), 'uploadContacts', { session, contacts });
-});
-
-/** POST /api/ai/account/multi-account */
+/** POST /api/ai/account/multi-account: lists the accounts signed in alongside this session. */
 router.post('/multi-account', async (req, res) => {
   const session = requireSession(req, res); if (!session) return;
   const { action = 'list' } = req.body;
+  if (action !== 'list') return res.status(400).json({ success: false, error: 'UNSUPPORTED_ACTION', message: 'Only action "list" is supported.' });
   return queueOperation(res, generateOperationId(), 'multiAccount', { session, action });
 });
 
@@ -94,13 +99,6 @@ router.post('/login-history', async (req, res) => {
 router.post('/connected-accounts', async (req, res) => {
   const session = requireSession(req, res); if (!session) return;
   return queueOperation(res, generateOperationId(), 'connectedAccounts', { session });
-});
-
-/** POST /api/ai/account/appeal-suspension */
-router.post('/appeal-suspension', async (req, res) => {
-  const session = requireSession(req, res); if (!session) return;
-  const { reason } = req.body;
-  return queueOperation(res, generateOperationId(), 'appealSuspension', { session, reason });
 });
 
 /** POST /api/ai/account/qr-code */

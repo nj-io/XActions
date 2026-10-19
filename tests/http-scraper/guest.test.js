@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * Tests for GuestTokenManager — Guest token acquisition, caching, pooling,
  * rate-limit tracking, and header generation.
@@ -6,7 +6,7 @@
  * All tests use mocked fetch — no real network requests.
  *
  * @author nichxbt
- * @license MIT
+ * @license Apache-2.0
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';

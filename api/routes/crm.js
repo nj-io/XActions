@@ -1,17 +1,20 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions CRM API Routes
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 import { Router } from 'express';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
 
 // Require authentication for all CRM routes
-router.use(authenticate);
+// These routes drive the server's single, operator-wide instance (not
+// per-user state), so they are for the operator: any signed-in user could
+// once read or change them.
+router.use(authenticate, requireAdmin);
 
 // POST /api/crm/sync/:username
 router.post('/sync/:username', async (req, res) => {

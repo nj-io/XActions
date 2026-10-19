@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
  * 💬 Auto Commenter
@@ -29,7 +29,9 @@
  * ============================================================
  */
 
-const CONFIG = {
+// `var` (not `const`): a repeated top-level `const` paste in the same
+// DevTools tab throws "already been declared" instead of re-running.
+var CONFIG = {
   // ---- COMMENTS TO POST ----
   // The script will randomly pick from these
   // 💡 Add variety to avoid looking like a bot!
@@ -131,7 +133,11 @@ const CONFIG = {
    * Get tweet ID
    */
   function getTweetId(tweetEl) {
-    const link = tweetEl.querySelector('a[href*="/status/"]');
+    // The timestamp's enclosing anchor is the tweet's own permalink; the first
+    // /status/ link in the article can belong to a quoted tweet
+    const timeEl = tweetEl.querySelector('time');
+    const link = (timeEl && timeEl.closest('a[href*="/status/"]')) ||
+                 tweetEl.querySelector('a[href*="/status/"]');
     if (link) {
       const match = link.href.match(/\/status\/(\d+)/);
       return match ? match[1] : null;
@@ -161,16 +167,18 @@ const CONFIG = {
     if (age < CONFIG.minPostAgeSeconds) return false;
     if (age > CONFIG.maxPostAgeMinutes * 60) return false;
     
-    // Check if original tweet
+    // Check if original tweet (structural marker first; English text as fallback)
     if (CONFIG.onlyOriginalTweets) {
-      const socialContext = tweetEl.querySelector('[data-testid="socialContext"]');
-      if (socialContext?.innerText?.includes('Replying')) return false;
+      const isReply = tweetEl.querySelector('[data-testid="in-reply-to"]') !== null ||
+        Array.from(tweetEl.querySelectorAll('div[dir]')).some(el =>
+          el.innerText.startsWith('Replying to'));
+      if (isReply) return false;
     }
-    
+
     // Check for media
     if (CONFIG.onlyWithMedia) {
-      const hasMedia = tweetEl.querySelector('[data-testid="tweetPhoto"]') || 
-                       tweetEl.querySelector('[data-testid="videoPlayer"]');
+      const hasMedia = tweetEl.querySelector('[data-testid="tweetPhoto"]') ||
+                       tweetEl.querySelector('[data-testid="videoPlayer"], [data-testid="videoComponent"]');
       if (!hasMedia) return false;
     }
     

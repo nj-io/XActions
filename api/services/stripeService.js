@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * Stripe Billing Service
  * Handles customer creation, subscriptions, and portal sessions.
@@ -153,14 +153,14 @@ export async function cancelSubscription(userId) {
     cancel_at_period_end: true,
   });
 
+  const cancelAt = fromEpoch(updated.cancel_at ?? periodEnd(updated));
+
   await prisma.subscription.update({
     where: { userId },
-    data: {
-      cancelAt: new Date(updated.current_period_end * 1000),
-    },
+    data: { cancelAt },
   });
 
-  return { cancelAt: new Date(updated.current_period_end * 1000) };
+  return { cancelAt };
 }
 
 /**
@@ -208,6 +208,48 @@ export async function handleWebhookEvent(event) {
 
 // --- Internal helpers ---
 
+/**
+ * End of a subscription's current billing period, in epoch seconds.
+ *
+ * API versions from 2025-03-31 moved `current_period_end` off the
+ * subscription and onto each subscription item; the subscription's own period
+ * ends with its earliest item. Webhook payloads follow the endpoint's API
+ * version rather than this SDK's, so both shapes arrive here.
+ */
+function periodEnd(subscription) {
+  if (subscription.current_period_end) return subscription.current_period_end;
+  const ends = (subscription.items?.data || [])
+    .map((item) => item.current_period_end)
+    .filter(Boolean);
+  return ends.length ? Math.min(...ends) : null;
+}
+
+function fromEpoch(seconds) {
+  return seconds ? new Date(seconds * 1000) : null;
+}
+
+/**
+ * The PaymentIntent behind an invoice. Older API versions put it on the
+ * invoice itself; newer ones list it under `invoice.payments`, which webhook
+ * payloads leave unexpanded, so it is fetched when the payload lacks it.
+ */
+async function invoicePaymentIntentId(invoice) {
+  const idOf = (ref) => (typeof ref === 'string' ? ref : ref?.id || null);
+  if (invoice.payment_intent) return idOf(invoice.payment_intent);
+
+  let payments = invoice.payments?.data;
+  if (!payments) {
+    try {
+      payments = (await getStripe().invoicePayments.list({ invoice: invoice.id, limit: 10 })).data;
+    } catch (err) {
+      console.error(`❌ Could not list payments for invoice ${invoice.id}: ${err.message}`);
+      return null;
+    }
+  }
+  const match = payments.find((p) => p.payment?.payment_intent);
+  return match ? idOf(match.payment.payment_intent) : null;
+}
+
 async function activateSubscription(session) {
   const { userId, tier } = session.metadata;
   if (!userId || !tier) return;
@@ -248,8 +290,8 @@ async function syncSubscription(stripeSubscription) {
     where: { id: sub.id },
     data: {
       status,
-      endDate: new Date(stripeSubscription.current_period_end * 1000),
-      cancelAt: stripeSubscription.cancel_at ? new Date(stripeSubscription.cancel_at * 1000) : null,
+      endDate: fromEpoch(periodEnd(stripeSubscription)) ?? undefined,
+      cancelAt: fromEpoch(stripeSubscription.cancel_at),
     },
   });
 }
@@ -290,7 +332,7 @@ async function recordPayment(invoice) {
       type: 'subscription',
       amount: invoice.amount_paid / 100,
       currency: invoice.currency,
-      stripePaymentId: invoice.payment_intent,
+      stripePaymentId: await invoicePaymentIntentId(invoice),
       stripeInvoiceId: invoice.id,
       status: 'succeeded',
     },
@@ -317,7 +359,7 @@ async function handleFailedPayment(invoice) {
       type: 'subscription',
       amount: invoice.amount_due / 100,
       currency: invoice.currency,
-      stripePaymentId: invoice.payment_intent,
+      stripePaymentId: await invoicePaymentIntentId(invoice),
       stripeInvoiceId: invoice.id,
       status: 'failed',
     },

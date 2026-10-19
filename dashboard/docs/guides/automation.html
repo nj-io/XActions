@@ -1,78 +1,283 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>XActions Automation Framework Guide | XActions</title>
-  <meta name="description" content="A complete browser automation toolkit for X (Twitter) growth and engagement.">
-  <meta name="keywords" content="xactions, twitter automation, x automation, free, open source, automation, framework, guide, guides &amp; reference">
-  <meta name="author" content="nich (@nichxbt)">
-  <meta name="robots" content="index, follow">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>XActions Automation Framework Guide — XActions Docs</title>
+<meta name="description" content="A complete browser automation toolkit for X (Twitter) growth and engagement.">
+<meta name="keywords" content="xactions, twitter automation, x automation, free, open source, automation, framework, guide, guides &amp; reference">
+<meta name="author" content="nich (@nichxbt)">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="color-scheme" content="light dark">
 
-  <meta property="og:type" content="article">
-  <meta property="og:title" content="XActions Automation Framework Guide — XActions">
-  <meta property="og:description" content="A complete browser automation toolkit for X (Twitter) growth and engagement.">
-  <meta property="og:url" content="https://xactions.app/docs/guides/automation">
-  <meta property="og:site_name" content="XActions">
+<meta property="og:type" content="article">
+<meta property="og:title" content="XActions Automation Framework Guide — XActions">
+<meta property="og:description" content="A complete browser automation toolkit for X (Twitter) growth and engagement.">
+<meta property="og:url" content="https://xactions.app/docs/guides/automation">
+<meta property="og:image" content="https://xactions.app/og-docs.png">
+<meta property="og:site_name" content="XActions">
 
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="XActions Automation Framework Guide — XActions">
-  <meta name="twitter:description" content="A complete browser automation toolkit for X (Twitter) growth and engagement.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@nichxbt">
+<meta name="twitter:title" content="XActions Automation Framework Guide — XActions">
+<meta name="twitter:description" content="A complete browser automation toolkit for X (Twitter) growth and engagement.">
+<meta name="twitter:image" content="https://xactions.app/og-docs.png">
 
-  <link rel="canonical" href="https://xactions.app/docs/guides/automation">
-  <link rel="manifest" href="/manifest.json">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link rel="canonical" href="https://xactions.app/docs/guides/automation">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link rel="stylesheet" href="/docs/assets/docs.css">
 
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "TechArticle",
-    "headline": "XActions Automation Framework Guide | XActions",
-    "description": "A complete browser automation toolkit for X (Twitter) growth and engagement.",
-    "url": "https://xactions.app/docs/guides/automation",
-    "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
-    "datePublished": "2026-02-25",
-    "dateModified": "2026-02-25",
-    "mainEntityOfPage": "https://xactions.app/docs/guides/automation",
-    "articleSection": "Guides & Reference",
-    "keywords": "xactions, twitter automation, x automation, free, open source, automation, framework, guide, guides & reference"
-  }
-  </script>
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Docs", "item": "https://xactions.app/docs" },
-      { "@type": "ListItem", "position": 3, "name": "Guides & Reference", "item": "https://xactions.app/docs/guides" },
-      { "@type": "ListItem", "position": 4, "name": "XActions Automation Framework Guide", "item": "https://xactions.app/docs/guides/automation" }
-    ]
-  }
-  </script>
+<script>
+/* Applied before first paint so a dark-theme reader never sees a white flash. */
+(function(){try{var t=localStorage.getItem('xactions-theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();
+</script>
 
-  <link rel="stylesheet" href="/css/common.css">
-  <link rel="stylesheet" href="/css/docs.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "XActions Automation Framework Guide — XActions Docs",
+  "description": "A complete browser automation toolkit for X (Twitter) growth and engagement.",
+  "url": "https://xactions.app/docs/guides/automation",
+  "image": "https://xactions.app/og-docs.png",
+  "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
+  "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+  "isAccessibleForFree": true,
+  "license": "https://www.apache.org/licenses/LICENSE-2.0",
+  "mainEntityOfPage": "https://xactions.app/docs/guides/automation",
+  "articleSection": "Guides & Reference",
+  "keywords": "xactions, twitter automation, x automation, free, open source, automation, framework, guide, guides & reference"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
+    { "@type": "ListItem", "position": 2, "name": "Docs", "item": "https://xactions.app/docs" },
+    { "@type": "ListItem", "position": 3, "name": "Guides & Reference", "item": "https://xactions.app/docs" },
+    { "@type": "ListItem", "position": 4, "name": "XActions Automation Framework Guide", "item": "https://xactions.app/docs/guides/automation" }
+  ]
+}
+</script>
 </head>
 <body>
-  <div class="layout">
-    <aside class="sidebar-left" aria-label="Main navigation"></aside>
+<a class="skip-link" href="#main">Skip to content</a>
 
-    <main class="main-content">
-      <header class="main-header">
-        <h1>📖 XActions Automation Framework Guide</h1>
-        <div class="breadcrumb">
-          <a href="https://xactions.app">Home</a> › <a href="https://xactions.app/docs">Docs</a> › <a href="https://xactions.app/docs/guides">Guides &amp; Reference</a> › XActions Automation Framework Guide
-        </div>
-      </header>
+<header class="topbar">
+  <button class="icon-btn menu-toggle" data-menu-toggle aria-expanded="false" aria-label="Open navigation">☰</button>
+  <a class="topbar__brand" href="/">⚡ XActions</a>
+  <div class="topbar__spacer"></div>
+  <button class="search-trigger" data-search-trigger aria-label="Search documentation">
+    <span aria-hidden="true">🔍</span><span class="search-trigger__label">Search docs</span><kbd>⌘K</kbd>
+  </button>
+  <nav class="topbar__nav" aria-label="Main">
+    <a class="topbar__link" href="/docs" aria-current="page">Docs</a>
+    <a class="topbar__link" href="/tutorials">Tutorials</a>
+    <a class="topbar__link" href="/examples">Examples</a>
+    <a class="topbar__link" href="https://github.com/nirholas/XActions" target="_blank" rel="noopener">GitHub</a>
+  </nav>
+  <button class="icon-btn" data-theme-toggle aria-label="Switch theme">☾</button>
+</header>
 
-      <article class="article">
-        <span class="cat-badge">Guides &amp; Reference</span>
-        <h1>🤖 XActions Automation Framework Guide</h1>
+<div class="scrim" data-scrim></div>
+
+<div class="layout">
+  <aside class="sidebar" aria-label="Documentation sections">
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Guides &amp; Reference</div>
+      <a class="sidebar__link" href="/docs/guides/scheduler">⏰ Scheduler &amp; Webhook Triggers</a>
+      <a class="sidebar__link" href="/docs/guides/a2a-api-reference">A2A API Reference — XActions</a>
+      <a class="sidebar__link" href="/docs/guides/a2a-protocol">A2A Protocol — XActions</a>
+      <a class="sidebar__link" href="/docs/guides/portability">Account Portability — Export, Migrate &amp; Diff</a>
+      <a class="sidebar__link" href="/docs/guides/algorithm-builder">Algorithm Builder — 24/7 Niche Growth Automation</a>
+      <a class="sidebar__link" href="/docs/guides/analytics-advanced">Analytics &amp; Sentiment Analysis</a>
+      <a class="sidebar__link" href="/docs/guides/architecture">Architecture</a>
+      <a class="sidebar__link" href="/docs/guides/ask">Ask XActions</a>
+      <a class="sidebar__link" href="/docs/guides/audience-overlap">Audience Overlap Analysis</a>
+      <a class="sidebar__link" href="/docs/guides/spaces-agent">Autonomous Space Agent</a>
+      <a class="sidebar__link" href="/docs/guides/browser-extension">Browser Extension</a>
+      <a class="sidebar__link" href="/docs/guides/browser-scripts">Browser Scripts</a>
+      <a class="sidebar__link" href="/docs/guides/bulk-operations">Bulk Operations</a>
+      <a class="sidebar__link" href="/docs/guides/configuration">Configuration</a>
+      <a class="sidebar__link" href="/docs/guides/content-calendar">Content Calendar</a>
+      <a class="sidebar__link" href="/docs/guides/control-panel">Control Panel — Browser Automation UI</a>
+      <a class="sidebar__link" href="/docs/guides/dashboard">Dashboard</a>
+      <a class="sidebar__link" href="/docs/guides/database">Database Schema</a>
+      <a class="sidebar__link" href="/docs/guides/deployment">Deployment Guide</a>
+      <a class="sidebar__link" href="/docs/guides/engagement-booster">Engagement Booster — Smart Tweet Engagement</a>
+      <a class="sidebar__link" href="/docs/guides/engage">Engagement sweeps: like, repost, and reply across a whole feed</a>
+      <a class="sidebar__link" href="/docs/guides/evergreen-recycler">Evergreen Content Recycler</a>
+      <a class="sidebar__link" href="/docs/guides/examples">Examples</a>
+      <a class="sidebar__link" href="/docs/guides/follower-crm">Follower CRM</a>
+      <a class="sidebar__link" href="/docs/guides/getting-started">Getting Started with XActions</a>
+      <a class="sidebar__link" href="/docs/guides/history-store">History Store &amp; Auto-Snapshots</a>
+      <a class="sidebar__link" href="/docs/guides/media-archive">Media archive</a>
+      <a class="sidebar__link" href="/docs/guides/monitoring">Monitoring Guide</a>
+      <a class="sidebar__link" href="/docs/guides/notifications">Notifications</a>
+      <a class="sidebar__link" href="/docs/guides/x402">Paying for XActions: x402 and MCP</a>
+      <a class="sidebar__link" href="/docs/guides/plugins">Plugin System</a>
+      <a class="sidebar__link" href="/docs/guides/streaming">Real-Time Streaming</a>
+      <a class="sidebar__link" href="/docs/guides/streams">Real-time Streams — Live Twitter Monitoring</a>
+      <a class="sidebar__link" href="/docs/guides/reputation-audit">Reputation audit: AI-score your own timeline, get a shareable card</a>
+      <a class="sidebar__link" href="/docs/guides/rss-monitor">Rss Monitor</a>
+      <a class="sidebar__link" href="/docs/guides/scrapers">Scrapers</a>
+      <a class="sidebar__link" href="/docs/guides/scraping-infrastructure">Scraping Infrastructure</a>
+      <a class="sidebar__link" href="/docs/guides/scraping">Scraping Infrastructure</a>
+      <a class="sidebar__link" href="/docs/guides/analytics">Sentiment Analysis &amp; Reputation Monitoring</a>
+      <a class="sidebar__link" href="/docs/guides/skills">Skills Reference</a>
+      <a class="sidebar__link" href="/docs/guides/social-graph">Social Graph</a>
+      <a class="sidebar__link" href="/docs/guides/graph">Social Graph — Network Analysis &amp; Visualization</a>
+      <a class="sidebar__link" href="/docs/guides/graph-system">Social Graph System</a>
+      <a class="sidebar__link" href="/docs/guides/stealth-scraping">Stealth Scraping &amp; Proxy Rotation</a>
+      <a class="sidebar__link" href="/docs/guides/search-sweep">Sweep an X search: delete, like, repost, or reply to every result</a>
+      <a class="sidebar__link" href="/docs/guides/scheduling">Task Scheduling</a>
+      <a class="sidebar__link" href="/docs/guides/teams">Team Management</a>
+      <a class="sidebar__link" href="/docs/guides/cryptocurrency-api-guide">The Complete Guide to Cryptocurrency APIs in 2026</a>
+      <a class="sidebar__link" href="/docs/guides/mcp-remote">The hosted MCP server</a>
+      <a class="sidebar__link" href="/docs/guides/agents">Thought Leader Agent</a>
+      <a class="sidebar__link" href="/docs/guides/agent-advanced">Thought Leader Agent — Advanced Features</a>
+      <a class="sidebar__link" href="/docs/guides/agent-api-reference">Thought Leader Agent — API Reference</a>
+      <a class="sidebar__link" href="/docs/guides/agent-architecture">Thought Leader Agent — Architecture</a>
+      <a class="sidebar__link" href="/docs/guides/agent-config-reference">Thought Leader Agent — Configuration Reference</a>
+      <a class="sidebar__link" href="/docs/guides/agent-getting-started">Thought Leader Agent — Getting Started</a>
+      <a class="sidebar__link" href="/docs/guides/agent-system">Thought Leader Agent System</a>
+      <a class="sidebar__link" href="/docs/guides/troubleshooting">Troubleshooting</a>
+      <a class="sidebar__link" href="/docs/guides/price-correlation">Tweet-Price Correlation</a>
+      <a class="sidebar__link" href="/docs/guides/usage">Usage</a>
+      <a class="sidebar__link" href="/docs/guides/video-downloader">Video Downloader</a>
+      <a class="sidebar__link" href="/docs/guides/video">Video Engine — Programmatic Video Generation</a>
+      <a class="sidebar__link" href="/docs/guides/video-generation">Video Generation</a>
+      <a class="sidebar__link" href="/docs/guides/workflows">Workflow Engine</a>
+      <a class="sidebar__link" href="/docs/guides/x-developer-api-crypto-guide-2026">X Developer API in 2026: The Complete Guide for Crypto Builders</a>
+      <a class="sidebar__link" href="/docs/guides/dom-selectors">X/Twitter DOM Selector Reference</a>
+      <a class="sidebar__link" href="/docs/guides/ai-api">XActions AI API Documentation</a>
+      <a class="sidebar__link" href="/docs/guides/api-reference">XActions API Reference</a>
+      <a class="sidebar__link" href="/docs/guides/automation" aria-current="page">XActions Automation Framework Guide</a>
+      <a class="sidebar__link" href="/docs/guides/cli-reference">XActions CLI Reference</a>
+      <a class="sidebar__link" href="/docs/guides/xactions-reference">XActions Complete Function Reference</a>
+      <a class="sidebar__link" href="/docs/guides/readme">XActions Documentation</a>
+      <a class="sidebar__link" href="/docs/guides/extension-api">XActions Extension — Internal API Reference</a>
+      <a class="sidebar__link" href="/docs/guides/extension">XActions Extension — User Guide</a>
+      <a class="sidebar__link" href="/docs/guides/growth_strategy">XActions Growth Strategy: 76 → 100,000 Stars</a>
+      <a class="sidebar__link" href="/docs/guides/mcp-setup">XActions MCP Server Setup Guide</a>
+      <a class="sidebar__link" href="/docs/guides/rest-api">XActions REST API Reference</a>
+      <a class="sidebar__link" href="/docs/guides/feature_inventory">XActions v3.5.0: Complete Feature Inventory</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Tutorials</div>
+      <a class="sidebar__link" href="/docs/learn/your-first-scrape">Tutorial 01 — Your first scrape</a>
+      <a class="sidebar__link" href="/docs/learn/mcp-with-claude">Tutorial 02 — Claude that can use X</a>
+      <a class="sidebar__link" href="/docs/learn/clean-up-your-following">Tutorial 03 — Clean up your following list</a>
+      <a class="sidebar__link" href="/docs/learn/build-a-brand-monitor">Tutorial 04 — Build a brand monitor</a>
+      <a class="sidebar__link" href="/docs/learn/competitive-intelligence">05: Read any account like an analyst</a>
+      <a class="sidebar__link" href="/docs/learn/everything-is-json">06: Everything is JSON</a>
+      <a class="sidebar__link" href="/docs/learn/your-x-archive">07: Read your own X archive</a>
+      <a class="sidebar__link" href="/docs/learn/readme">Tutorials</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Developer Guides</div>
+      <a class="sidebar__link" href="/docs/guides/developer/contributing-features">Adding New Features</a>
+      <a class="sidebar__link" href="/docs/guides/developer/agent-troubleshooting">Agent Troubleshooting Guide</a>
+      <a class="sidebar__link" href="/docs/guides/developer/browser-script-patterns">Browser Script Patterns</a>
+      <a class="sidebar__link" href="/docs/guides/developer/selectors">X/Twitter DOM Selectors Reference</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Architecture</div>
+      <a class="sidebar__link" href="/docs/architecture/http-scraper">HTTP-Based Scraper — Architecture &amp; Implementation Plan</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Browser Automation</div>
+      <a class="sidebar__link" href="/docs/automation/advanced-techniques">Advanced Automation Techniques</a>
+      <a class="sidebar__link" href="/docs/automation/getting-started-browser">Getting Started with Browser Automation</a>
+      <a class="sidebar__link" href="/docs/automation/actions-reference">XActions Actions Library Reference (`actions.js`)</a>
+      <a class="sidebar__link" href="/docs/automation/scripts-reference">XActions Automation Scripts — Complete Reference</a>
+      <a class="sidebar__link" href="/docs/automation/core-reference">XActions Core Module Reference (`core.js`)</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Research &amp; Architecture</div>
+      <a class="sidebar__link" href="/docs/research/llm-powered-thought-leader">24/7 LLM-Powered Thought Leadership Agent — Architecture &amp; Implementation Guide</a>
+      <a class="sidebar__link" href="/docs/research/algorithm-cultivation">Algorithmic Feed Cultivation: A Technical Research Paper on Automated Thought Leadership via Platform Signal Training</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Case Studies</div>
+      <a class="sidebar__link" href="/docs/case-studies/robust-dom-extraction">Robust DOM Extraction: A Case Study in Browser Automation Resilience</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Agent Skills</div>
+      <a class="sidebar__link" href="/docs/skills/account-backup">Account Backup &amp; Data Export</a>
+      <a class="sidebar__link" href="/docs/skills/account-tools">Account Tools (Miscellaneous)</a>
+      <a class="sidebar__link" href="/docs/skills/algorithm-cultivation">Algorithm Cultivation &amp; Thought Leadership</a>
+      <a class="sidebar__link" href="/docs/skills/analytics-insights">Analytics &amp; Insights</a>
+      <a class="sidebar__link" href="/docs/skills/articles-longform">Articles &amp; Longform</a>
+      <a class="sidebar__link" href="/docs">+ 45 more…</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Skill References</div>
+      <a class="sidebar__link" href="/docs/skills/algorithm-cultivation-algorithm-internals">Algorithm Internals &amp; Architecture</a>
+      <a class="sidebar__link" href="/docs/skills/analytics-insights-script-configs">Analytics Script Configs</a>
+      <a class="sidebar__link" href="/docs/skills/blocking-muting-management-script-details">Blocking &amp; Muting Script Details</a>
+      <a class="sidebar__link" href="/docs/skills/algorithm-cultivation-browser-scripts">Browser Scripts Reference</a>
+      <a class="sidebar__link" href="/docs/skills/content-posting-script-configs">Content Posting Script Configs</a>
+      <a class="sidebar__link" href="/docs">+ 4 more…</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Claude Prompt Library</div>
+      <a class="sidebar__link" href="/docs/prompts/mcp-setup-and-first-commands">Tutorial: Setting Up XActions MCP Server with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/unfollow-non-followers-cleanup">Tutorial: Unfollow Non-Followers &amp; Follower Cleanup with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/growth-automation-suite">Tutorial: Growth Automation Suite — Grow Your X Account on Autopilot</a>
+      <a class="sidebar__link" href="/docs/prompts/scraping-research-analysis">Tutorial: Tweet Scraping, Profile Analysis &amp; Research with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/content-posting-threads-scheduling">Tutorial: Content Posting, Threads, Polls &amp; Scheduling with Claude</a>
+      <a class="sidebar__link" href="/docs">+ 19 more…</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Project Info</div>
+      <a class="sidebar__link" href="/docs/project/contributing">Contributing to XActions</a>
+      <a class="sidebar__link" href="/docs/project/changelog">Changelog</a>
+      <a class="sidebar__link" href="/docs/project/roadmap">Roadmap</a>
+      <a class="sidebar__link" href="/docs/project/security">Security Policy</a>
+      <a class="sidebar__link" href="/docs/project/code_of_conduct">Contributor Covenant Code of Conduct</a>
+      <a class="sidebar__link" href="/docs/project/readme">Quick start</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Extensions &amp; Plugins</div>
+      <a class="sidebar__link" href="/docs/extras/scripts">Chrome DevTools Console Scripts</a>
+      <a class="sidebar__link" href="/docs/extras/examples">Examples</a>
+      <a class="sidebar__link" href="/docs/extras/integrations-n8n">n8n-nodes-xactions</a>
+      <a class="sidebar__link" href="/docs/extras/extension">XActions Browser Extension</a>
+      <a class="sidebar__link" href="/docs/extras/src-plugins-excel">XActions Excel Plugin</a>
+      <a class="sidebar__link" href="/docs/extras/src-plugins-google-sheets">XActions Google Sheets Plugin</a>
+      <a class="sidebar__link" href="/docs/extras/src-plugins-template">xactions-plugin-example</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Launch &amp; Releases</div>
+      <a class="sidebar__link" href="/docs/launch/v310-launch-content">XActions v3.1.0 — Launch Content</a>
+    </div>
+  </aside>
+
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="https://xactions.app">Home</a> <span aria-hidden="true">›</span> <a href="https://xactions.app/docs">Docs</a> <span aria-hidden="true">›</span> <a href="https://xactions.app/docs">Guides &amp; Reference</a> <span aria-hidden="true">›</span> <span>XActions Automation Framework Guide</span>
+    </nav>
+
+    <span class="eyebrow">📖 Guides &amp; Reference</span>
+
+    <article class="prose">
+<h1 id="-xactions-automation-framework-guide">🤖 XActions Automation Framework Guide</h1>
 <p>A complete browser automation toolkit for X (Twitter) growth and engagement.</p>
-<h2>📦 Architecture Overview</h2>
+<hr>
+<h2 id="-important-disclaimer">⚠️ Important Disclaimer</h2>
+<p>These automation tools are for <strong>educational purposes</strong> and personal productivity. Please:</p>
+<ul>
+<li><strong>Respect X&#39;s Terms of Service</strong> — automation may violate their ToS</li>
+<li><strong>Use responsibly</strong> — don&#39;t spam, harass, or abuse these tools</li>
+<li><strong>Understand the risks</strong> — your account could be limited or suspended</li>
+<li><strong>Start slow</strong> — test with conservative settings first</li>
+</ul>
+<hr>
+<h2 id="-architecture-overview">📦 Architecture Overview</h2>
 <p>All automation scripts use a <strong>modular architecture</strong>:</p>
 <pre><code>src/automation/
 ├── core.js               ← Required! Load this first
@@ -101,14 +306,14 @@
 <li>Logging system</li>
 </ul>
 <hr>
-<h2>🎯 XActions Library (<code>actions.js</code>)</h2>
+<h2 id="-xactions-library-actionsjs">🎯 XActions Library (<code>actions.js</code>)</h2>
 <p>The complete X/Twitter actions library with <strong>100+ functions</strong> covering every available user action.</p>
-<h3>Quick Start</h3>
+<h3 id="quick-start">Quick Start</h3>
 <pre><code class="language-js">// 1. Load core.js first
 // 2. Load actions.js
 // 3. Use XActions!
 </code></pre>
-<h3>Available Sections</h3>
+<h3 id="available-sections">Available Sections</h3>
 <table>
 <thead>
 <tr>
@@ -178,7 +383,7 @@
 <td><code>browse()</code>, <code>join()</code>, <code>leave()</code>, <code>post()</code></td>
 </tr>
 </tbody></table>
-<h3>Examples</h3>
+<h3 id="examples">Examples</h3>
 <p><strong>Post a tweet:</strong></p>
 <pre><code class="language-js">await XActions.tweet.post(&quot;Hello world! 👋&quot;)
 </code></pre>
@@ -220,9 +425,9 @@ console.log(bookmarks)
 <pre><code class="language-js">XActions.utils.devMode()
 </code></pre>
 <hr>
-<h2>� XActions Function Reference</h2>
-<h3>XActions.user (Part 2) - Profile Exploration</h3>
-<h4><code>XActions.user.viewMedia(username)</code> - View user&#39;s media</h4>
+<h2 id="-xactions-function-reference">� XActions Function Reference</h2>
+<h3 id="xactionsuser-part-2---profile-exploration">XActions.user (Part 2) - Profile Exploration</h3>
+<h4 id="xactionsuserviewmediausername---view-user39s-media"><code>XActions.user.viewMedia(username)</code> - View user&#39;s media</h4>
 <pre><code class="language-js">// Example 1: View a creator&#39;s media gallery
 await XActions.user.viewMedia(&quot;mkbhd&quot;)
 // Opens mkbhd&#39;s media tab to see all photos and videos
@@ -236,7 +441,7 @@ const username = &quot;potentialfollow&quot;
 await XActions.user.viewMedia(username)
 // Check their media content before deciding to follow
 </code></pre>
-<h4><code>XActions.user.viewReplies(username)</code> - View user&#39;s replies</h4>
+<h4 id="xactionsuserviewrepliesusername---view-user39s-replies"><code>XActions.user.viewReplies(username)</code> - View user&#39;s replies</h4>
 <pre><code class="language-js">// Example 1: See how a user engages with others
 await XActions.user.viewReplies(&quot;naval&quot;)
 // View naval&#39;s replies to understand their engagement style
@@ -252,7 +457,7 @@ async function analyzeEngagementStyle(username) {
 }
 await analyzeEngagementStyle(&quot;pmarca&quot;)
 </code></pre>
-<h4><code>XActions.user.viewHighlights(username)</code> - View user&#39;s highlights</h4>
+<h4 id="xactionsuserviewhighlightsusername---view-user39s-highlights"><code>XActions.user.viewHighlights(username)</code> - View user&#39;s highlights</h4>
 <pre><code class="language-js">// Example 1: See curated content from a creator
 await XActions.user.viewHighlights(&quot;sama&quot;)
 // View Sam Altman&#39;s highlighted/pinned content
@@ -268,7 +473,7 @@ for (const leader of leaders) {
   await new Promise(r =&gt; setTimeout(r, 3000)) // Review each
 }
 </code></pre>
-<h4><code>XActions.user.viewArticles(username)</code> - View user&#39;s articles</h4>
+<h4 id="xactionsuserviewarticlesusername---view-user39s-articles"><code>XActions.user.viewArticles(username)</code> - View user&#39;s articles</h4>
 <pre><code class="language-js">// Example 1: Read long-form content from a writer
 await XActions.user.viewArticles(&quot;maborak&quot;)
 // View their X articles/long posts
@@ -284,7 +489,7 @@ async function researchArticles(username) {
 }
 await researchArticles(&quot;aeyakovenko&quot;)
 </code></pre>
-<h4><code>XActions.user.shareProfile(username)</code> - Copy profile link</h4>
+<h4 id="xactionsusershareprofileusername---copy-profile-link"><code>XActions.user.shareProfile(username)</code> - Copy profile link</h4>
 <pre><code class="language-js">// Example 1: Share someone&#39;s profile
 await XActions.user.shareProfile(&quot;github&quot;)
 // Copies x.com/github to clipboard
@@ -306,7 +511,7 @@ async function collectProfileLinks(usernames) {
   return links
 }
 </code></pre>
-<h4><code>XActions.user.followsYou(username)</code> - Check if user follows you</h4>
+<h4 id="xactionsuserfollowsyouusername---check-if-user-follows-you"><code>XActions.user.followsYou(username)</code> - Check if user follows you</h4>
 <pre><code class="language-js">// Example 1: Check if someone follows you back
 const followsBack = await XActions.user.followsYou(&quot;elonmusk&quot;)
 console.log(followsBack ? &quot;They follow you!&quot; : &quot;They don&#39;t follow you&quot;)
@@ -334,7 +539,7 @@ async function smartUnfollow(username) {
   return true
 }
 </code></pre>
-<h4><code>XActions.user.getInfo(username)</code> - Get user info object</h4>
+<h4 id="xactionsusergetinfousername---get-user-info-object"><code>XActions.user.getInfo(username)</code> - Get user info object</h4>
 <pre><code class="language-js">// Example 1: Get basic user information
 const info = await XActions.user.getInfo(&quot;openai&quot;)
 console.log(`${info.name} (@${info.username})`)
@@ -362,7 +567,7 @@ async function collectUserData(usernames) {
   return database
 }
 </code></pre>
-<h4><code>XActions.user.restrict(username)</code> - Restrict user interactions</h4>
+<h4 id="xactionsuserrestrictusername---restrict-user-interactions"><code>XActions.user.restrict(username)</code> - Restrict user interactions</h4>
 <pre><code class="language-js">// Example 1: Restrict a user without blocking
 await XActions.user.restrict(&quot;annoyinguser&quot;)
 // They won&#39;t know they&#39;re restricted, but their interactions are limited
@@ -382,8 +587,8 @@ async function softModerate(username) {
 await softModerate(&quot;spammyuser&quot;)
 </code></pre>
 <hr>
-<h3>XActions.dm - Direct Messages</h3>
-<h4><code>XActions.dm.send(username, message)</code> - Send a DM</h4>
+<h3 id="xactionsdm---direct-messages">XActions.dm - Direct Messages</h3>
+<h4 id="xactionsdmsendusername-message---send-a-dm"><code>XActions.dm.send(username, message)</code> - Send a DM</h4>
 <pre><code class="language-js">// Example 1: Send a simple DM
 await XActions.dm.send(&quot;friend&quot;, &quot;Hey! How are you doing?&quot;)
 
@@ -404,7 +609,7 @@ for (const p of prospects) {
   await new Promise(r =&gt; setTimeout(r, 5000)) // Wait between DMs
 }
 </code></pre>
-<h4><code>XActions.dm.open(username)</code> - Open DM conversation</h4>
+<h4 id="xactionsdmopenusername---open-dm-conversation"><code>XActions.dm.open(username)</code> - Open DM conversation</h4>
 <pre><code class="language-js">// Example 1: Open an existing conversation
 await XActions.dm.open(&quot;bestfriend&quot;)
 // Opens the DM thread with bestfriend
@@ -418,7 +623,7 @@ await XActions.dm.open(&quot;teammate&quot;)
 // Then you can manually add images/files
 console.log(&quot;DM opened - ready to send media!&quot;)
 </code></pre>
-<h4><code>XActions.dm.getConversations()</code> - Get all DM conversations</h4>
+<h4 id="xactionsdmgetconversations---get-all-dm-conversations"><code>XActions.dm.getConversations()</code> - Get all DM conversations</h4>
 <pre><code class="language-js">// Example 1: List all your conversations
 const convos = await XActions.dm.getConversations()
 console.log(`You have ${convos.length} conversations`)
@@ -437,7 +642,7 @@ const summary = convos.map(c =&gt; ({
 }))
 console.table(summary)
 </code></pre>
-<h4><code>XActions.dm.deleteConversation(element)</code> - Delete conversation</h4>
+<h4 id="xactionsdmdeleteconversationelement---delete-conversation"><code>XActions.dm.deleteConversation(element)</code> - Delete conversation</h4>
 <pre><code class="language-js">// Example 1: Delete a specific conversation
 const convos = await XActions.dm.getConversations()
 const targetConvo = convos.find(c =&gt; c.username === &quot;oldcontact&quot;)
@@ -462,7 +667,7 @@ for (const convo of convos) {
   }
 }
 </code></pre>
-<h4><code>XActions.dm.leaveGroup()</code> - Leave group DM</h4>
+<h4 id="xactionsdmleavegroup---leave-group-dm"><code>XActions.dm.leaveGroup()</code> - Leave group DM</h4>
 <pre><code class="language-js">// Example 1: Leave current group DM
 await XActions.dm.leaveGroup()
 console.log(&quot;Left the group!&quot;)
@@ -478,7 +683,7 @@ await XActions.dm.open(&quot;groupname&quot;)
 await XActions.dm.leaveGroup()
 console.log(&quot;Successfully left group&quot;)
 </code></pre>
-<h4><code>XActions.dm.createGroup(usernames, groupName)</code> - Create group DM</h4>
+<h4 id="xactionsdmcreategroupusernames-groupname---create-group-dm"><code>XActions.dm.createGroup(usernames, groupName)</code> - Create group DM</h4>
 <pre><code class="language-js">// Example 1: Create a team group
 await XActions.dm.createGroup(
   [&quot;teammate1&quot;, &quot;teammate2&quot;, &quot;teammate3&quot;],
@@ -496,7 +701,7 @@ const mastermindMembers = [&quot;founder1&quot;, &quot;founder2&quot;, &quot;fou
 await XActions.dm.createGroup(mastermindMembers, &quot;Founders Mastermind&quot;)
 console.log(&quot;Group created with&quot;, mastermindMembers.length, &quot;members&quot;)
 </code></pre>
-<h4><code>XActions.dm.sendImage()</code> - Send image in DM</h4>
+<h4 id="xactionsdmsendimage---send-image-in-dm"><code>XActions.dm.sendImage()</code> - Send image in DM</h4>
 <pre><code class="language-js">// Example 1: Open image picker in DM
 await XActions.dm.open(&quot;friend&quot;)
 await XActions.dm.sendImage()
@@ -515,7 +720,7 @@ async function shareImageWith(username) {
 }
 await shareImageWith(&quot;designer&quot;)
 </code></pre>
-<h4><code>XActions.dm.sendGif(searchTerm)</code> - Send GIF in DM</h4>
+<h4 id="xactionsdmsendgifsearchterm---send-gif-in-dm"><code>XActions.dm.sendGif(searchTerm)</code> - Send GIF in DM</h4>
 <pre><code class="language-js">// Example 1: Send a celebration GIF
 await XActions.dm.open(&quot;friend&quot;)
 await XActions.dm.sendGif(&quot;celebration&quot;)
@@ -533,7 +738,7 @@ const reactions = {
 await XActions.dm.open(&quot;bestie&quot;)
 await XActions.dm.sendGif(reactions.happy)
 </code></pre>
-<h4><code>XActions.dm.react(messageElement, emoji)</code> - React to message</h4>
+<h4 id="xactionsdmreactmessageelement-emoji---react-to-message"><code>XActions.dm.react(messageElement, emoji)</code> - React to message</h4>
 <pre><code class="language-js">// Example 1: React to a message with heart
 const messages = document.querySelectorAll(&#39;[data-testid=&quot;messageEntry&quot;]&#39;)
 const lastMessage = messages[messages.length - 1]
@@ -551,8 +756,8 @@ for (let i = 0; i &lt; Math.min(5, messages.length); i++) {
 }
 </code></pre>
 <hr>
-<h3>XActions.search - Search &amp; Discovery</h3>
-<h4><code>XActions.search.query(query, filter)</code> - Search with query</h4>
+<h3 id="xactionssearch---search-amp-discovery">XActions.search - Search &amp; Discovery</h3>
+<h4 id="xactionssearchqueryquery-filter---search-with-query"><code>XActions.search.query(query, filter)</code> - Search with query</h4>
 <pre><code class="language-js">// Example 1: Basic search
 await XActions.search.query(&quot;javascript tips&quot;)
 
@@ -568,7 +773,7 @@ for (const topic of topics) {
   await new Promise(r =&gt; setTimeout(r, 3000))
 }
 </code></pre>
-<h4><code>XActions.search.top(query)</code> - Search top results</h4>
+<h4 id="xactionssearchtopquery---search-top-results"><code>XActions.search.top(query)</code> - Search top results</h4>
 <pre><code class="language-js">// Example 1: Find most popular tweets about a topic
 await XActions.search.top(&quot;machine learning&quot;)
 
@@ -584,7 +789,7 @@ for (const comp of competitors) {
   await new Promise(r =&gt; setTimeout(r, 2000))
 }
 </code></pre>
-<h4><code>XActions.search.latest(query)</code> - Search latest</h4>
+<h4 id="xactionssearchlatestquery---search-latest"><code>XActions.search.latest(query)</code> - Search latest</h4>
 <pre><code class="language-js">// Example 1: Find breaking news
 await XActions.search.latest(&quot;breaking news crypto&quot;)
 
@@ -597,7 +802,7 @@ setInterval(async () =&gt; {
   console.log(&quot;Refreshed latest bitcoin tweets&quot;)
 }, 60000) // Every minute
 </code></pre>
-<h4><code>XActions.search.people(query)</code> - Search people</h4>
+<h4 id="xactionssearchpeoplequery---search-people"><code>XActions.search.people(query)</code> - Search people</h4>
 <pre><code class="language-js">// Example 1: Find experts in a field
 await XActions.search.people(&quot;AI researcher&quot;)
 
@@ -612,7 +817,7 @@ for (const role of roles) {
   await new Promise(r =&gt; setTimeout(r, 2000))
 }
 </code></pre>
-<h4><code>XActions.search.photos(query)</code> - Search photos</h4>
+<h4 id="xactionssearchphotosquery---search-photos"><code>XActions.search.photos(query)</code> - Search photos</h4>
 <pre><code class="language-js">// Example 1: Find visual content
 await XActions.search.photos(&quot;infographic design&quot;)
 
@@ -623,7 +828,7 @@ await XActions.search.photos(&quot;UI design inspiration&quot;)
 await XActions.search.photos(&quot;tech meme&quot;)
 console.log(&quot;Browsing tech memes...&quot;)
 </code></pre>
-<h4><code>XActions.search.videos(query)</code> - Search videos</h4>
+<h4 id="xactionssearchvideosquery---search-videos"><code>XActions.search.videos(query)</code> - Search videos</h4>
 <pre><code class="language-js">// Example 1: Find video content
 await XActions.search.videos(&quot;coding tutorial&quot;)
 
@@ -637,7 +842,7 @@ for (const type of videoTypes) {
   await new Promise(r =&gt; setTimeout(r, 3000))
 }
 </code></pre>
-<h4><code>XActions.search.from(username)</code> - Search from user</h4>
+<h4 id="xactionssearchfromusername---search-from-user"><code>XActions.search.from(username)</code> - Search from user</h4>
 <pre><code class="language-js">// Example 1: Search all tweets from a user
 await XActions.search.from(&quot;elonmusk&quot;)
 
@@ -652,7 +857,7 @@ async function researchUser(username) {
 }
 await researchUser(&quot;paulg&quot;)
 </code></pre>
-<h4><code>XActions.search.to(username)</code> - Search to user</h4>
+<h4 id="xactionssearchtousername---search-to-user"><code>XActions.search.to(username)</code> - Search to user</h4>
 <pre><code class="language-js">// Example 1: Find replies to a user
 await XActions.search.to(&quot;github&quot;)
 
@@ -663,7 +868,7 @@ await XActions.search.to(&quot;openai&quot;)
 await XActions.search.to(&quot;yourcompany&quot;)
 console.log(&quot;Viewing all replies to your company account&quot;)
 </code></pre>
-<h4><code>XActions.search.mentions(username)</code> - Search mentions</h4>
+<h4 id="xactionssearchmentionsusername---search-mentions"><code>XActions.search.mentions(username)</code> - Search mentions</h4>
 <pre><code class="language-js">// Example 1: Find all mentions of a user
 await XActions.search.mentions(&quot;vitalikbuterin&quot;)
 
@@ -678,7 +883,7 @@ for (const comp of competitors) {
   await new Promise(r =&gt; setTimeout(r, 2000))
 }
 </code></pre>
-<h4><code>XActions.search.hashtag(tag)</code> - Search hashtag</h4>
+<h4 id="xactionssearchhashtagtag---search-hashtag"><code>XActions.search.hashtag(tag)</code> - Search hashtag</h4>
 <pre><code class="language-js">// Example 1: Track a hashtag
 await XActions.search.hashtag(&quot;buildinpublic&quot;)
 
@@ -693,7 +898,7 @@ for (const tag of eventTags) {
   await new Promise(r =&gt; setTimeout(r, 2000))
 }
 </code></pre>
-<h4><code>XActions.search.advanced(options)</code> - Advanced search with operators</h4>
+<h4 id="xactionssearchadvancedoptions---advanced-search-with-operators"><code>XActions.search.advanced(options)</code> - Advanced search with operators</h4>
 <pre><code class="language-js">// Example 1: Find viral tweets from a user
 await XActions.search.advanced({
   from: &quot;elonmusk&quot;,
@@ -736,7 +941,7 @@ await XActions.search.advanced({
   lang: &quot;en&quot;
 })
 </code></pre>
-<h4><code>XActions.search.getResults()</code> - Get current search results</h4>
+<h4 id="xactionssearchgetresults---get-current-search-results"><code>XActions.search.getResults()</code> - Get current search results</h4>
 <pre><code class="language-js">// Example 1: Get tweets from current search
 const results = await XActions.search.getResults()
 console.log(`Found ${results.length} results`)
@@ -760,8 +965,8 @@ const data = results.map(r =&gt; ({
 console.table(data)
 </code></pre>
 <hr>
-<h3>XActions.nav (Part 1) - Core Navigation</h3>
-<h4><code>XActions.nav.home()</code> - Navigate to home</h4>
+<h3 id="xactionsnav-part-1---core-navigation">XActions.nav (Part 1) - Core Navigation</h3>
+<h4 id="xactionsnavhome---navigate-to-home"><code>XActions.nav.home()</code> - Navigate to home</h4>
 <pre><code class="language-js">// Example 1: Go to home timeline
 await XActions.nav.home()
 
@@ -774,7 +979,7 @@ console.log(&quot;Back to home timeline!&quot;)
 await XActions.nav.home()
 // Begin liking/engagement automation from home feed
 </code></pre>
-<h4><code>XActions.nav.explore()</code> - Navigate to explore</h4>
+<h4 id="xactionsnavexplore---navigate-to-explore"><code>XActions.nav.explore()</code> - Navigate to explore</h4>
 <pre><code class="language-js">// Example 1: Go to explore page
 await XActions.nav.explore()
 
@@ -788,7 +993,7 @@ await new Promise(r =&gt; setTimeout(r, 2000))
 const trends = document.querySelectorAll(&#39;[data-testid=&quot;trend&quot;]&#39;)
 console.log(`Found ${trends.length} trending topics`)
 </code></pre>
-<h4><code>XActions.nav.notifications()</code> - Navigate to notifications</h4>
+<h4 id="xactionsnavnotifications---navigate-to-notifications"><code>XActions.nav.notifications()</code> - Navigate to notifications</h4>
 <pre><code class="language-js">// Example 1: Check notifications
 await XActions.nav.notifications()
 
@@ -804,7 +1009,7 @@ async function checkNotifications() {
 }
 await checkNotifications()
 </code></pre>
-<h4><code>XActions.nav.messages()</code> - Navigate to messages</h4>
+<h4 id="xactionsnavmessages---navigate-to-messages"><code>XActions.nav.messages()</code> - Navigate to messages</h4>
 <pre><code class="language-js">// Example 1: Open DM inbox
 await XActions.nav.messages()
 
@@ -817,7 +1022,7 @@ await XActions.nav.messages()
 const convos = await XActions.dm.getConversations()
 console.log(`You have ${convos.length} conversations`)
 </code></pre>
-<h4><code>XActions.nav.bookmarks()</code> - Navigate to bookmarks</h4>
+<h4 id="xactionsnavbookmarks---navigate-to-bookmarks"><code>XActions.nav.bookmarks()</code> - Navigate to bookmarks</h4>
 <pre><code class="language-js">// Example 1: View saved bookmarks
 await XActions.nav.bookmarks()
 
@@ -830,7 +1035,7 @@ await XActions.nav.bookmarks()
 await new Promise(r =&gt; setTimeout(r, 2000))
 // Now you can export or organize bookmarks
 </code></pre>
-<h4><code>XActions.nav.lists()</code> - Navigate to lists</h4>
+<h4 id="xactionsnavlists---navigate-to-lists"><code>XActions.nav.lists()</code> - Navigate to lists</h4>
 <pre><code class="language-js">// Example 1: View your lists
 await XActions.nav.lists()
 
@@ -843,7 +1048,7 @@ await XActions.nav.lists()
 const lists = await XActions.lists.getAll()
 console.log(`You have ${lists.length} lists`)
 </code></pre>
-<h4><code>XActions.nav.communities()</code> - Navigate to communities</h4>
+<h4 id="xactionsnavcommunities---navigate-to-communities"><code>XActions.nav.communities()</code> - Navigate to communities</h4>
 <pre><code class="language-js">// Example 1: Browse communities
 await XActions.nav.communities()
 
@@ -856,7 +1061,7 @@ await XActions.nav.communities()
 await new Promise(r =&gt; setTimeout(r, 2000))
 console.log(&quot;Ready to engage with communities&quot;)
 </code></pre>
-<h4><code>XActions.nav.premium()</code> - Navigate to premium signup</h4>
+<h4 id="xactionsnavpremium---navigate-to-premium-signup"><code>XActions.nav.premium()</code> - Navigate to premium signup</h4>
 <pre><code class="language-js">// Example 1: View premium features
 await XActions.nav.premium()
 
@@ -869,20 +1074,20 @@ await XActions.nav.premium()
 // Review features and pricing
 </code></pre>
 <hr>
-<h2>�🚀 Quick Start</h2>
-<h3>Step 1: Load the Core Module</h3>
+<h2 id="-quick-start">�🚀 Quick Start</h2>
+<h3 id="step-1-load-the-core-module">Step 1: Load the Core Module</h3>
 <pre><code class="language-js">// ALWAYS paste core.js first!
 // Copy the contents of src/automation/core.js
 </code></pre>
-<h3>Step 2: Load Your Automation Script</h3>
+<h3 id="step-2-load-your-automation-script">Step 2: Load Your Automation Script</h3>
 <pre><code class="language-js">// Then paste the automation script you want to use
 // e.g., autoLiker.js, keywordFollow.js, etc.
 </code></pre>
-<h3>Step 3: Configure &amp; Run</h3>
+<h3 id="step-3-configure-amp-run">Step 3: Configure &amp; Run</h3>
 <p>Each script has a configuration section at the top. Modify it to match your needs.</p>
 <hr>
-<h2>📚 Script Documentation</h2>
-<h3>1. Auto-Liker (<code>autoLiker.js</code>)</h3>
+<h2 id="-script-documentation">📚 Script Documentation</h2>
+<h3 id="1-auto-liker-autolikerjs">1. Auto-Liker (<code>autoLiker.js</code>)</h3>
 <p><strong>Purpose:</strong> Automatically like posts on your timeline based on keywords or users.</p>
 <p><strong>How to use:</strong></p>
 <ol>
@@ -904,7 +1109,7 @@ await XActions.nav.premium()
 window.XActions.Liker.stats()   // View statistics
 </code></pre>
 <hr>
-<h3>2. Keyword Follow (<code>keywordFollow.js</code>)</h3>
+<h3 id="2-keyword-follow-keywordfollowjs">2. Keyword Follow (<code>keywordFollow.js</code>)</h3>
 <p><strong>Purpose:</strong> Search for keywords and auto-follow users who match your criteria.</p>
 <p><strong>How to use:</strong></p>
 <ol>
@@ -932,7 +1137,7 @@ window.XActions.Liker.stats()   // View statistics
 <li>Run <code>window.XActions.KeywordFollow.tracked()</code> to see followed list</li>
 </ul>
 <hr>
-<h3>3. Smart Unfollow (<code>smartUnfollow.js</code>)</h3>
+<h3 id="3-smart-unfollow-smartunfollowjs">3. Smart Unfollow (<code>smartUnfollow.js</code>)</h3>
 <p><strong>Purpose:</strong> Unfollow users who didn&#39;t follow back within a specified time period.</p>
 <p><strong>How to use:</strong></p>
 <ol>
@@ -948,9 +1153,10 @@ window.XActions.Liker.stats()   // View statistics
   WHITELIST: [&#39;friend1&#39;, &#39;friend2&#39;],  // Never unfollow these users
 };
 </code></pre>
-<p><strong>Integration:</strong><br>Works best with <code>keywordFollow.js</code> — it reads the tracking data to know when you followed each user.</p>
+<p><strong>Integration:</strong>
+Works best with <code>keywordFollow.js</code> — it reads the tracking data to know when you followed each user.</p>
 <hr>
-<h3>4. Link Scraper (<code>linkScraper.js</code>)</h3>
+<h3 id="4-link-scraper-linkscraperjs">4. Link Scraper (<code>linkScraper.js</code>)</h3>
 <p><strong>Purpose:</strong> Extract all external links shared by a user.</p>
 <p><strong>How to use:</strong></p>
 <ol>
@@ -974,7 +1180,7 @@ window.XActions.Liker.stats()   // View statistics
 <li>Console summary grouped by domain</li>
 </ul>
 <hr>
-<h3>5. Auto-Commenter (<code>autoCommenter.js</code>)</h3>
+<h3 id="5-auto-commenter-autocommenterjs">5. Auto-Commenter (<code>autoCommenter.js</code>)</h3>
 <p><strong>Purpose:</strong> Monitor a user and automatically comment on their new posts.</p>
 <p><strong>How to use:</strong></p>
 <ol>
@@ -1005,7 +1211,7 @@ window.XActions.Commenter.stats()   // View statistics
 </code></pre>
 <p>⚠️ <strong>Warning:</strong> Be careful with auto-commenting — it can appear spammy if overused.</p>
 <hr>
-<h3>6. Multi-Account Manager (<code>multiAccount.js</code>)</h3>
+<h3 id="6-multi-account-manager-multiaccountjs">6. Multi-Account Manager (<code>multiAccount.js</code>)</h3>
 <p><strong>Purpose:</strong> Store and manage multiple X accounts for automation.</p>
 <p><strong>How to use:</strong></p>
 <ol>
@@ -1041,7 +1247,7 @@ XAccounts.login(&#39;username&#39;)
 <li>Never share your export strings</li>
 </ul>
 <hr>
-<h3>7. Growth Suite (<code>growthSuite.js</code>)</h3>
+<h3 id="7-growth-suite-growthsuitejs">7. Growth Suite (<code>growthSuite.js</code>)</h3>
 <p><strong>Purpose:</strong> All-in-one growth automation combining follow, like, and unfollow.</p>
 <p><strong>How to use:</strong></p>
 <ol>
@@ -1083,7 +1289,7 @@ window.XActions.Growth.state()    // View current state
 window.XActions.Growth.tracked()  // View tracked users
 </code></pre>
 <hr>
-<h2>🛡️ Rate Limiting</h2>
+<h2 id="-rate-limiting">🛡️ Rate Limiting</h2>
 <p>All scripts include built-in rate limiting to protect your account:</p>
 <table>
 <thead>
@@ -1122,7 +1328,7 @@ window.XActions.Growth.tracked()  // View tracked users
 <li>Take breaks between sessions</li>
 </ul>
 <hr>
-<h2>💾 Data Persistence</h2>
+<h2 id="-data-persistence">💾 Data Persistence</h2>
 <p>All tracking data is stored in <code>localStorage</code>:</p>
 <table>
 <thead>
@@ -1158,8 +1364,8 @@ window.XActions.Growth.tracked()  // View tracked users
   .forEach(k =&gt; localStorage.removeItem(k));
 </code></pre>
 <hr>
-<h2>🔧 Customization</h2>
-<h3>Adjusting Selectors</h3>
+<h2 id="-customization">🔧 Customization</h2>
+<h3 id="adjusting-selectors">Adjusting Selectors</h3>
 <p>If X updates their UI, you may need to update selectors in <code>core.js</code>:</p>
 <pre><code class="language-js">const SELECTORS = {
   tweet: &#39;[data-testid=&quot;tweet&quot;]&#39;,
@@ -1171,7 +1377,7 @@ window.XActions.Growth.tracked()  // View tracked users
   // Add or modify as needed
 };
 </code></pre>
-<h3>Creating Custom Scripts</h3>
+<h3 id="creating-custom-scripts">Creating Custom Scripts</h3>
 <p>Use the core module to build your own automations:</p>
 <pre><code class="language-js">(async () =&gt; {
   const { log, sleep, clickElement, waitForElement, SELECTORS } = window.XActions.Core;
@@ -1187,7 +1393,7 @@ window.XActions.Growth.tracked()  // View tracked users
 })();
 </code></pre>
 <hr>
-<h3>8. Follow Target Users (<code>followTargetUsers.js</code>)</h3>
+<h3 id="8-follow-target-users-followtargetusersjs">8. Follow Target Users (<code>followTargetUsers.js</code>)</h3>
 <p><strong>Purpose:</strong> Follow the followers or following of any target account.</p>
 <p><strong>How to use:</strong></p>
 <ol>
@@ -1212,7 +1418,7 @@ window.XActions.Growth.tracked()  // View tracked users
 };
 </code></pre>
 <hr>
-<h3>9. Follow Engagers (<code>followEngagers.js</code>)</h3>
+<h3 id="9-follow-engagers-followengagersjs">9. Follow Engagers (<code>followEngagers.js</code>)</h3>
 <p><strong>Purpose:</strong> Follow users who liked, retweeted, or quoted specific posts.</p>
 <p><strong>How to use:</strong></p>
 <ol>
@@ -1229,7 +1435,7 @@ window.XActions.Growth.tracked()  // View tracked users
 };
 </code></pre>
 <hr>
-<h3>10. Protect Active Users (<code>protectActiveUsers.js</code>)</h3>
+<h3 id="10-protect-active-users-protectactiveusersjs">10. Protect Active Users (<code>protectActiveUsers.js</code>)</h3>
 <p><strong>Purpose:</strong> Scan your posts for engagers and protect them from being unfollowed.</p>
 <p><strong>How to use:</strong></p>
 <ol>
@@ -1256,7 +1462,7 @@ window.XActions.Growth.tracked()  // View tracked users
 isProtected(&#39;username&#39;)   // Check if user is protected
 </code></pre>
 <hr>
-<h3>11. Quota Supervisor (<code>quotaSupervisor.js</code>)</h3>
+<h3 id="11-quota-supervisor-quotasupervisorjs">11. Quota Supervisor (<code>quotaSupervisor.js</code>)</h3>
 <p><strong>Purpose:</strong> Sophisticated rate limiting to protect your account from restrictions.</p>
 <p><strong>How to use:</strong></p>
 <ol>
@@ -1290,7 +1496,7 @@ quotaReset()     // Reset all quotas
 quotaWake()      // Wake up from quota sleep
 </code></pre>
 <hr>
-<h3>12. Session Logger (<code>sessionLogger.js</code>)</h3>
+<h3 id="12-session-logger-sessionloggerjs">12. Session Logger (<code>sessionLogger.js</code>)</h3>
 <p><strong>Purpose:</strong> Track all automation actions and generate analytics reports.</p>
 <p><strong>How to use:</strong></p>
 <ol>
@@ -1306,8 +1512,8 @@ sessionStats()    // View current session
 exportLogs()      // Export logs as JSON
 </code></pre>
 <hr>
-<h2>🎧 Customer Service Tools</h2>
-<h3>13. Customer Service Bot (<code>customerService.js</code>)</h3>
+<h2 id="-customer-service-tools">🎧 Customer Service Tools</h2>
+<h3 id="13-customer-service-bot-customerservicejs">13. Customer Service Bot (<code>customerService.js</code>)</h3>
 <p><strong>Purpose:</strong> Automate customer service responses for business accounts.</p>
 <p><strong>How to use:</strong></p>
 <ol>
@@ -1360,7 +1566,7 @@ csTemplates()     // Show all templates
 csRespond(&#39;issue&#39;) // Get a response template
 </code></pre>
 <hr>
-<h3>14. Algorithm Builder (<code>algorithmBuilder.js</code>)</h3>
+<h3 id="14-algorithm-builder-algorithmbuilderjs">14. Algorithm Builder (<code>algorithmBuilder.js</code>)</h3>
 <p><strong>Purpose:</strong> LLM-powered algorithm cultivation engine. Trains X&#39;s algorithm by systematically searching your niche, liking relevant content, following key accounts, and posting AI-generated comments and original posts — all in your persona&#39;s voice.</p>
 <p><strong>This is the browser console version.</strong> For the 24/7 headless Puppeteer version, use the CLI: <code>xactions persona run &lt;id&gt;</code>.</p>
 <p><strong>How to use:</strong></p>
@@ -1404,7 +1610,7 @@ window.XActions.Algorithm.state()   // View current state
 <p><strong>Tip:</strong> For 24/7 unattended operation, use the Node.js version via <code>xactions persona create</code> + <code>xactions persona run &lt;id&gt;</code> instead.</p>
 </blockquote>
 <hr>
-<h3>Multi-Account with user:pass Import</h3>
+<h3 id="multi-account-with-userpass-import">Multi-Account with user:pass Import</h3>
 <p>The Multi-Account Manager now supports importing from simple text format:</p>
 <pre><code class="language-js">// Import accounts from a txt/csv file format
 XAccounts.importText(`
@@ -1429,8 +1635,8 @@ XAccounts.stats.show() // View per-account stats
 <li><code>username\tpassword</code> (tab-separated)</li>
 </ul>
 <hr>
-<h2>� XActions Function Reference</h2>
-<h3>XActions.settings (Part 2 - Advanced Settings)</h3>
+<h2 id="-xactions-function-reference-1">� XActions Function Reference</h2>
+<h3 id="xactionssettings-part-2---advanced-settings">XActions.settings (Part 2 - Advanced Settings)</h3>
 <pre><code class="language-js">// XActions.settings.blockedAccounts - View blocked accounts
 // Example 1: Navigate to blocked accounts page
 await XActions.settings.blockedAccounts()
@@ -1483,7 +1689,7 @@ console.log(&quot;3. Notified followers?&quot;)
 await XActions.settings.deactivate()
 </code></pre>
 <hr>
-<h3>XActions.profile (Profile Management)</h3>
+<h3 id="xactionsprofile-profile-management">XActions.profile (Profile Management)</h3>
 <pre><code class="language-js">// XActions.profile.edit - Open profile editor
 // Example 1: Open profile editor
 await XActions.profile.edit()
@@ -1574,7 +1780,7 @@ await XActions.profile.switchToProfessional()
 console.log(&quot;You&#39;ll now have access to tweet analytics and audience insights!&quot;)
 </code></pre>
 <hr>
-<h3>XActions.utils (Utilities &amp; Helpers)</h3>
+<h3 id="xactionsutils-utilities-amp-helpers">XActions.utils (Utilities &amp; Helpers)</h3>
 <pre><code class="language-js">// XActions.utils.getCurrentUser - Get current logged-in username
 // Example 1: Get your username
 const me = await XActions.utils.getCurrentUser()
@@ -1832,7 +2038,7 @@ const selectors = XActions.utils.getAllSelectors()
 console.log(JSON.stringify(selectors, null, 2))
 </code></pre>
 <hr>
-<h3>XActions.spaces (Twitter Spaces)</h3>
+<h3 id="xactionsspaces-twitter-spaces">XActions.spaces (Twitter Spaces)</h3>
 <pre><code class="language-js">// XActions.spaces.browse - Browse live spaces
 // Example 1: Go to spaces discovery
 await XActions.spaces.browse()
@@ -1906,7 +2112,7 @@ const link = await XActions.spaces.share()
 await XActions.dm.send(&quot;friend&quot;, `Join this Space! ${link}`)
 </code></pre>
 <hr>
-<h3>XActions.communities (Twitter Communities)</h3>
+<h3 id="xactionscommunities-twitter-communities">XActions.communities (Twitter Communities)</h3>
 <pre><code class="language-js">// XActions.communities.browse - Browse communities
 // Example 1: Open communities browser
 await XActions.communities.browse()
@@ -1957,7 +2163,7 @@ await XActions.communities.leave(communityId)
 console.log(&quot;Successfully left!&quot;)
 </code></pre>
 <hr>
-<h2>�🐛 Troubleshooting</h2>
+<h2 id="-troubleshooting">�🐛 Troubleshooting</h2>
 <p><strong>Script stops working:</strong></p>
 <ul>
 <li>X may have updated their UI — check selectors</li>
@@ -1976,7 +2182,7 @@ console.log(&quot;Successfully left!&quot;)
 <li>Take longer breaks between sessions</li>
 </ul>
 <hr>
-<h2>📋 Best Practices</h2>
+<h2 id="-best-practices">📋 Best Practices</h2>
 <ol>
 <li><strong>Start small</strong> — Test with 5-10 actions first</li>
 <li><strong>Monitor results</strong> — Watch for errors or unusual behavior  </li>
@@ -1986,12 +2192,12 @@ console.log(&quot;Successfully left!&quot;)
 <li><strong>Have backups</strong> — Export your tracking data regularly</li>
 </ol>
 <hr>
-<h2>📖 XActions Function Reference</h2>
+<h2 id="-xactions-function-reference-2">📖 XActions Function Reference</h2>
 <p>Complete reference with practical examples for every XActions function.</p>
 <hr>
-<h3>🐦 XActions.tweet — Posting &amp; Managing Tweets</h3>
+<h3 id="-xactionstweet--posting-amp-managing-tweets">🐦 XActions.tweet — Posting &amp; Managing Tweets</h3>
 <p>Functions for posting and managing tweets.</p>
-<h4><code>post(text, options)</code> - Post a new tweet</h4>
+<h4 id="posttext-options---post-a-new-tweet"><code>post(text, options)</code> - Post a new tweet</h4>
 <pre><code class="language-js">// XActions.tweet.post - Post a new tweet
 // Example 1: Simple tweet
 await XActions.tweet.post(&quot;Hello world! 🌍&quot;)
@@ -2008,7 +2214,7 @@ const quotes = [
 const randomQuote = quotes[Math.floor(Math.random() * quotes.length)]
 await XActions.tweet.post(randomQuote)
 </code></pre>
-<h4><code>reply(tweetElement, text)</code> - Reply to a tweet</h4>
+<h4 id="replytweetelement-text---reply-to-a-tweet"><code>reply(tweetElement, text)</code> - Reply to a tweet</h4>
 <pre><code class="language-js">// XActions.tweet.reply - Reply to a tweet
 // Example 1: Reply to the first tweet on your timeline
 const tweets = XActions.tweet.getAll()
@@ -2034,7 +2240,7 @@ await XActions.tweet.reply(tweet, `
 Thanks for the insights!
 `)
 </code></pre>
-<h4><code>quote(tweetElement, text)</code> - Quote tweet</h4>
+<h4 id="quotetweetelement-text---quote-tweet"><code>quote(tweetElement, text)</code> - Quote tweet</h4>
 <pre><code class="language-js">// XActions.tweet.quote - Quote tweet with commentary
 // Example 1: Quote tweet with commentary
 const tweet = XActions.tweet.getAll()[0]
@@ -2055,7 +2261,7 @@ Adding some context to this thread 🧵
 1/ This relates to what I posted last week about AI trends...
 `)
 </code></pre>
-<h4><code>delete(tweetElement)</code> - Delete your tweet</h4>
+<h4 id="deletetweetelement---delete-your-tweet"><code>delete(tweetElement)</code> - Delete your tweet</h4>
 <pre><code class="language-js">// XActions.tweet.delete - Delete your tweet
 // Example 1: Delete your most recent tweet
 const myTweets = XActions.tweet.getAll()
@@ -2081,7 +2287,7 @@ for (const tweet of tweets) {
   await new Promise(r =&gt; setTimeout(r, 3000)) // Rate limit protection
 }
 </code></pre>
-<h4><code>pin(tweetElement)</code> - Pin tweet to profile</h4>
+<h4 id="pintweetelement---pin-tweet-to-profile"><code>pin(tweetElement)</code> - Pin tweet to profile</h4>
 <pre><code class="language-js">// XActions.tweet.pin - Pin tweet to profile
 // Example 1: Pin a specific tweet
 const tweets = XActions.tweet.getAll()
@@ -2105,7 +2311,7 @@ const announcement = tweets.find(t =&gt;
 )
 if (announcement) await XActions.tweet.pin(announcement)
 </code></pre>
-<h4><code>getId(tweetElement)</code> - Get tweet ID from element</h4>
+<h4 id="getidtweetelement---get-tweet-id-from-element"><code>getId(tweetElement)</code> - Get tweet ID from element</h4>
 <pre><code class="language-js">// XActions.tweet.getId - Get tweet ID from element
 // Example 1: Get ID of first visible tweet
 const tweets = XActions.tweet.getAll()
@@ -2123,7 +2329,7 @@ const id = XActions.tweet.getId(tweet)
 const shareUrl = `https://x.com/i/status/${id}`
 console.log(`Share this: ${shareUrl}`)
 </code></pre>
-<h4><code>getAll()</code> - Get all visible tweets</h4>
+<h4 id="getall---get-all-visible-tweets"><code>getAll()</code> - Get all visible tweets</h4>
 <pre><code class="language-js">// XActions.tweet.getAll - Get all visible tweets
 // Example 1: Count visible tweets
 const tweets = XActions.tweet.getAll()
@@ -2144,7 +2350,7 @@ const tweetTexts = tweets.map(t =&gt;
 )
 console.log(&#39;Tweet contents:&#39;, tweetTexts)
 </code></pre>
-<h4><code>thread(tweets)</code> - Post a thread of tweets</h4>
+<h4 id="threadtweets---post-a-thread-of-tweets"><code>thread(tweets)</code> - Post a thread of tweets</h4>
 <pre><code class="language-js">// XActions.tweet.thread - Post a thread of tweets
 // Example 1: Post a simple thread
 await XActions.tweet.thread([
@@ -2177,9 +2383,9 @@ await XActions.tweet.thread([
 ])
 </code></pre>
 <hr>
-<h3>💜 XActions.engage — Engagement Actions</h3>
+<h3 id="-xactionsengage--engagement-actions">💜 XActions.engage — Engagement Actions</h3>
 <p>Functions for engaging with tweets (likes, retweets, bookmarks, etc.).</p>
-<h4><code>like(tweetElement)</code> - Like a tweet</h4>
+<h4 id="liketweetelement---like-a-tweet"><code>like(tweetElement)</code> - Like a tweet</h4>
 <pre><code class="language-js">// XActions.engage.like - Like a tweet
 // Example 1: Like the first tweet on your timeline
 const tweets = XActions.tweet.getAll()
@@ -2206,7 +2412,7 @@ for (const tweet of tweets) {
   }
 }
 </code></pre>
-<h4><code>unlike(tweetElement)</code> - Unlike a tweet</h4>
+<h4 id="unliketweetelement---unlike-a-tweet"><code>unlike(tweetElement)</code> - Unlike a tweet</h4>
 <pre><code class="language-js">// XActions.engage.unlike - Unlike a tweet
 // Example 1: Unlike a tweet you accidentally liked
 const tweets = XActions.tweet.getAll()
@@ -2233,7 +2439,7 @@ for (const tweet of tweets) {
   }
 }
 </code></pre>
-<h4><code>retweet(tweetElement)</code> - Retweet</h4>
+<h4 id="retweettweetelement---retweet"><code>retweet(tweetElement)</code> - Retweet</h4>
 <pre><code class="language-js">// XActions.engage.retweet - Retweet
 // Example 1: Retweet the first tweet
 const tweets = XActions.tweet.getAll()
@@ -2260,7 +2466,7 @@ for (const tweet of tweets) {
   }
 }
 </code></pre>
-<h4><code>unretweet(tweetElement)</code> - Undo retweet</h4>
+<h4 id="unretweettweetelement---undo-retweet"><code>unretweet(tweetElement)</code> - Undo retweet</h4>
 <pre><code class="language-js">// XActions.engage.unretweet - Undo retweet
 // Example 1: Undo retweet on first retweeted tweet
 const tweets = XActions.tweet.getAll()
@@ -2286,7 +2492,7 @@ for (const tweet of tweets) {
 }
 console.log(`Removed ${count} retweets`)
 </code></pre>
-<h4><code>bookmark(tweetElement)</code> - Bookmark tweet</h4>
+<h4 id="bookmarktweetelement---bookmark-tweet"><code>bookmark(tweetElement)</code> - Bookmark tweet</h4>
 <pre><code class="language-js">// XActions.engage.bookmark - Bookmark tweet
 // Example 1: Bookmark a valuable tweet
 const tweets = XActions.tweet.getAll()
@@ -2314,7 +2520,7 @@ for (const tweet of tweets) {
   }
 }
 </code></pre>
-<h4><code>unbookmark(tweetElement)</code> - Remove bookmark</h4>
+<h4 id="unbookmarktweetelement---remove-bookmark"><code>unbookmark(tweetElement)</code> - Remove bookmark</h4>
 <pre><code class="language-js">// XActions.engage.unbookmark - Remove bookmark
 // Example 1: Remove bookmark from first bookmarked tweet
 const tweets = XActions.tweet.getAll()
@@ -2336,7 +2542,7 @@ for (const tweet of tweets) {
   }
 }
 </code></pre>
-<h4><code>addToList(tweetElement, listName)</code> - Add tweet author to list</h4>
+<h4 id="addtolisttweetelement-listname---add-tweet-author-to-list"><code>addToList(tweetElement, listName)</code> - Add tweet author to list</h4>
 <pre><code class="language-js">// XActions.engage.addToList - Add tweet author to list
 // Example 1: Add author to your &quot;Interesting People&quot; list
 const tweets = XActions.tweet.getAll()
@@ -2361,7 +2567,7 @@ for (const tweet of tweets) {
   }
 }
 </code></pre>
-<h4><code>report(tweetElement, reason)</code> - Report tweet</h4>
+<h4 id="reporttweetelement-reason---report-tweet"><code>report(tweetElement, reason)</code> - Report tweet</h4>
 <pre><code class="language-js">// XActions.engage.report - Report tweet
 // Example 1: Report a spam tweet
 const tweets = XActions.tweet.getAll()
@@ -2388,7 +2594,7 @@ const suspiciousTweet = tweets.find(t =&gt;
 )
 if (suspiciousTweet) await XActions.engage.report(suspiciousTweet, &#39;scam&#39;)
 </code></pre>
-<h4><code>copyLink(tweetElement)</code> - Copy tweet link</h4>
+<h4 id="copylinktweetelement---copy-tweet-link"><code>copyLink(tweetElement)</code> - Copy tweet link</h4>
 <pre><code class="language-js">// XActions.engage.copyLink - Copy tweet link
 // Example 1: Copy link of first tweet
 const tweets = XActions.tweet.getAll()
@@ -2410,7 +2616,7 @@ await XActions.engage.copyLink(tweet)
 const id = XActions.tweet.getId(tweet)
 console.log(`Copied: https://x.com/i/status/${id}`)
 </code></pre>
-<h4><code>shareViaDM(tweetElement, username)</code> - Share via DM</h4>
+<h4 id="shareviadmtweetelement-username---share-via-dm"><code>shareViaDM(tweetElement, username)</code> - Share via DM</h4>
 <pre><code class="language-js">// XActions.engage.shareViaDM - Share via DM
 // Example 1: Share tweet with a friend
 const tweets = XActions.tweet.getAll()
@@ -2431,7 +2637,7 @@ if (importantTweet) {
   await XActions.engage.shareViaDM(importantTweet, &quot;newseditor&quot;)
 }
 </code></pre>
-<h4><code>embed(tweetElement)</code> - Get embed code</h4>
+<h4 id="embedtweetelement---get-embed-code"><code>embed(tweetElement)</code> - Get embed code</h4>
 <pre><code class="language-js">// XActions.engage.embed - Get embed code
 // Example 1: Get embed code for first tweet
 const tweets = XActions.tweet.getAll()
@@ -2450,7 +2656,7 @@ const tweet = XActions.tweet.getAll()[0]
 await XActions.engage.embed(tweet)
 // Then copy the embed HTML for your website
 </code></pre>
-<h4><code>viewAnalytics(tweetElement)</code> - View tweet analytics</h4>
+<h4 id="viewanalyticstweetelement---view-tweet-analytics"><code>viewAnalytics(tweetElement)</code> - View tweet analytics</h4>
 <pre><code class="language-js">// XActions.engage.viewAnalytics - View tweet analytics
 // Example 1: View analytics of your recent tweet
 const tweets = XActions.tweet.getAll()
@@ -2468,7 +2674,7 @@ for (const tweet of tweets.slice(0, 5)) {
   await new Promise(r =&gt; setTimeout(r, 5000)) // Time to view
 }
 </code></pre>
-<h4><code>requestNote(tweetElement)</code> - Request community note</h4>
+<h4 id="requestnotetweetelement---request-community-note"><code>requestNote(tweetElement)</code> - Request community note</h4>
 <pre><code class="language-js">// XActions.engage.requestNote - Request community note
 // Example 1: Request note on misleading tweet
 const tweets = XActions.tweet.getAll()
@@ -2492,7 +2698,7 @@ const tweet = XActions.tweet.getAll()[0]
 await XActions.engage.requestNote(tweet)
 console.log(&#39;Community note request submitted&#39;)
 </code></pre>
-<h4><code>highlight(tweetElement)</code> - Highlight tweet (Premium)</h4>
+<h4 id="highlighttweetelement---highlight-tweet-premium"><code>highlight(tweetElement)</code> - Highlight tweet (Premium)</h4>
 <pre><code class="language-js">// XActions.engage.highlight - Highlight tweet (X Premium)
 // Example 1: Highlight your best tweet
 const tweets = XActions.tweet.getAll()
@@ -2517,9 +2723,9 @@ if (bestTweet) {
 }
 </code></pre>
 <hr>
-<h3>👤 XActions.user — User Interactions (Part 1)</h3>
+<h3 id="-xactionsuser--user-interactions-part-1">👤 XActions.user — User Interactions (Part 1)</h3>
 <p>Functions for interacting with user accounts.</p>
-<h4><code>follow(target)</code> - Follow user (username or element)</h4>
+<h4 id="followtarget---follow-user-username-or-element"><code>follow(target)</code> - Follow user (username or element)</h4>
 <pre><code class="language-js">// XActions.user.follow - Follow user
 // Example 1: Follow a user by username
 await XActions.user.follow(&quot;elonmusk&quot;)
@@ -2536,7 +2742,7 @@ for (const username of usersToFollow) {
   console.log(`Followed @${username}`)
 }
 </code></pre>
-<h4><code>unfollow(target)</code> - Unfollow user</h4>
+<h4 id="unfollowtarget---unfollow-user"><code>unfollow(target)</code> - Unfollow user</h4>
 <pre><code class="language-js">// XActions.user.unfollow - Unfollow user
 // Example 1: Unfollow a specific user
 await XActions.user.unfollow(&quot;oldaccount&quot;)
@@ -2556,7 +2762,7 @@ for (const user of inactiveUsers) {
   await new Promise(r =&gt; setTimeout(r, 3000))
 }
 </code></pre>
-<h4><code>block(username)</code> - Block user</h4>
+<h4 id="blockusername---block-user"><code>block(username)</code> - Block user</h4>
 <pre><code class="language-js">// XActions.user.block - Block user
 // Example 1: Block a spam account
 await XActions.user.block(&quot;spammer123&quot;)
@@ -2577,7 +2783,7 @@ for (const account of accountsToBlock) {
   await new Promise(r =&gt; setTimeout(r, 3000))
 }
 </code></pre>
-<h4><code>unblock(username)</code> - Unblock user</h4>
+<h4 id="unblockusername---unblock-user"><code>unblock(username)</code> - Unblock user</h4>
 <pre><code class="language-js">// XActions.user.unblock - Unblock user
 // Example 1: Unblock a specific user
 await XActions.user.unblock(&quot;formerlyblocked&quot;)
@@ -2598,7 +2804,7 @@ for (const account of blocked) {
 }
 console.log(&#39;All accounts unblocked&#39;)
 </code></pre>
-<h4><code>mute(username)</code> - Mute user</h4>
+<h4 id="muteusername---mute-user"><code>mute(username)</code> - Mute user</h4>
 <pre><code class="language-js">// XActions.user.mute - Mute user
 // Example 1: Mute a noisy account
 await XActions.user.mute(&quot;loudaccount&quot;)
@@ -2618,7 +2824,7 @@ for (const account of eventAccounts) {
   console.log(`Muted @${account} for quieter timeline`)
 }
 </code></pre>
-<h4><code>unmute(username)</code> - Unmute user</h4>
+<h4 id="unmuteusername---unmute-user"><code>unmute(username)</code> - Unmute user</h4>
 <pre><code class="language-js">// XActions.user.unmute - Unmute user
 // Example 1: Unmute a specific user
 await XActions.user.unmute(&quot;nowrelevant&quot;)
@@ -2638,7 +2844,7 @@ for (const username of mutedList) {
 }
 localStorage.removeItem(&#39;muted_accounts&#39;)
 </code></pre>
-<h4><code>report(username)</code> - Report user</h4>
+<h4 id="reportusername---report-user"><code>report(username)</code> - Report user</h4>
 <pre><code class="language-js">// XActions.user.report - Report user
 // Example 1: Report a spam/bot account
 await XActions.user.report(&quot;suspiciousbot&quot;)
@@ -2655,7 +2861,7 @@ for (const user of reportList) {
   await new Promise(r =&gt; setTimeout(r, 10000)) // Time to complete report
 }
 </code></pre>
-<h4><code>addToList(username, listName)</code> - Add user to list</h4>
+<h4 id="addtolistusername-listname---add-user-to-list"><code>addToList(username, listName)</code> - Add user to list</h4>
 <pre><code class="language-js">// XActions.user.addToList - Add user to list
 // Example 1: Add to your curated list
 await XActions.user.addToList(&quot;techexpert&quot;, &quot;Tech Leaders&quot;)
@@ -2679,7 +2885,7 @@ for (const target of researchTargets) {
   console.log(`Added @${target} to Research list`)
 }
 </code></pre>
-<h4><code>notifyOn(username)</code> - Turn on notifications</h4>
+<h4 id="notifyonusername---turn-on-notifications"><code>notifyOn(username)</code> - Turn on notifications</h4>
 <pre><code class="language-js">// XActions.user.notifyOn - Turn on notifications
 // Example 1: Get notifications for a key account
 await XActions.user.notifyOn(&quot;breakingnews&quot;)
@@ -2699,7 +2905,7 @@ for (const comp of competitors) {
   console.log(`Now tracking @${comp}&#39;s posts`)
 }
 </code></pre>
-<h4><code>notifyOff(username)</code> - Turn off notifications</h4>
+<h4 id="notifyoffusername---turn-off-notifications"><code>notifyOff(username)</code> - Turn off notifications</h4>
 <pre><code class="language-js">// XActions.user.notifyOff - Turn off notifications
 // Example 1: Stop notifications from noisy account
 await XActions.user.notifyOff(&quot;toofrequent&quot;)
@@ -2716,7 +2922,7 @@ console.log(&#39;Notification cleanup complete&#39;)
 await XActions.user.notifyOff(&quot;productlaunch2024&quot;)
 console.log(&#39;Post-launch notifications disabled&#39;)
 </code></pre>
-<h4><code>viewTopics(username)</code> - View user&#39;s topics</h4>
+<h4 id="viewtopicsusername---view-user39s-topics"><code>viewTopics(username)</code> - View user&#39;s topics</h4>
 <pre><code class="language-js">// XActions.user.viewTopics - View user&#39;s topics
 // Example 1: See what topics a user follows
 await XActions.user.viewTopics(&quot;elonmusk&quot;)
@@ -2732,7 +2938,7 @@ for (const user of interestingUsers) {
   await new Promise(r =&gt; setTimeout(r, 5000)) // Time to review
 }
 </code></pre>
-<h4><code>viewLists(username)</code> - View user&#39;s lists</h4>
+<h4 id="viewlistsusername---view-user39s-lists"><code>viewLists(username)</code> - View user&#39;s lists</h4>
 <pre><code class="language-js">// XActions.user.viewLists - View user&#39;s lists
 // Example 1: Discover curated lists
 await XActions.user.viewLists(&quot;curator&quot;)
@@ -2748,7 +2954,7 @@ for (const curator of curators) {
   await new Promise(r =&gt; setTimeout(r, 5000))
 }
 </code></pre>
-<h4><code>viewFollowers(username)</code> - View followers</h4>
+<h4 id="viewfollowersusername---view-followers"><code>viewFollowers(username)</code> - View followers</h4>
 <pre><code class="language-js">// XActions.user.viewFollowers - View followers
 // Example 1: Browse a user&#39;s followers
 await XActions.user.viewFollowers(&quot;popularaccount&quot;)
@@ -2761,7 +2967,7 @@ console.log(&#39;Analyze their follower demographics&#39;)
 await XActions.user.viewFollowers(&quot;industryexpert&quot;)
 // Now scroll and follow interesting accounts
 </code></pre>
-<h4><code>viewFollowing(username)</code> - View following</h4>
+<h4 id="viewfollowingusername---view-following"><code>viewFollowing(username)</code> - View following</h4>
 <pre><code class="language-js">// XActions.user.viewFollowing - View following
 // Example 1: See who a user follows
 await XActions.user.viewFollowing(&quot;tastemaker&quot;)
@@ -2774,7 +2980,7 @@ console.log(&#39;Great source for new follows!&#39;)
 await XActions.user.viewFollowing(&quot;competitor&quot;)
 console.log(&#39;See who your competitors watch&#39;)
 </code></pre>
-<h4><code>viewLikes(username)</code> - View user&#39;s likes</h4>
+<h4 id="viewlikesusername---view-user39s-likes"><code>viewLikes(username)</code> - View user&#39;s likes</h4>
 <pre><code class="language-js">// XActions.user.viewLikes - View user&#39;s likes
 // Example 1: See what content a user likes
 await XActions.user.viewLikes(&quot;influencer&quot;)
@@ -2788,9 +2994,9 @@ await XActions.user.viewLikes(&quot;successfulcreator&quot;)
 console.log(&#39;See what resonates with them&#39;)
 </code></pre>
 <hr>
-<h3>🧭 XActions.nav — Navigation (Part 2)</h3>
+<h3 id="-xactionsnav--navigation-part-2">🧭 XActions.nav — Navigation (Part 2)</h3>
 <p>Navigate anywhere on X with simple function calls.</p>
-<h4><code>profile(username)</code> - Navigate to user profile</h4>
+<h4 id="profileusername---navigate-to-user-profile"><code>profile(username)</code> - Navigate to user profile</h4>
 <pre><code class="language-js">// XActions.nav.profile - Navigate to any user&#39;s profile
 // Example 1: View a specific user&#39;s profile
 await XActions.nav.profile(&quot;elonmusk&quot;)
@@ -2806,7 +3012,7 @@ for (const user of usersToCheck) {
   await new Promise(r =&gt; setTimeout(r, 3000))
 }
 </code></pre>
-<h4><code>settings()</code> - Navigate to settings</h4>
+<h4 id="settings---navigate-to-settings"><code>settings()</code> - Navigate to settings</h4>
 <pre><code class="language-js">// XActions.nav.settings - Go to account settings
 // Example 1: Quick access to settings
 await XActions.nav.settings()
@@ -2815,7 +3021,7 @@ await XActions.nav.settings()
 await XActions.nav.settings()
 console.log(&quot;Settings page loaded - ready to configure&quot;)
 </code></pre>
-<h4><code>notifyAll()</code> - All notifications tab</h4>
+<h4 id="notifyall---all-notifications-tab"><code>notifyAll()</code> - All notifications tab</h4>
 <pre><code class="language-js">// XActions.nav.notifyAll - View all notifications
 // Example 1: Check all notifications
 await XActions.nav.notifyAll()
@@ -2824,7 +3030,7 @@ await XActions.nav.notifyAll()
 console.log(&quot;Checking all notifications...&quot;)
 await XActions.nav.notifyAll()
 </code></pre>
-<h4><code>notifyVerified()</code> - Verified notifications only</h4>
+<h4 id="notifyverified---verified-notifications-only"><code>notifyVerified()</code> - Verified notifications only</h4>
 <pre><code class="language-js">// XActions.nav.notifyVerified - Filter to verified accounts only
 // Example 1: See only verified account interactions
 await XActions.nav.notifyVerified()
@@ -2834,7 +3040,7 @@ console.log(&quot;Showing verified accounts only&quot;)
 await XActions.nav.notifyVerified()
 // Verified users often have higher-quality interactions
 </code></pre>
-<h4><code>notifyMentions()</code> - Mentions tab</h4>
+<h4 id="notifymentions---mentions-tab"><code>notifyMentions()</code> - Mentions tab</h4>
 <pre><code class="language-js">// XActions.nav.notifyMentions - View mentions only
 // Example 1: Check who&#39;s talking about you
 await XActions.nav.notifyMentions()
@@ -2847,7 +3053,7 @@ console.log(&quot;Checking mentions for replies to respond to...&quot;)
 await XActions.nav.notifyMentions()
 // Great for customer service monitoring
 </code></pre>
-<h4><code>forYou()</code> - For You timeline</h4>
+<h4 id="foryou---for-you-timeline"><code>forYou()</code> - For You timeline</h4>
 <pre><code class="language-js">// XActions.nav.forYou - Switch to algorithmic timeline
 // Example 1: See what&#39;s trending for you
 await XActions.nav.forYou()
@@ -2859,7 +3065,7 @@ await new Promise(r =&gt; setTimeout(r, 5000))
 await XActions.nav.following()
 console.log(&quot;Now viewing Following chronological feed&quot;)
 </code></pre>
-<h4><code>following()</code> - Following timeline</h4>
+<h4 id="following---following-timeline"><code>following()</code> - Following timeline</h4>
 <pre><code class="language-js">// XActions.nav.following - Switch to chronological following timeline
 // Example 1: See latest from people you follow
 await XActions.nav.following()
@@ -2868,7 +3074,7 @@ await XActions.nav.following()
 await XActions.nav.following()
 console.log(&quot;Showing posts from accounts you follow, newest first&quot;)
 </code></pre>
-<h4><code>trending()</code> - Trending page</h4>
+<h4 id="trending---trending-page"><code>trending()</code> - Trending page</h4>
 <pre><code class="language-js">// XActions.nav.trending - See what&#39;s trending
 // Example 1: Check trending topics
 await XActions.nav.trending()
@@ -2881,7 +3087,7 @@ console.log(&quot;Checking trending topics for content ideas...&quot;)
 await XActions.nav.trending()
 // Great for staying updated on current events
 </code></pre>
-<h4><code>forYouExplore()</code> - For You in Explore</h4>
+<h4 id="foryouexplore---for-you-in-explore"><code>forYouExplore()</code> - For You in Explore</h4>
 <pre><code class="language-js">// XActions.nav.forYouExplore - Personalized explore content
 // Example 1: Discover personalized content
 await XActions.nav.forYouExplore()
@@ -2890,7 +3096,7 @@ await XActions.nav.forYouExplore()
 await XActions.nav.forYouExplore()
 console.log(&quot;Exploring personalized recommendations...&quot;)
 </code></pre>
-<h4><code>news()</code> - News tab</h4>
+<h4 id="news---news-tab"><code>news()</code> - News tab</h4>
 <pre><code class="language-js">// XActions.nav.news - Navigate to news section
 // Example 1: Check latest news
 await XActions.nav.news()
@@ -2899,7 +3105,7 @@ await XActions.nav.news()
 await XActions.nav.news()
 console.log(&quot;Loading news section...&quot;)
 </code></pre>
-<h4><code>sports()</code> - Sports tab</h4>
+<h4 id="sports---sports-tab"><code>sports()</code> - Sports tab</h4>
 <pre><code class="language-js">// XActions.nav.sports - Navigate to sports section
 // Example 1: Check sports updates
 await XActions.nav.sports()
@@ -2908,7 +3114,7 @@ await XActions.nav.sports()
 await XActions.nav.sports()
 console.log(&quot;Checking sports updates...&quot;)
 </code></pre>
-<h4><code>entertainment()</code> - Entertainment tab</h4>
+<h4 id="entertainment---entertainment-tab"><code>entertainment()</code> - Entertainment tab</h4>
 <pre><code class="language-js">// XActions.nav.entertainment - Navigate to entertainment section
 // Example 1: Browse entertainment news
 await XActions.nav.entertainment()
@@ -2917,7 +3123,7 @@ await XActions.nav.entertainment()
 await XActions.nav.entertainment()
 console.log(&quot;Loading entertainment section...&quot;)
 </code></pre>
-<h4><code>spaces()</code> - Spaces page</h4>
+<h4 id="spaces---spaces-page"><code>spaces()</code> - Spaces page</h4>
 <pre><code class="language-js">// XActions.nav.spaces - Navigate to Twitter Spaces
 // Example 1: Browse live audio rooms
 await XActions.nav.spaces()
@@ -2926,7 +3132,7 @@ await XActions.nav.spaces()
 await XActions.nav.spaces()
 console.log(&quot;Browsing live Spaces...&quot;)
 </code></pre>
-<h4><code>scrollToTop()</code> - Scroll to top</h4>
+<h4 id="scrolltotop---scroll-to-top"><code>scrollToTop()</code> - Scroll to top</h4>
 <pre><code class="language-js">// XActions.nav.scrollToTop - Scroll page to top
 // Example 1: Return to top after browsing
 XActions.nav.scrollToTop()
@@ -2939,7 +3145,7 @@ console.log(&quot;Scrolled to top of page&quot;)
 await XActions.utils.loadMore(10)
 XActions.nav.scrollToTop()  // Go back to start
 </code></pre>
-<h4><code>scrollToBottom()</code> - Scroll to bottom</h4>
+<h4 id="scrolltobottom---scroll-to-bottom"><code>scrollToBottom()</code> - Scroll to bottom</h4>
 <pre><code class="language-js">// XActions.nav.scrollToBottom - Scroll page to bottom
 // Example 1: Load more content
 XActions.nav.scrollToBottom()
@@ -2948,7 +3154,7 @@ XActions.nav.scrollToBottom()
 XActions.nav.scrollToBottom()
 console.log(&quot;Scrolled to bottom&quot;)
 </code></pre>
-<h4><code>scrollBy(pixels)</code> - Scroll by specific amount</h4>
+<h4 id="scrollbypixels---scroll-by-specific-amount"><code>scrollBy(pixels)</code> - Scroll by specific amount</h4>
 <pre><code class="language-js">// XActions.nav.scrollBy - Scroll by pixel amount
 // Example 1: Scroll down gradually
 XActions.nav.scrollBy(500)
@@ -2962,7 +3168,7 @@ for (let i = 0; i &lt; 5; i++) {
   await new Promise(r =&gt; setTimeout(r, 1000))
 }
 </code></pre>
-<h4><code>back()</code> - Browser back</h4>
+<h4 id="back---browser-back"><code>back()</code> - Browser back</h4>
 <pre><code class="language-js">// XActions.nav.back - Go to previous page
 // Example 1: Simple back navigation
 XActions.nav.back()
@@ -2972,7 +3178,7 @@ await XActions.nav.profile(&quot;elonmusk&quot;)
 // ... view profile ...
 XActions.nav.back()  // Return to previous page
 </code></pre>
-<h4><code>forward()</code> - Browser forward</h4>
+<h4 id="forward---browser-forward"><code>forward()</code> - Browser forward</h4>
 <pre><code class="language-js">// XActions.nav.forward - Go forward in browser history
 // Example 1: Undo a back navigation
 XActions.nav.forward()
@@ -2982,7 +3188,7 @@ XActions.nav.back()
 // Changed your mind...
 XActions.nav.forward()
 </code></pre>
-<h4><code>refresh()</code> - Refresh page</h4>
+<h4 id="refresh---refresh-page"><code>refresh()</code> - Refresh page</h4>
 <pre><code class="language-js">// XActions.nav.refresh - Reload the current page
 // Example 1: Refresh to see new content
 XActions.nav.refresh()
@@ -2992,9 +3198,9 @@ console.log(&quot;Refreshing page...&quot;)
 XActions.nav.refresh()
 </code></pre>
 <hr>
-<h3>📋 XActions.lists — List Management</h3>
+<h3 id="-xactionslists--list-management">📋 XActions.lists — List Management</h3>
 <p>Create and manage X Lists for organizing accounts.</p>
-<h4><code>create(name, description, isPrivate)</code> - Create a new list</h4>
+<h4 id="createname-description-isprivate---create-a-new-list"><code>create(name, description, isPrivate)</code> - Create a new list</h4>
 <pre><code class="language-js">// XActions.lists.create - Create a new X list
 // Example 1: Create a private competitors list
 await XActions.lists.create(&quot;Competitors&quot;, &quot;Track competitor accounts&quot;, true)
@@ -3017,7 +3223,7 @@ for (const list of listsToCreate) {
   console.log(`Created list: ${list.name}`)
 }
 </code></pre>
-<h4><code>delete(listId)</code> - Delete a list</h4>
+<h4 id="deletelistid---delete-a-list"><code>delete(listId)</code> - Delete a list</h4>
 <pre><code class="language-js">// XActions.lists.delete - Remove a list permanently
 // Example 1: Delete a list by ID
 await XActions.lists.delete(&quot;1234567890&quot;)
@@ -3033,7 +3239,7 @@ if (confirm(&quot;Are you sure you want to delete this list?&quot;)) {
   await XActions.lists.delete(&quot;1234567890&quot;)
 }
 </code></pre>
-<h4><code>edit(listId, newName, newDescription)</code> - Edit list details</h4>
+<h4 id="editlistid-newname-newdescription---edit-list-details"><code>edit(listId, newName, newDescription)</code> - Edit list details</h4>
 <pre><code class="language-js">// XActions.lists.edit - Update list name and description
 // Example 1: Rename a list
 await XActions.lists.edit(&quot;1234567890&quot;, &quot;Tech Influencers&quot;, null)
@@ -3049,7 +3255,7 @@ await XActions.lists.edit(
 )
 console.log(&quot;List updated!&quot;)
 </code></pre>
-<h4><code>follow(listId)</code> - Follow a list</h4>
+<h4 id="followlistid---follow-a-list"><code>follow(listId)</code> - Follow a list</h4>
 <pre><code class="language-js">// XActions.lists.follow - Subscribe to a public list
 // Example 1: Follow a curated list
 await XActions.lists.follow(&quot;1234567890&quot;)
@@ -3065,7 +3271,7 @@ for (const listId of listsToFollow) {
 await XActions.lists.follow(&quot;1234567890&quot;)
 console.log(&quot;Successfully followed list!&quot;)
 </code></pre>
-<h4><code>unfollow(listId)</code> - Unfollow a list</h4>
+<h4 id="unfollowlistid---unfollow-a-list"><code>unfollow(listId)</code> - Unfollow a list</h4>
 <pre><code class="language-js">// XActions.lists.unfollow - Unsubscribe from a list
 // Example 1: Unfollow a list
 await XActions.lists.unfollow(&quot;1234567890&quot;)
@@ -3074,7 +3280,7 @@ await XActions.lists.unfollow(&quot;1234567890&quot;)
 await XActions.lists.unfollow(&quot;1234567890&quot;)
 console.log(&quot;Unfollowed list - will no longer see in timeline&quot;)
 </code></pre>
-<h4><code>pin(listId)</code> - Pin/unpin list</h4>
+<h4 id="pinlistid---pinunpin-list"><code>pin(listId)</code> - Pin/unpin list</h4>
 <pre><code class="language-js">// XActions.lists.pin - Toggle pin status for quick access
 // Example 1: Pin your most-used list
 await XActions.lists.pin(&quot;1234567890&quot;)
@@ -3092,7 +3298,7 @@ await XActions.lists.pin(&quot;1234567890&quot;)
 // Run again to unpin:
 // await XActions.lists.pin(&quot;1234567890&quot;)
 </code></pre>
-<h4><code>getAll()</code> - Get all your lists</h4>
+<h4 id="getall---get-all-your-lists"><code>getAll()</code> - Get all your lists</h4>
 <pre><code class="language-js">// XActions.lists.getAll - Retrieve all lists you own or follow
 // Example 1: View all lists
 const myLists = await XActions.lists.getAll()
@@ -3109,7 +3315,7 @@ const myLists = await XActions.lists.getAll()
 console.log(`Total lists: ${myLists.length}`)
 console.log(&quot;Consider archiving unused lists!&quot;)
 </code></pre>
-<h4><code>viewMembers(listId)</code> - View list members</h4>
+<h4 id="viewmemberslistid---view-list-members"><code>viewMembers(listId)</code> - View list members</h4>
 <pre><code class="language-js">// XActions.lists.viewMembers - See all members of a list
 // Example 1: View members of a list
 await XActions.lists.viewMembers(&quot;1234567890&quot;)
@@ -3122,7 +3328,7 @@ console.log(&quot;Review members and remove inactive accounts&quot;)
 await XActions.lists.viewMembers(&quot;1234567890&quot;)
 // Now you can manually add/remove members from the UI
 </code></pre>
-<h4><code>viewFollowers(listId)</code> - View list followers</h4>
+<h4 id="viewfollowerslistid---view-list-followers"><code>viewFollowers(listId)</code> - View list followers</h4>
 <pre><code class="language-js">// XActions.lists.viewFollowers - See who follows your list
 // Example 1: Check list popularity
 await XActions.lists.viewFollowers(&quot;1234567890&quot;)
@@ -3136,9 +3342,9 @@ await XActions.lists.viewFollowers(&quot;1234567890&quot;)
 // Great for seeing how many people value your curation
 </code></pre>
 <hr>
-<h3>⚙️ XActions.settings — Account Settings</h3>
+<h3 id="-xactionssettings--account-settings">⚙️ XActions.settings — Account Settings</h3>
 <p>Quick access to all X settings pages.</p>
-<h4><code>account()</code> - Account settings</h4>
+<h4 id="account---account-settings"><code>account()</code> - Account settings</h4>
 <pre><code class="language-js">// XActions.settings.account - Navigate to account settings
 // Example 1: View account settings
 await XActions.settings.account()
@@ -3151,7 +3357,7 @@ console.log(&quot;Account settings loaded - check username, email, etc.&quot;)
 await XActions.settings.account()
 // Review current settings before making updates
 </code></pre>
-<h4><code>security()</code> - Security settings</h4>
+<h4 id="security---security-settings"><code>security()</code> - Security settings</h4>
 <pre><code class="language-js">// XActions.settings.security - Navigate to security settings
 // Example 1: Review security settings
 await XActions.settings.security()
@@ -3164,7 +3370,7 @@ console.log(&quot;Review: 2FA status, connected apps, active sessions&quot;)
 await XActions.settings.security()
 // Check for unauthorized access and update password
 </code></pre>
-<h4><code>privacy()</code> - Privacy settings</h4>
+<h4 id="privacy---privacy-settings"><code>privacy()</code> - Privacy settings</h4>
 <pre><code class="language-js">// XActions.settings.privacy - Navigate to privacy settings
 // Example 1: Review privacy settings
 await XActions.settings.privacy()
@@ -3177,7 +3383,7 @@ console.log(&quot;Review: discoverability, data sharing, ad preferences&quot;)
 await XActions.settings.privacy()
 // Review who can see your posts, find you by email/phone, etc.
 </code></pre>
-<h4><code>notifications()</code> - Notification settings</h4>
+<h4 id="notifications---notification-settings"><code>notifications()</code> - Notification settings</h4>
 <pre><code class="language-js">// XActions.settings.notifications - Navigate to notification settings
 // Example 1: Configure notifications
 await XActions.settings.notifications()
@@ -3190,7 +3396,7 @@ console.log(&quot;Customize which notifications you receive&quot;)
 await XActions.settings.notifications()
 // Turn off notifications you don&#39;t need
 </code></pre>
-<h4><code>accessibility()</code> - Accessibility settings</h4>
+<h4 id="accessibility---accessibility-settings"><code>accessibility()</code> - Accessibility settings</h4>
 <pre><code class="language-js">// XActions.settings.accessibility - Navigate to accessibility settings
 // Example 1: View accessibility options
 await XActions.settings.accessibility()
@@ -3203,7 +3409,7 @@ console.log(&quot;Adjust: font size, color contrast, motion settings&quot;)
 await XActions.settings.accessibility()
 // Great for: autoplay settings, image descriptions, reduced motion
 </code></pre>
-<h4><code>monetization()</code> - Monetization settings</h4>
+<h4 id="monetization---monetization-settings"><code>monetization()</code> - Monetization settings</h4>
 <pre><code class="language-js">// XActions.settings.monetization - Navigate to monetization settings
 // Example 1: Check monetization status
 await XActions.settings.monetization()
@@ -3216,7 +3422,7 @@ console.log(&quot;Review: ad revenue, tips, subscriptions&quot;)
 await XActions.settings.monetization()
 // Enable features to earn from your content
 </code></pre>
-<h4><code>creatorSubs()</code> - Creator subscriptions</h4>
+<h4 id="creatorsubs---creator-subscriptions"><code>creatorSubs()</code> - Creator subscriptions</h4>
 <pre><code class="language-js">// XActions.settings.creatorSubs - Navigate to creator subscriptions
 // Example 1: Manage subscriptions
 await XActions.settings.creatorSubs()
@@ -3229,7 +3435,7 @@ console.log(&quot;See creators you&#39;re subscribed to&quot;)
 await XActions.settings.creatorSubs()
 // Review and cancel unused subscriptions
 </code></pre>
-<h4><code>premium()</code> - Premium settings</h4>
+<h4 id="premium---premium-settings"><code>premium()</code> - Premium settings</h4>
 <pre><code class="language-js">// XActions.settings.premium - Navigate to Premium/X Premium settings
 // Example 1: Check Premium status
 await XActions.settings.premium()
@@ -3242,7 +3448,7 @@ console.log(&quot;Review your Premium subscription and features&quot;)
 await XActions.settings.premium()
 // Upgrade tier or manage billing
 </code></pre>
-<h4><code>mutedAccounts()</code> - View muted accounts</h4>
+<h4 id="mutedaccounts---view-muted-accounts"><code>mutedAccounts()</code> - View muted accounts</h4>
 <pre><code class="language-js">// XActions.settings.mutedAccounts - See all muted accounts
 // Example 1: Review muted accounts
 await XActions.settings.mutedAccounts()
@@ -3255,7 +3461,7 @@ console.log(&quot;Review accounts you&#39;ve muted - unmute if needed&quot;)
 await XActions.settings.mutedAccounts()
 // Remove mutes for accounts you want to see again
 </code></pre>
-<h4><code>mutedWords()</code> - View muted words</h4>
+<h4 id="mutedwords---view-muted-words"><code>mutedWords()</code> - View muted words</h4>
 <pre><code class="language-js">// XActions.settings.mutedWords - See all muted words/phrases
 // Example 1: Review muted keywords
 await XActions.settings.mutedWords()
@@ -3273,74 +3479,75 @@ await XActions.settings.mutedWords()
   <a href="https://github.com/nirholas/XActions">⭐ Back to Main README</a>
 </p>
 
+    </article>
 
-        <div class="cta-box">
-          <h3>⚡ Explore XActions</h3>
-          <p>100% free and open-source. No API keys, no fees, no signup.</p>
-          <a href="/docs">Browse All Documentation</a>
-        </div>
-      </article>
-    </main>
+    <div class="page-meta">
+      <span>25 min read</span>
+      <a href="https://github.com/nirholas/XActions/edit/main/docs/automation.md" target="_blank" rel="noopener">Edit this page</a>
+      <a href="https://github.com/nirholas/XActions/issues/new?title=Docs%3A%20XActions%20Automation%20Framework%20Guide" target="_blank" rel="noopener">Report a problem</a>
+    </div>
 
-    <aside class="sidebar-right">
-      <div class="sidebar-card">
-        <h3>📖 In This Section</h3>
-                <a href="/docs/guides/getting-started">📖 Getting Started with XActions</a>
-        <a href="/docs/guides/usage">📖 Usage</a>
-        <a href="/docs/guides/monitoring">📖 Monitoring Guide</a>
-        <a href="/docs/guides/cli-reference">📖 XActions CLI Reference</a>
-        <a href="/docs/guides/ai-api">📖 XActions AI API Documentation</a>
-        <a href="/docs/guides/api-reference">📖 XActions — API Reference</a>
-        <a href="/docs/guides/deployment">📖 Deployment Guide</a>
-        <a href="/docs/guides/dom-selectors">📖 X/Twitter DOM Selector Reference</a>
-      </div>
-      <div class="sidebar-card">
-        <h3>🔗 Quick Links</h3>
-        <a href="/docs">All Documentation</a>
-        <a href="/features">All 43+ Features</a>
-        <a href="/tutorials">Tutorials</a>
-        <a href="/ai">AI Integration</a>
-        <a href="/mcp">MCP Server</a>
-        <a href="https://github.com/nirholas/XActions" rel="noopener">GitHub</a>
-      </div>
-    </aside>
+    <nav class="page-nav" aria-label="Previous and next">
+      <a class="page-nav__link" href="/docs/guides/api-reference"><span class="page-nav__dir">← Previous</span><span class="page-nav__title">XActions API Reference</span></a>
+      <a class="page-nav__link page-nav__link--next" href="/docs/guides/cli-reference"><span class="page-nav__dir">Next →</span><span class="page-nav__title">XActions CLI Reference</span></a>
+    </nav>
+
+    <div class="callout">
+      <h3>⚡ Free and open source</h3>
+      <p>No API keys, no monthly fees, no signup. Star the repo if it saved you a subscription.</p>
+      <a class="btn" href="https://github.com/nirholas/XActions" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+  </main>
+
+  <aside class="toc" data-toc aria-label="On this page">
+    <div class="toc__heading">On this page</div>
+  </aside>
+</div>
+
+<dialog class="search-dialog" data-search-dialog aria-label="Search documentation">
+  <input class="search-dialog__input" data-search-input type="search" placeholder="Search the documentation…" aria-label="Search query" autocomplete="off" spellcheck="false">
+  <div class="search-dialog__results" data-search-results role="listbox" aria-label="Search results"></div>
+  <div class="search-dialog__footer">
+    <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+    <span><kbd>↵</kbd> open</span>
+    <span><kbd>esc</kbd> close</span>
   </div>
+</dialog>
 
-  <footer class="site-footer">
-    <div class="footer-content">
-      <div class="footer-section">
-        <h4>XActions</h4>
-        <p>100% Free & Open Source X/Twitter Automation</p>
-        <p>Created by <a href="https://x.com/nichxbt" rel="noopener">@nichxbt</a></p>
-      </div>
-      <div class="footer-section">
-        <h4>Product</h4>
-        <a href="/features">Features</a>
-        <a href="/pricing">Pricing</a>
-        <a href="/run">Run Scripts</a>
-        <a href="/dashboard">Dashboard</a>
-        <a href="/analytics">Analytics</a>
-      </div>
-      <div class="footer-section">
-        <h4>AI & Developers</h4>
-        <a href="/ai">AI Integration</a>
-        <a href="/ai-api">AI API (x402)</a>
-        <a href="/mcp">MCP Server</a>
-        <a href="/docs">Documentation</a>
-        <a href="/tutorials">Tutorials</a>
-      </div>
-      <div class="footer-section">
-        <h4>Community</h4>
-        <a href="https://github.com/nirholas/XActions" rel="noopener">GitHub</a>
-        <a href="/about">About</a>
-        <a href="/terms">Terms</a>
-        <a href="/privacy">Privacy</a>
-      </div>
+<footer class="site-footer">
+  <div class="site-footer__inner">
+    <div>
+      <h4>XActions</h4>
+      <p>Free, open-source X/Twitter automation.</p>
+      <p>Built by <a href="https://x.com/nichxbt" target="_blank" rel="noopener">@nichxbt</a></p>
     </div>
-    <div class="footer-bottom">
-      <p>© 2024-2026 XActions. MIT License. No API fees. No limits.</p>
+    <div>
+      <h4>Learn</h4>
+      <a href="/docs/learn/your-first-scrape">Your first scrape</a>
+      <a href="/docs/learn/mcp-with-claude">MCP with Claude</a>
+      <a href="/examples">Examples</a>
+      <a href="/docs/guides/troubleshooting">Troubleshooting</a>
     </div>
-  </footer>
-<script src="/js/sidebar.js"></script>
+    <div>
+      <h4>Reference</h4>
+      <a href="/docs/guides/cli-reference">CLI</a>
+      <a href="/docs/guides/api-reference">API</a>
+      <a href="/docs/guides/mcp-setup">MCP server</a>
+      <a href="/docs/guides/browser-scripts">Browser scripts</a>
+    </div>
+    <div>
+      <h4>Project</h4>
+      <a href="https://github.com/nirholas/XActions" target="_blank" rel="noopener">GitHub</a>
+      <a href="/docs/project/contributing">Contributing</a>
+      <a href="/docs/project/changelog">Changelog</a>
+      <a href="/docs/project/security">Security</a>
+    </div>
+  </div>
+  <div class="site-footer__bottom">
+    <p>© 2024–2026 XActions. Apache-2.0 licensed. No API fees.</p>
+  </div>
+</footer>
+
+<script src="/docs/assets/docs.js" defer></script>
 </body>
 </html>

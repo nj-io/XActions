@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Account Importer / Migration Tool
  * Import/migrate Twitter data to Bluesky or Mastodon.
@@ -11,11 +11,12 @@
  * platform credentials and user confirmation.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 import { promises as fs } from 'fs';
 import path from 'path';
+import { importTwitterArchive, exportArchive, ARCHIVE_SOURCE } from './twitter-archive.js';
 
 // ============================================================================
 // User Matching
@@ -356,7 +357,9 @@ export async function migrateToMastodon(options) {
  * Migrate to a target platform
  *
  * @param {object} options
- * @param {string} options.exportDir - Path to export directory
+ * @param {string} [options.exportDir] - Path to export directory (or output dir when source is 'twitterArchive')
+ * @param {string} [options.source] - 'twitterArchive' to migrate straight from the official X data export
+ * @param {string} [options.archivePath] - The archive zip or folder when source is 'twitterArchive'
  * @param {string} options.platform - 'bluesky' or 'mastodon'
  * @param {boolean} [options.dryRun=true]
  * @param {object} [options.credentials] - Platform-specific credentials
@@ -364,7 +367,21 @@ export async function migrateToMastodon(options) {
  * @returns {object} Migration summary
  */
 export async function migrate(options) {
-  const { platform, exportDir, dryRun = true, credentials = {}, onProgress } = options;
+  const { platform, dryRun = true, credentials = {}, onProgress, source, archivePath } = options;
+  let { exportDir } = options;
+
+  // source: 'twitterArchive' reads the official X data export (zip or folder)
+  // and materialises it as an export directory first, so the same tweets.json /
+  // following.json flow below applies.
+  if (source === ARCHIVE_SOURCE) {
+    if (!archivePath) throw new Error('source "twitterArchive" requires archivePath');
+    const archive = await importTwitterArchive(archivePath, {
+      sections: ['account', 'profile', 'tweets', 'following'],
+      onProgress,
+    });
+    const written = await exportArchive(archive, { outputDir: exportDir, formats: ['json'] });
+    exportDir = written.dir;
+  }
 
   // Verify export directory exists
   try {

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions MCP Server
  * Model Context Protocol server for AI agents (Claude, GPT, etc.)
@@ -20,17 +20,21 @@
  * 
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @see https://xactions.app
- * @license MIT
+ * @license Apache-2.0
  */
 
+import { VERSION } from '../version.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { localhostHostValidation } from '@modelcontextprotocol/sdk/server/middleware/hostHeaderValidation.js';
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
+import { realpathSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 // ============================================================================
 // Plugin System
@@ -39,6 +43,22 @@ import { randomUUID } from 'node:crypto';
 import { initializePlugins, getPluginTools } from '../plugins/index.js';
 import { extractArticleText } from './articleText.js';
 import { articleToMarkdown } from './articleMarkdown.js';
+
+// ============================================================================
+// Tool filtering + draft approval
+// ============================================================================
+
+import {
+  createToolFilter,
+  isWriteTool,
+  groupOf,
+  buildGroups,
+  GROUP_NAMES,
+  ALWAYS_AVAILABLE_TOOLS,
+  resolveActionCharge,
+} from './tool-groups.js';
+import * as drafts from './drafts.js';
+import * as actionCaps from './action-caps.js';
 
 // ============================================================================
 // Configuration
@@ -205,6 +225,11 @@ const TOOLS = [
           type: 'number',
           description: 'Maximum results (default: 50)',
         },
+        filter: {
+          type: 'string',
+          enum: ['latest', 'top', 'people', 'photos', 'videos'],
+          description: 'Result ranking (default: latest). Use "top" for the highest-engagement results; "latest" returns the newest, which typically have no engagement yet.',
+        },
         platform: {
           type: 'string',
           enum: ['twitter', 'bluesky', 'mastodon', 'threads'],
@@ -220,7 +245,7 @@ const TOOLS = [
   },
   {
     name: 'x_follow',
-    description: 'Follow an X/Twitter user.',
+    description: 'Follow an X/Twitter account by username. Requires a saved session (`xactions login` / `xactions connect`, or XACTIONS_SESSION_COOKIE). Returns success only once the profile shows Following.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -234,7 +259,7 @@ const TOOLS = [
   },
   {
     name: 'x_unfollow',
-    description: 'Unfollow an X/Twitter user.',
+    description: 'Unfollow an X/Twitter account by username. Requires a saved session (`xactions login` / `xactions connect`, or XACTIONS_SESSION_COOKIE). Returns success only once the profile no longer shows Following.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -284,7 +309,7 @@ const TOOLS = [
   },
   {
     name: 'x_post_tweet',
-    description: 'Post a new tweet to X/Twitter.',
+    description: 'Publish a new tweet from the authenticated account. Returns the posted tweet URL when X reports success.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -298,7 +323,7 @@ const TOOLS = [
   },
   {
     name: 'x_like',
-    description: 'Like a tweet by its URL.',
+    description: 'Like a tweet by its URL from the authenticated account. Idempotent: liking an already-liked tweet is a no-op.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -312,7 +337,7 @@ const TOOLS = [
   },
   {
     name: 'x_retweet',
-    description: 'Retweet a tweet by its URL.',
+    description: 'Retweet (repost) a tweet by its URL from the authenticated account, without adding a quote comment.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -325,8 +350,47 @@ const TOOLS = [
     },
   },
   {
+    name: 'x_engage',
+    description: 'Sweep a feed and engage every post on it: like, repost, and reply across a profile, a search, or a list. Replies come from your templates or from an LLM given a plain-language brief. Defaults to a dry run; pass dryRun: false to act. Progress is saved per feed, so a second call skips what the first already did.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        username: { type: 'string', description: 'Profile to sweep, without the @. Give exactly one of username, search, or list.' },
+        search: { type: 'string', description: 'Search query to sweep instead of a profile' },
+        list: { type: 'string', description: 'List ID to sweep instead of a profile (digits from x.com/i/lists/<id>)' },
+        mode: { type: 'string', enum: ['Latest', 'Top'], description: 'Search ranking (search only). Default Latest.' },
+        like: { type: 'boolean', description: 'Like each post (default true)' },
+        repost: { type: 'boolean', description: 'Repost each post (default false)' },
+        comment: { type: 'boolean', description: 'Reply to each post (default false). Needs prompt or templates.' },
+        limit: { type: 'number', description: 'Maximum posts to engage, 1-200 (default 20)' },
+        prompt: { type: 'string', description: 'How the replies should sound, e.g. "supportive, specific, one honest question, no hype". Turns on LLM replies.' },
+        persona: { type: 'string', description: 'Optional persona line for the LLM, e.g. "You are @you, a founder building X"' },
+        templates: { type: 'array', items: { type: 'string' }, description: 'Reply templates; {author} and {name} are filled in. Used directly, or as the fallback when the model fails.' },
+        provider: { type: 'string', enum: ['openrouter', 'openai', 'xai', 'anthropic', 'ollama', 'custom'], description: 'LLM provider (default openrouter)' },
+        model: { type: 'string', description: 'LLM model; provider default if omitted' },
+        apiKey: { type: 'string', description: 'LLM API key; falls back to OPENROUTER_API_KEY / OPENAI_API_KEY / XAI_API_KEY / ANTHROPIC_API_KEY' },
+        baseUrl: { type: 'string', description: 'Chat-completions URL for provider "custom"' },
+        includeReplies: { type: 'boolean', description: 'Include replies, not just top-level posts' },
+        includeReposts: { type: 'boolean', description: "Include posts the account reposted from others" },
+        since: { type: 'string', description: 'Only posts on or after this ISO date' },
+        onlyFrom: { type: 'array', items: { type: 'string' }, description: 'Only engage posts by these authors (useful on search and list feeds)' },
+        skipUsers: { type: 'array', items: { type: 'string' }, description: 'Never engage posts by these authors' },
+        keywords: { type: 'array', items: { type: 'string' }, description: 'Only posts containing one of these words' },
+        skipKeywords: { type: 'array', items: { type: 'string' }, description: 'Skip posts containing any of these words' },
+        minLikes: { type: 'number', description: 'Only posts with at least this many likes' },
+        maxLikes: { type: 'number', description: 'Only posts with at most this many likes (0 = no ceiling)' },
+        delaySeconds: { type: 'number', description: 'Seconds between posts (default 20). Lower is likelier to be rate limited.' },
+        jitterSeconds: { type: 'number', description: 'Random spread added to the delay (default 10)' },
+        dryRun: { type: 'boolean', description: 'Preview without posting. Defaults to true.' },
+        reset: { type: 'boolean', description: 'Forget saved progress for this feed first' },
+        resume: { type: 'boolean', description: 'Read and write saved progress (default true)' },
+      },
+      required: [],
+    },
+  },
+  {
     name: 'x_download_video',
-    description: 'Get video download URLs from a tweet.',
+    description: 'Download the video attached to a tweet and return the local file path plus the resolved media URL and metadata.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -355,7 +419,7 @@ const TOOLS = [
   // ====== Posting & Content ======
   {
     name: 'x_post_thread',
-    description: 'Post a multi-tweet thread to X/Twitter.',
+    description: 'Publish a multi-tweet thread from an ordered list of texts. Each entry becomes a reply to the previous one.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -370,7 +434,7 @@ const TOOLS = [
   },
   {
     name: 'x_create_poll',
-    description: 'Create a poll tweet on X/Twitter.',
+    description: 'Create a poll tweet with a question, two to four options, and a duration in minutes (default 24 hours).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -399,7 +463,7 @@ const TOOLS = [
   },
   {
     name: 'x_delete_tweet',
-    description: 'Delete a tweet by its URL.',
+    description: 'Permanently delete one of the authenticated account\'s tweets by its URL. This cannot be undone.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -411,7 +475,7 @@ const TOOLS = [
   // ====== Engagement ======
   {
     name: 'x_reply',
-    description: 'Reply to a tweet.',
+    description: 'Reply to a tweet by its URL with the given text. The reply is posted from the authenticated account.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -423,7 +487,7 @@ const TOOLS = [
   },
   {
     name: 'x_bookmark',
-    description: 'Bookmark a tweet.',
+    description: 'Save a tweet to the authenticated account\'s private bookmarks by its URL so it can be found later.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -434,7 +498,7 @@ const TOOLS = [
   },
   {
     name: 'x_get_bookmarks',
-    description: 'Export your bookmarked tweets.',
+    description: 'List the authenticated account\'s saved bookmarks, newest first, up to the requested limit.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -489,6 +553,17 @@ const TOOLS = [
       },
     },
   },
+  {
+    name: 'x_get_home_timeline',
+    description: 'Read posts from your home timeline on X/Twitter. Supports For You or Following.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        timeline: { type: 'string', enum: ['for_you', 'following'], description: 'Which home timeline to read (default: for_you)' },
+        limit: { type: 'number', description: 'Maximum posts to collect (default: 25)' },
+      },
+    },
+  },
   // ====== Notifications ======
   {
     name: 'x_get_notifications',
@@ -503,7 +578,7 @@ const TOOLS = [
   },
   {
     name: 'x_mute_user',
-    description: 'Mute an X/Twitter user.',
+    description: 'Mute an account by username so its posts stop appearing in the authenticated user\'s timeline and notifications.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -514,7 +589,7 @@ const TOOLS = [
   },
   {
     name: 'x_unmute_user',
-    description: 'Unmute an X/Twitter user.',
+    description: 'Unmute a previously muted account by username, restoring its posts to the authenticated user\'s timeline.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -538,7 +613,7 @@ const TOOLS = [
   },
   {
     name: 'x_get_conversations',
-    description: 'Get your DM conversation list.',
+    description: 'List the authenticated account\'s direct-message conversations with participants and the latest message preview.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -548,7 +623,7 @@ const TOOLS = [
   },
   {
     name: 'x_export_dms',
-    description: 'Export DM messages to JSON.',
+    description: 'Export the authenticated account\'s direct messages as structured JSON, including sender, text, and timestamps.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -583,7 +658,7 @@ const TOOLS = [
   // ====== Lists ======
   {
     name: 'x_get_lists',
-    description: 'Get your X/Twitter lists.',
+    description: 'List the X Lists the authenticated account owns or follows, with names, member counts, and URLs.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -606,7 +681,7 @@ const TOOLS = [
   // ====== Spaces ======
   {
     name: 'x_get_spaces',
-    description: 'Get live or scheduled X/Twitter Spaces.',
+    description: 'Discover X Spaces (live audio rooms) by state and topic: live now, scheduled, or recently ended.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -673,7 +748,7 @@ const TOOLS = [
   // ====== Analytics ======
   {
     name: 'x_get_analytics',
-    description: 'Get your account engagement analytics.',
+    description: 'Fetch the authenticated account\'s analytics dashboard: impressions, engagements, profile visits, and follower change for the period.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -714,7 +789,7 @@ const TOOLS = [
   },
   {
     name: 'x_get_blocked',
-    description: 'Get your blocked accounts list.',
+    description: 'List the accounts the authenticated user has blocked, with usernames and display names.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1173,6 +1248,28 @@ const TOOLS = [
       required: ['username'],
     },
   },
+  {
+    name: 'x_account_report',
+    description:
+      'Full account report for one or more public X accounts, computed from public data with no login: engagement rate, median interactions per post, posting cadence, content mix (original vs reply vs repost, media and link share), best hour and weekday by median engagement, top posts, top hashtags, and plain-language observations. Pass an array of usernames to get a side-by-side comparison as well. Use this instead of fetching a profile and a timeline separately when the question is about how an account is performing.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        username: {
+          oneOf: [
+            { type: 'string' },
+            { type: 'array', items: { type: 'string' }, minItems: 2, maxItems: 4 },
+          ],
+          description: 'Username without @, or an array of 2 to 4 usernames to compare',
+        },
+        limit: {
+          type: 'number',
+          description: 'Posts to sample per account (default 50, max 200). A larger sample gives steadier medians.',
+        },
+      },
+      required: ['username'],
+    },
+  },
   // ====== AI Tools (require OPENROUTER_API_KEY) ======
   {
     name: 'x_analyze_voice',
@@ -1267,6 +1364,57 @@ const TOOLS = [
         },
       },
       required: ['url'],
+    },
+  },
+  // ====== Media archive ======
+  {
+    name: 'x_download_media',
+    description:
+      'Download every photo, video and GIF from a profile, a single tweet, a ' +
+      'search or a community to local files. Handles the media tab, avatars and ' +
+      'banners at original resolution, filename templates, and an archive file ' +
+      'so re-runs only fetch what is new. Use this to build or sync a local ' +
+      'media archive; use x_get_media to only list media without saving it.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        target: {
+          type: 'string',
+          description: 'What to download: "@user", "@user:avatar", "@user:banner", "@user:all", a tweet id or URL, "search:<query>", or "community:<id>".',
+        },
+        outputDir: { type: 'string', description: 'Directory to write into (default: ./media).' },
+        template: { type: 'string', description: 'Filename template, e.g. "{username}/{date}_{media_filename}.{ext}".' },
+        archive: { type: 'boolean', description: 'Record downloads so later runs skip what is already saved (default: true).' },
+        limit: { type: 'number', description: 'How many source items to walk (default: 100).' },
+        types: { type: 'array', items: { type: 'string', enum: ['photo', 'video', 'gif'] }, description: 'Only download these media types.' },
+        dryRun: { type: 'boolean', description: 'List what would be downloaded without writing files.' },
+      },
+      required: ['target'],
+    },
+  },
+  // ====== Ask XActions ======
+  {
+    name: 'x_ask',
+    description:
+      'Ask how to do something with XActions and get an answer grounded in the ' +
+      'toolkit\'s own documentation, skills, browser scripts and repository, with ' +
+      'sources and the exact runnable action (browser script, CLI command or MCP ' +
+      'tool). Use this before guessing at a workflow, inventing a script name, or ' +
+      'telling a user something is unsupported: it is the toolkit describing itself. ' +
+      'Needs no API key.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        question: {
+          type: 'string',
+          description: 'A plain-language question, e.g. "how do I unfollow everyone?"',
+        },
+        actionsOnly: {
+          type: 'boolean',
+          description: 'Skip the written answer and return only the matching scripts, commands and tools (fast, no LLM call).',
+        },
+      },
+      required: ['question'],
     },
   },
   // ====== Cross-Platform ======
@@ -1570,7 +1718,7 @@ const TOOLS = [
   },
   {
     name: 'x_crm_tag',
-    description: 'Add a tag to a CRM contact.',
+    description: 'Attach one or more tags to a contact in the local CRM so it can be found later with x_crm_search or grouped by x_crm_segment.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1591,7 +1739,7 @@ const TOOLS = [
   },
   {
     name: 'x_crm_segment',
-    description: 'Get contacts in a CRM segment.',
+    description: 'Group the local CRM into segments by tag, follower count, or engagement level and return each segment\'s contacts.',
     inputSchema: {
       type: 'object',
       properties: { name: { type: 'string', description: 'Segment name' } },
@@ -1618,7 +1766,7 @@ const TOOLS = [
   // ── 09-F: Scheduler ──
   {
     name: 'x_schedule_add',
-    description: 'Add a cron-scheduled job.',
+    description: 'Queue a tweet to be posted later at the given ISO timestamp by the local scheduler. Returns the scheduled job id.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1631,12 +1779,12 @@ const TOOLS = [
   },
   {
     name: 'x_schedule_list',
-    description: 'List all scheduled jobs.',
+    description: 'List every tweet queued in the local scheduler with its id, text, scheduled time, and status.',
     inputSchema: { type: 'object', properties: {} },
   },
   {
     name: 'x_schedule_remove',
-    description: 'Remove a scheduled job.',
+    description: 'Cancel a queued tweet in the local scheduler by its job id so it is never posted.',
     inputSchema: {
       type: 'object',
       properties: { name: { type: 'string', description: 'Job name' } },
@@ -1662,7 +1810,7 @@ const TOOLS = [
   // ── 09-I: RSS Monitor ──
   {
     name: 'x_rss_add',
-    description: 'Add an RSS feed to monitor.',
+    description: 'Subscribe to an RSS or Atom feed URL so new entries can be turned into tweet drafts by x_rss_check.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1675,12 +1823,12 @@ const TOOLS = [
   },
   {
     name: 'x_rss_check',
-    description: 'Check all RSS feeds for new items.',
+    description: 'Poll the subscribed RSS feeds for entries published since the last check and stage them as tweet drafts.',
     inputSchema: { type: 'object', properties: {} },
   },
   {
     name: 'x_rss_drafts',
-    description: 'View drafts generated from RSS feeds.',
+    description: 'List the tweet drafts generated from RSS feed entries, ready for review, editing, or posting.',
     inputSchema: { type: 'object', properties: {} },
   },
 
@@ -1699,7 +1847,7 @@ const TOOLS = [
   },
   {
     name: 'x_suggest_hashtags',
-    description: 'Suggest relevant hashtags for a tweet.',
+    description: 'Suggest relevant hashtags for a draft tweet based on its topic, current trends, and the account\'s niche.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1750,7 +1898,7 @@ const TOOLS = [
     description: 'Send a test notification to a specific channel.',
     inputSchema: {
       type: 'object',
-      properties: { channel: { type: 'string', enum: ['slack', 'discord', 'telegram', 'email'], description: 'Channel to test' } },
+      properties: { channel: { type: 'string', enum: ['slack', 'discord', 'telegram', 'email', 'webhook'], description: 'Channel to test' } },
       required: ['channel'],
     },
   },
@@ -1758,7 +1906,7 @@ const TOOLS = [
   // ── 09-M: Datasets ──
   {
     name: 'x_dataset_list',
-    description: 'List all stored scraping datasets.',
+    description: 'List the locally saved datasets (exports, scrapes, snapshots) with their names, row counts, and timestamps.',
     inputSchema: { type: 'object', properties: {} },
   },
   {
@@ -1778,7 +1926,7 @@ const TOOLS = [
   // ── 09-N: Team Management ──
   {
     name: 'x_team_create',
-    description: 'Create a new team.',
+    description: 'Create a named team workspace for shared accounts, roles, and audit history across several operators.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1790,7 +1938,7 @@ const TOOLS = [
   },
   {
     name: 'x_team_members',
-    description: 'List team members.',
+    description: 'List the members of a team workspace with their roles and when they were added.',
     inputSchema: {
       type: 'object',
       properties: { teamId: { type: 'string', description: 'Team ID' } },
@@ -2225,6 +2373,62 @@ const TOOLS = [
       },
     },
   },
+  // ====== Draft approval (always available, see tool-groups.js) ======
+  {
+    name: 'x_list_drafts',
+    description: 'List tool calls held as drafts by the approval gate (XACTIONS_MCP_REQUIRE_APPROVAL). Each draft records the tool, its arguments, when it was created, and whether it is still pending, has been executed, or failed. Newest first.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', enum: ['pending', 'executed', 'failed', 'all'], description: 'Only return drafts in this state (default: all)' },
+      },
+    },
+  },
+  {
+    name: 'x_approve_draft',
+    description: 'Approve a pending draft and execute the stored tool call exactly as it was submitted. Only offered when approval mode is off (drafts left from an earlier session); with approval mode on, a person approves with `xactions drafts approve <id>`. A draft that already ran is refused so nothing is posted twice.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Draft id returned when the call was held' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'x_discard_draft',
+    description: 'Delete a draft without executing it. Use this to reject a held write, or to clean up drafts that have already been executed or failed.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Draft id to remove' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'x_draft_status',
+    description: 'Show one draft in full: the tool, the arguments it will run with, its current state, and the result or error if it has already been approved.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Draft id to inspect' },
+      },
+      required: ['id'],
+    },
+  },
+
+  // ====== Daily action caps (see action-caps.js) ======
+  {
+    name: 'x_action_budget',
+    description: 'Report the remaining daily action budget for the active account: for each action class (post, reply, like, repost, follow, unfollow, dm, block, mute, delete) the cap, how many actions were used in the rolling 24 hour window, how many remain, and when the next slot frees. Caps persist across restarts and are set by XACTIONS_ACTION_CAPS or ~/.xactions/action-caps.json.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        account: { type: 'string', description: 'Account to report on (default: the active session, or "default")' },
+      },
+    },
+  },
 ];
 
 // ============================================================================
@@ -2266,11 +2470,157 @@ async function initializeBackend() {
 
 /**
  * Execute a tool using the appropriate backend
+ *
+ * @param {string} name tool name
+ * @param {object} args tool arguments
+ * @param {{ account?: string }} [options] server options; `account` is the
+ *   ledger account daily action caps are read from and charged to
  */
-async function executeTool(name, args) {
+/**
+ * x_ask: the toolkit answering questions about itself.
+ *
+ * An agent driving XActions has the same problem a person does: 149 tools, 94
+ * browser scripts and 120 CLI commands are more surface than fits in a prompt.
+ * Rather than guess at a workflow or invent a script name, it can ask, and get
+ * back the documented answer, the sources behind it, and the exact thing to
+ * run next. Retrieval is local to the install; the written answer uses the
+ * same keyless lanes as the website, and degrades to the documentation digest
+ * when they are all busy.
+ */
+let askCatalogs = null;
+async function loadAskCatalogs() {
+  if (!askCatalogs) {
+    askCatalogs = (async () => {
+      const { readFile } = await import('node:fs/promises');
+      const dataUrl = (name) => fileURLToPath(new URL(`../../dashboard/data/${name}`, import.meta.url));
+      const [engine, actions, index, catalog] = await Promise.all([
+        import('../ask/engine.js'),
+        import('../ask/actions.js'),
+        readFile(dataUrl('ask-index.json'), 'utf8').then(JSON.parse),
+        readFile(dataUrl('ask-actions.json'), 'utf8').then(JSON.parse),
+      ]);
+      return {
+        ask: engine.ask,
+        searcher: engine.createSearcher(index),
+        matcher: actions.createActionMatcher(catalog),
+        publicActions: actions.publicActions,
+      };
+    })();
+    askCatalogs.catch(() => { askCatalogs = null; });
+  }
+  return askCatalogs;
+}
+
+async function executeAskTool(args) {
+  const question = String(args.question || '').trim();
+  if (!question) throw new Error('x_ask: "question" is required');
+
+  const { ask, searcher, matcher, publicActions } = await loadAskCatalogs();
+
+  // actionsOnly skips the LLM entirely: an agent that just wants "which tool
+  // does this" should not wait on a completion for it.
+  if (args.actionsOnly) {
+    const sources = searcher.search(question, { limit: 8 });
+    return {
+      question,
+      actions: publicActions(matcher.match(question, sources)),
+      sources: sources.slice(0, 5).map((s) => ({ title: s.t, url: s.u, path: s.p })),
+    };
+  }
+
+  let answer = '';
+  const result = await ask({
+    question,
+    searcher,
+    matcher,
+    env: process.env,
+    onEvent: (event) => {
+      if (event.type === 'delta') answer += event.text;
+    },
+  });
+
+  return {
+    question,
+    answer,
+    lane: result.lane,
+    fromDocumentationIndex: Boolean(result.digest),
+    actions: result.actions,
+    sources: result.sources,
+  };
+}
+
+/**
+ * x_download_media: build or sync a local media archive.
+ *
+ * The write here is to the caller's own disk, never to their X account, so it
+ * needs no approval gate. The summary counts every outcome, including
+ * failures, because an agent reporting "done" over six 404s is worse than one
+ * reporting the truth.
+ */
+async function executeDownloadMediaTool(args) {
+  const target = String(args.target || '').trim();
+  if (!target) throw new Error('x_download_media: "target" is required');
+
+  const [{ downloadMediaFor, DEFAULT_ARCHIVE }, { createHttpScraper }, path] = await Promise.all([
+    import('../media/index.js'),
+    import('../scrapers/twitter/http/index.js'),
+    import('node:path'),
+  ]);
+  // The HTTP scraper, not Puppeteer: media resolution is a few GraphQL reads
+  // and the download itself is plain fetch, so a browser would be pure cost.
+  const scrapers = await createHttpScraper(SESSION_COOKIE ? { cookies: SESSION_COOKIE } : {});
+  const outputDir = args.outputDir || './media';
+
+  const { items, results, summary } = await downloadMediaFor(target, {
+    scrapers,
+    outputDir,
+    template: args.template,
+    archivePath: args.archive === false ? null : path.join(outputDir, DEFAULT_ARCHIVE),
+    limit: Number(args.limit) || 100,
+    types: Array.isArray(args.types) && args.types.length ? args.types : undefined,
+    dryRun: Boolean(args.dryRun),
+  });
+
+  return {
+    target,
+    outputDir,
+    found: items.length,
+    summary,
+    failures: results.filter((r) => r.outcome === 'failed').map((r) => ({ url: r.url, reason: r.reason })),
+    files: results
+      .filter((r) => r.outcome === 'downloaded' || r.outcome === 'deduped' || r.outcome === 'planned')
+      .map((r) => ({ path: r.relativePath, type: r.mediaType, bytes: r.bytes ?? 0, outcome: r.outcome })),
+  };
+}
+
+async function executeTool(name, args, options = {}) {
   // Add session cookie to args if provided globally
   if (SESSION_COOKIE && !args.cookie && name === 'x_login') {
     args.cookie = SESSION_COOKIE;
+  }
+
+  // Draft approval tools never touch a backend and are always available
+  if (ALWAYS_AVAILABLE_TOOLS.includes(name)) {
+    return await executeDraftTool(name, args);
+  }
+
+  // Daily action budget: reads the local ledger, needs no browser
+  if (name === 'x_action_budget') {
+    return await executeActionBudgetTool(args, options);
+  }
+
+  // Platform directory: reads the scraper registry, needs no browser
+  if (name === 'x_list_platforms') {
+    return await executePlatformTool();
+  }
+
+  // Ask XActions: reads the shipped documentation index, needs no browser
+  if (name === 'x_ask') {
+    return await executeAskTool(args);
+  }
+
+  if (name === 'x_download_media') {
+    return await executeDownloadMediaTool(args);
   }
 
   // Handle Space agent tools (xspace-agent integration)
@@ -2368,6 +2718,172 @@ async function executeTool(name, args) {
     }
     return await toolFn(args);
   }
+}
+
+/**
+ * Draft approval tools. The executor handed to approveDraft is executeTool
+ * itself, so an approved draft takes the identical dispatch path the live
+ * call would have (plugins, remote mode, multi-platform variants included).
+ */
+async function executeDraftTool(name, args) {
+  switch (name) {
+    case 'x_list_drafts': {
+      const list = drafts.listDrafts({ status: args.status || 'all' });
+      return {
+        count: list.length,
+        pending: list.filter((d) => d.status === 'pending').length,
+        store: drafts.getDraftsPath(),
+        drafts: list,
+      };
+    }
+    case 'x_approve_draft': {
+      if (!args.id) throw new Error('x_approve_draft: "id" is required');
+      const draft = await drafts.approveDraft(args.id, (tool, toolArgs) => executeTool(tool, toolArgs));
+      if (draft.status === 'failed') {
+        throw new Error(`Draft ${draft.id} (${draft.tool}) failed: ${draft.error}`);
+      }
+      return { approved: true, draft };
+    }
+    case 'x_discard_draft': {
+      if (!args.id) throw new Error('x_discard_draft: "id" is required');
+      const removed = drafts.discardDraft(args.id);
+      return { discarded: true, id: removed.id, tool: removed.tool, status: removed.status };
+    }
+    case 'x_draft_status': {
+      if (!args.id) throw new Error('x_draft_status: "id" is required');
+      const draft = drafts.getDraft(args.id);
+      if (!draft) throw new Error(`No draft with id "${args.id}"`);
+      return draft;
+    }
+    default:
+      throw new Error(`Unknown draft tool: ${name}`);
+  }
+}
+
+/**
+ * Capability names each scraper module exposes, keyed by the exported
+ * function that implements them. Mirrors the actionMap in scrapers/index.js
+ * so the MCP answer matches what `scrape(platform, action)` accepts.
+ */
+const PLATFORM_ACTION_NAMES = {
+  scrapeProfile: 'profile',
+  scrapeFollowers: 'followers',
+  scrapeFollowing: 'following',
+  scrapeTweets: 'posts',
+  searchTweets: 'search',
+  scrapeHashtag: 'hashtag',
+  scrapeTrending: 'trending',
+  scrapeThread: 'thread',
+  scrapeLikes: 'likes',
+  scrapeMedia: 'media',
+  scrapeListMembers: 'listMembers',
+  scrapeBookmarks: 'bookmarks',
+  scrapeNotifications: 'notifications',
+  scrapeCommunityMembers: 'communityMembers',
+  scrapeSpaces: 'spaces',
+  scrapeFeed: 'feed',
+};
+
+const PLATFORM_META = {
+  twitter: {
+    aliases: ['x'],
+    transport: 'browser',
+    auth: 'XACTIONS_SESSION_COOKIE (auth_token) for private data; guest tier for public profiles',
+    mcpTools: 'all x_* tools; the default when no platform argument is given',
+  },
+  bluesky: {
+    aliases: ['bsky'],
+    transport: 'api',
+    auth: 'BLUESKY_IDENTIFIER + BLUESKY_PASSWORD (app password) for authenticated calls',
+    mcpTools: 'x_get_profile, x_get_followers, x_get_following, x_get_tweets, x_search_tweets with platform: "bluesky"',
+  },
+  mastodon: {
+    aliases: ['masto'],
+    transport: 'api',
+    auth: 'MASTODON_INSTANCE + MASTODON_ACCESS_TOKEN for authenticated calls',
+    mcpTools: 'x_get_profile, x_get_followers, x_get_following, x_get_tweets, x_search_tweets with platform: "mastodon"',
+  },
+  threads: {
+    aliases: [],
+    transport: 'browser',
+    auth: 'none for public profiles',
+    mcpTools: 'x_get_profile, x_get_followers, x_get_following, x_get_tweets, x_search_tweets with platform: "threads"',
+  },
+};
+
+/**
+ * x_list_platforms: enumerate the scraper registry with the actions each
+ * platform module actually exports, plus the scraping adapters (Puppeteer,
+ * Playwright, Cheerio, ...) and whether their dependencies are installed.
+ */
+async function executePlatformTool() {
+  const scrapers = await import('../scrapers/index.js');
+  const { platforms, getAdapterInfo, getDefaultAdapterName } = scrapers;
+
+  const seen = new Set();
+  const result = [];
+  for (const [key, mod] of Object.entries(platforms)) {
+    if (seen.has(mod)) continue;
+    seen.add(mod);
+    const meta = PLATFORM_META[key] || { aliases: [], transport: 'unknown', auth: 'unknown', mcpTools: '' };
+    const capabilities = Object.keys(mod)
+      .filter((fn) => typeof mod[fn] === 'function' && PLATFORM_ACTION_NAMES[fn])
+      .map((fn) => PLATFORM_ACTION_NAMES[fn]);
+    result.push({
+      name: key,
+      aliases: meta.aliases,
+      transport: meta.transport,
+      auth: meta.auth,
+      capabilities,
+      mcpTools: meta.mcpTools,
+    });
+  }
+
+  const adapters = await getAdapterInfo();
+
+  return {
+    platforms: result,
+    defaultPlatform: 'twitter',
+    adapters,
+    defaultAdapter: getDefaultAdapterName(),
+    usage: 'Pass platform: "bluesky" | "mastodon" | "threads" to x_get_profile, x_get_followers, x_get_following, x_get_tweets, or x_search_tweets. Omit it for X/Twitter.',
+  };
+}
+
+/**
+ * Coerce a scraped engagement count to a number.
+ *
+ * The HTTP scraper returns numbers, but DOM-scraped fields have been strings,
+ * sometimes abbreviated ("3.9K"). `+` concatenated those instead of summing,
+ * so every engagement threshold below silently failed to match.
+ *
+ * @param {unknown} value
+ * @returns {number}
+ */
+function toCount(value) {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  if (typeof value !== 'string') return 0;
+  const match = value.trim().replace(/,/g, '').match(/^([\d.]+)\s*([KMB])?$/i);
+  if (!match) return 0;
+  const scale = { k: 1e3, m: 1e6, b: 1e9 }[(match[2] || '').toLowerCase()] || 1;
+  return Math.round(parseFloat(match[1]) * scale);
+}
+
+/**
+ * Normalise a tweet-list result into an array.
+ *
+ * `localTools.x_search_tweets` and `localTools.x_get_tweets` both resolve to a
+ * plain array, but the handlers below read `.tweets` off the result. That
+ * property is undefined on an array, so each consumer silently saw zero
+ * tweets and reported an empty analysis instead of failing.
+ *
+ * @param {unknown} result
+ * @returns {Array<object>}
+ */
+function asTweetList(result) {
+  if (Array.isArray(result)) return result;
+  if (Array.isArray(result?.tweets)) return result.tweets;
+  return [];
 }
 
 /**
@@ -2643,7 +3159,7 @@ async function executeXeepyTool(name, args) {
       });
       const users = [];
       const seen = new Set();
-      for (const tweet of (searchResults?.tweets || [])) {
+      for (const tweet of asTweetList(searchResults)) {
         if (users.length >= (args.limit || 10)) break;
         const username = tweet.authorUsername || tweet.author;
         if (!username || seen.has(username)) continue;
@@ -2652,10 +3168,13 @@ async function executeXeepyTool(name, args) {
           // Apply filters — would need profile scrape for full filtering
         }
         try {
-          await localTools.x_follow?.({ username });
-          users.push(username);
+          const outcome = await localTools.x_follow?.({ username });
+          // A follow counts once it is confirmed, not because nothing threw.
+          if (outcome && outcome.success !== false) users.push(username);
+        } catch { /* skip failed follows */ }
+        if (users.length < (args.limit || 10)) {
           await new Promise(r => setTimeout(r, (args.delay || 3) * 1000));
-        } catch (e) { /* skip failed follows */ }
+        }
       }
       return { followed: users, count: users.length };
     }
@@ -2665,7 +3184,7 @@ async function executeXeepyTool(name, args) {
       const engagers = new Set();
       const followed = [];
       // Simplified — follow repliers from recent tweets
-      for (const tweet of (tweets?.tweets || []).slice(0, 5)) {
+      for (const tweet of asTweetList(tweets).slice(0, 5)) {
         if (followed.length >= (args.limit || 10)) break;
         // Would scrape replies for full implementation
       }
@@ -2732,7 +3251,7 @@ async function executeXeepyTool(name, args) {
     case 'x_auto_comment': {
       const searchResults = await localTools.x_search_tweets?.({ query: args.query, limit: args.limit || 5 });
       const commented = [];
-      for (const tweet of (searchResults?.tweets || [])) {
+      for (const tweet of asTweetList(searchResults)) {
         try {
           await localTools.x_reply?.({ tweetUrl: tweet.url, text: args.comment });
           commented.push(tweet.url);
@@ -2745,8 +3264,8 @@ async function executeXeepyTool(name, args) {
     case 'x_auto_retweet': {
       const searchResults = await localTools.x_search_tweets?.({ query: args.query, limit: args.limit || 5 });
       const retweeted = [];
-      for (const tweet of (searchResults?.tweets || [])) {
-        if (args.minLikes && tweet.likes < args.minLikes) continue;
+      for (const tweet of asTweetList(searchResults)) {
+        if (args.minLikes && toCount(tweet.likes) < args.minLikes) continue;
         try {
           await localTools.x_retweet?.({ tweetUrl: tweet.url });
           retweeted.push(tweet.url);
@@ -2772,8 +3291,9 @@ async function executeXeepyTool(name, args) {
         if (!profile.avatar || profile.avatar.includes('default_profile')) { signals.push('default_avatar'); botScore += 20; }
       }
       
-      if (tweets?.tweets) {
-        const texts = tweets.tweets.map(t => t.text);
+      const botTweets = asTweetList(tweets);
+      if (botTweets.length) {
+        const texts = botTweets.map(t => t.text);
         const uniqueTexts = new Set(texts);
         if (texts.length > 5 && uniqueTexts.size < texts.length * 0.5) {
           signals.push('repetitive_content'); botScore += 30;
@@ -2792,7 +3312,7 @@ async function executeXeepyTool(name, args) {
     case 'x_find_influencers': {
       const searchResults = await localTools.x_search_tweets?.({ query: args.niche, limit: 100 });
       const authorMap = new Map();
-      for (const tweet of (searchResults?.tweets || [])) {
+      for (const tweet of asTweetList(searchResults)) {
         const username = tweet.authorUsername || tweet.author;
         if (!username) continue;
         if (!authorMap.has(username)) {
@@ -2800,7 +3320,7 @@ async function executeXeepyTool(name, args) {
         }
         const entry = authorMap.get(username);
         entry.tweetCount++;
-        entry.totalEngagement += (tweet.likes || 0) + (tweet.retweets || 0) + (tweet.replies || 0);
+        entry.totalEngagement += toCount(tweet.likes) + toCount(tweet.retweets) + toCount(tweet.replies);
       }
       
       const influencers = Array.from(authorMap.values())
@@ -2817,7 +3337,7 @@ async function executeXeepyTool(name, args) {
       
       // Extract niche keywords from user's tweets
       const keywords = new Set();
-      for (const tweet of (tweets?.tweets || [])) {
+      for (const tweet of asTweetList(tweets)) {
         const hashtags = tweet.text.match(/#\w+/g) || [];
         hashtags.forEach(h => keywords.add(h));
       }
@@ -2827,7 +3347,7 @@ async function executeXeepyTool(name, args) {
       
       const seen = new Set([args.username]);
       const result = [];
-      for (const tweet of (targets?.tweets || [])) {
+      for (const tweet of asTweetList(targets)) {
         const u = tweet.authorUsername || tweet.author;
         if (!u || seen.has(u)) continue;
         seen.add(u);
@@ -2839,15 +3359,23 @@ async function executeXeepyTool(name, args) {
     }
 
     case 'x_crypto_analyze': {
-      const searchResults = await localTools.x_search_tweets?.({ query: args.query, limit: args.limit || 100 });
-      const tweets = searchResults?.tweets || [];
+      // Rank by 'top' rather than the default 'latest'. The newest tweets for
+      // a ticker have had no time to accumulate engagement, so sampling them
+      // measured sentiment over fresh spam and left topInfluencers — which
+      // requires engagement > 50 — permanently empty.
+      const searchResults = await localTools.x_search_tweets?.({
+        query: args.query,
+        limit: args.limit || 100,
+        filter: 'top',
+      });
+      const tweets = asTweetList(searchResults);
       
       let bullish = 0, bearish = 0, neutral = 0;
       const influencerMentions = new Map();
       
       for (const tweet of tweets) {
         const text = (tweet.text || '').toLowerCase();
-        const engagement = (tweet.likes || 0) + (tweet.retweets || 0);
+        const engagement = toCount(tweet.likes) + toCount(tweet.retweets);
         
         if (text.match(/bull|moon|pump|buy|long|breakout|ath|🚀|💎|🔥/)) bullish++;
         else if (text.match(/bear|dump|sell|short|crash|dead|rug|💀|📉/)) bearish++;
@@ -2958,16 +3486,16 @@ async function executeXeepyTool(name, args) {
     case 'x_engagement_report': {
       const profile = await localTools.x_get_profile?.({ username: args.username });
       const tweets = await localTools.x_get_tweets?.({ username: args.username, limit: 50 });
-      const tweetList = tweets?.tweets || [];
+      const tweetList = asTweetList(tweets);
       
       let totalLikes = 0, totalRetweets = 0, totalReplies = 0;
       let bestTweet = null, bestEngagement = 0;
       
       for (const t of tweetList) {
-        const eng = (t.likes || 0) + (t.retweets || 0) + (t.replies || 0);
-        totalLikes += t.likes || 0;
-        totalRetweets += t.retweets || 0;
-        totalReplies += t.replies || 0;
+        const eng = toCount(t.likes) + toCount(t.retweets) + toCount(t.replies);
+        totalLikes += toCount(t.likes);
+        totalRetweets += toCount(t.retweets);
+        totalReplies += toCount(t.replies);
         if (eng > bestEngagement) { bestEngagement = eng; bestTweet = t; }
       }
       
@@ -3001,7 +3529,7 @@ async function executeXeepyTool(name, args) {
           followers: profile?.followers,
           following: profile?.following,
           bio: profile?.bio?.slice(0, 100),
-          latestTweet: latestTweet?.tweets?.[0]?.text?.slice(0, 100),
+          latestTweet: asTweetList(latestTweet)[0]?.text?.slice(0, 100),
           capturedAt: new Date().toISOString(),
         },
         message: `Monitoring started. Compare future snapshots with this baseline to detect changes.`,
@@ -3012,18 +3540,19 @@ async function executeXeepyTool(name, args) {
       const keywords = args.keywords || [];
       const query = keywords.join(' OR ');
       const results = await localTools.x_search_tweets?.({ query, limit: 20 });
+      const matches = asTweetList(results);
       
       return {
         keywords,
         interval: `${args.interval || 10} minutes`,
-        currentMatches: results?.tweets?.length || 0,
-        latestTweets: (results?.tweets || []).slice(0, 5).map(t => ({
+        currentMatches: matches.length,
+        latestTweets: matches.slice(0, 5).map(t => ({
           text: t.text?.slice(0, 200),
           author: t.authorUsername || t.author,
           likes: t.likes,
           url: t.url,
         })),
-        message: `Monitoring ${keywords.length} keywords. ${results?.tweets?.length || 0} current matches found.`,
+        message: `Monitoring ${keywords.length} keywords. ${matches.length} current matches found.`,
       };
     }
 
@@ -3065,7 +3594,7 @@ async function executeXeepyTool(name, args) {
       return {
         username: args.username,
         followers: profile?.followers,
-        recentEngagement: (tweets?.tweets || []).slice(0, 5).map(t => ({
+        recentEngagement: asTweetList(tweets).slice(0, 5).map(t => ({
           text: t.text?.slice(0, 80),
           likes: t.likes,
           retweets: t.retweets,
@@ -3934,11 +4463,148 @@ async function executeAITool(name, args) {
  * Create a configured MCP Server instance with all tool handlers registered.
  * Returns a new instance each time — needed for HTTP mode (one server per session).
  */
-function createMcpServer() {
+/**
+ * Daily action cap tools and enforcement.
+ *
+ * The account an action is charged to is, in order: the `account` server
+ * option, XACTIONS_ACCOUNT, the username of the active saved session
+ * (`xactions login`), or "default". The session lookup runs once and is
+ * cached: the ledger key must not change mid-process.
+ */
+let cachedSessionAccount = null;
+
+async function resolveActionAccount(options = {}) {
+  if (options.account) return options.account;
+  if (process.env.XACTIONS_ACCOUNT) return process.env.XACTIONS_ACCOUNT;
+  if (cachedSessionAccount === null) {
+    cachedSessionAccount = await (async () => {
+      try {
+        const { getActiveSession } = await import('../client/auth/storage.js');
+        const session = await getActiveSession();
+        return session?.username || '';
+      } catch {
+        return '';
+      }
+    })();
+  }
+  return cachedSessionAccount || actionCaps.DEFAULT_ACCOUNT;
+}
+
+async function executeActionBudgetTool(args = {}, options = {}) {
+  const account = args.account || await resolveActionAccount(options);
+  return actionCaps.remaining(account);
+}
+
+/**
+ * Charge a tool call against the ledger before it runs. Returns null when the
+ * call is allowed (or needs no charge), or an MCP error result when the cap
+ * is reached, so nothing reaches X.
+ */
+async function enforceActionCap(name, args, options) {
+  const charge = resolveActionCharge(name, args);
+  if (!charge) return null;
+  // A sweep charges several classes at once (like + repost + reply), so the
+  // resolver may hand back a list. Every entry has to clear the ledger.
+  const charges = Array.isArray(charge) ? charge : [charge];
+  if (charges.length === 0) return null;
+  const account = await resolveActionAccount(options);
+  try {
+    for (const one of charges) {
+      actionCaps.checkAndRecord(account, one.actionClass, { count: one.count });
+    }
+    return null;
+  } catch (error) {
+    if (!(error instanceof actionCaps.ActionCapExceededError)) throw error;
+    return textResult({
+      error: error.message,
+      code: error.code,
+      tool: name,
+      account: error.account,
+      actionClass: error.actionClass,
+      cap: error.cap,
+      used: error.used,
+      resetAt: error.resetAt.toISOString(),
+      hint: 'Check x_action_budget for every class. Raise the cap with XACTIONS_ACTION_CAPS (JSON, e.g. {"follow":600}) or ~/.xactions/action-caps.json if this account is allowed more.',
+    }, true);
+  }
+}
+
+/**
+ * Resolve the runtime options that shape a server instance. Explicit
+ * options win, then environment variables, then defaults. Read at call time
+ * (not import time) so tests and the CLI can change the environment before
+ * building a server.
+ *
+ * @param {object} [overrides]
+ * @param {string | string[]} [overrides.tools] allowlist tokens (tool or group names)
+ * @param {string | string[]} [overrides.exclude] denylist tokens
+ * @param {boolean} [overrides.requireApproval] hold write tools as drafts
+ * @param {string} [overrides.account] ledger account for daily action caps
+ * @returns {{ tools: string | string[] | undefined, exclude: string | string[] | undefined, requireApproval: boolean, account: string | undefined }}
+ */
+function resolveServerOptions(overrides = {}) {
+  const truthy = (v) => v !== undefined && v !== '' && !['0', 'false', 'no', 'off'].includes(String(v).toLowerCase());
+  return {
+    tools: overrides.tools ?? process.env.XACTIONS_MCP_TOOLS,
+    exclude: overrides.exclude ?? process.env.XACTIONS_MCP_EXCLUDE,
+    requireApproval: overrides.requireApproval ?? truthy(process.env.XACTIONS_MCP_REQUIRE_APPROVAL),
+    account: overrides.account ?? process.env.XACTIONS_ACCOUNT,
+  };
+}
+
+/**
+ * Build the filter over the core tools plus whatever plugins registered.
+ * Plugin tools are only known after initializePlugins(), so the filter is
+ * rebuilt per request rather than cached at construction.
+ */
+function buildToolFilter(options) {
+  const pluginToolDefs = getPluginTools().map(({ _plugin, handler, ...def }) => def);
+  const all = [...TOOLS, ...pluginToolDefs];
+  return { all, filter: createToolFilter({ include: options.tools, exclude: options.exclude, tools: all }) };
+}
+
+/** Wrap a plain object as an MCP text result. */
+/**
+ * Approve a held draft the way a person does (`xactions drafts approve`):
+ * charge the daily caps for the stored call, then run it. A draft the cap
+ * refuses stays pending, so it can be approved once the window frees up.
+ *
+ * @param {string} id
+ * @param {object} [options] - server options (`account` picks the cap ledger)
+ * @returns {Promise<import('./drafts.js').Draft>}
+ */
+export async function approveDraftChecked(id, options = {}) {
+  const pending = drafts.getDraft(id);
+  if (pending && pending.status === 'pending') {
+    const refused = await enforceActionCap(pending.tool, pending.args, options);
+    if (refused) {
+      const body = JSON.parse(refused.content[0].text);
+      throw Object.assign(new Error(body.error), body);
+    }
+  }
+  return drafts.approveDraft(id, (tool, toolArgs) => executeTool(tool, toolArgs, options));
+}
+
+function textResult(payload, isError = false) {
+  return {
+    content: [{ type: 'text', text: JSON.stringify(payload, null, 2) }],
+    ...(isError ? { isError: true } : {}),
+  };
+}
+
+/**
+ * Create an MCP Server instance wired to the tool list, the allowlist
+ * filter, and the draft-approval gate.
+ *
+ * @param {object} [overrides] see resolveServerOptions()
+ */
+function createMcpServer(overrides = {}) {
+  const options = resolveServerOptions(overrides);
+
   const srv = new Server(
     {
       name: 'xactions-mcp',
-      version: '3.1.0',
+      version: VERSION,
     },
     {
       capabilities: {
@@ -3947,18 +4613,77 @@ function createMcpServer() {
     }
   );
 
-  // List available tools (core + plugins)
+  // List available tools (core + plugins), minus anything filtered out
   srv.setRequestHandler(ListToolsRequestSchema, async () => {
-    const pluginToolDefs = getPluginTools().map(({ _plugin, handler, ...def }) => def);
-    return { tools: [...TOOLS, ...pluginToolDefs] };
+    const { all, filter } = buildToolFilter(options);
+    const tools = filter.filter(all);
+    // In approval mode a person approves drafts, so the agent is not offered
+    // the tool that would let it approve its own held writes.
+    return { tools: options.requireApproval ? tools.filter((t) => t.name !== 'x_approve_draft') : tools };
   });
 
   // Execute tools
   srv.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
 
+    // A filtered tool is neither listed nor callable. Say why, so an agent
+    // that remembered the tool from a previous session gets a fix, not a
+    // generic "unknown tool".
+    const { all, filter } = buildToolFilter(options);
+    if (!filter.isAllowed(name)) {
+      const exists = all.some((t) => t.name === name);
+      return textResult({
+        error: exists
+          ? `Tool "${name}" is disabled by the server's tool filter`
+          : `Unknown tool: ${name}`,
+        ...(exists ? {
+          group: groupOf(name),
+          hint: 'Remove it from XACTIONS_MCP_EXCLUDE / --exclude, or add its name or group to XACTIONS_MCP_TOOLS / --tools.',
+          groups: GROUP_NAMES,
+        } : {}),
+      }, true);
+    }
+
+    // The gate exists so a person decides. An agent that could call
+    // x_approve_draft would approve its own held writes, so in approval mode
+    // approval happens outside the agent, in a terminal.
+    if (options.requireApproval && name === 'x_approve_draft') {
+      return textResult({
+        error: 'Drafts are approved by a person while approval mode is on, not by the agent.',
+        approve: `xactions drafts approve ${args?.id || '<id>'}`,
+        hint: 'Ask the user to review the draft and run that command. You can still inspect it with x_draft_status or drop it with x_discard_draft.',
+      }, true);
+    }
+
+    // Draft-approval gate: hold side-effect tools instead of running them
+    if (options.requireApproval && isWriteTool(name)) {
+      const draft = drafts.createDraft(name, args || {});
+      return textResult({
+        held: true,
+        draftId: draft.id,
+        tool: draft.tool,
+        args: draft.args,
+        createdAt: draft.createdAt,
+        message: `Approval mode is on. "${name}" was saved as draft ${draft.id} and has NOT been executed.`,
+        next: `Ask the user to review it and run \`xactions drafts approve ${draft.id}\` to send it, or drop it with x_discard_draft. You cannot approve it yourself.`,
+      });
+    }
+
+    // Daily action caps: charge the call (or the draft it approves) before
+    // anything reaches X. A refused approval leaves the draft pending.
+    if (name === 'x_approve_draft') {
+      const pending = args?.id ? drafts.getDraft(args.id) : null;
+      if (pending && pending.status === 'pending') {
+        const refused = await enforceActionCap(pending.tool, pending.args, options);
+        if (refused) return refused;
+      }
+    } else {
+      const refused = await enforceActionCap(name, args || {}, options);
+      if (refused) return refused;
+    }
+
     try {
-      const result = await executeTool(name, args || {});
+      const result = await executeTool(name, args || {}, options);
 
       return {
         content: [
@@ -4050,7 +4775,7 @@ function printBanner(pluginCount, pluginToolCount) {
   const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
   console.error('');
-  console.error('⚡ XActions MCP Server v3.1.0 — 140+ tools');
+  console.error(`⚡ XActions MCP Server v${VERSION} — ${TOOLS.length + pluginToolCount} tools`);
   console.error('   The free, open-source Twitter/X MCP server');
   console.error('   https://github.com/nirholas/XActions');
   console.error('');
@@ -4108,41 +4833,176 @@ function printBanner(pluginCount, pluginToolCount) {
 }
 
 // ============================================================================
-// HTTP Transport (for Railway / remote deployment)
+// CLI flags
 // ============================================================================
+
+const CLI_USAGE = `Usage: xactions-mcp [options]
+
+Transport
+  --http                 Serve Streamable HTTP on /mcp instead of stdio
+  --port <n>             HTTP port (default: PORT env or 8787)
+  --host <addr>          HTTP bind address (default: XACTIONS_MCP_HOST env or 127.0.0.1)
+
+Tool filtering (tool names, group names, or prefix* patterns; comma separated)
+  --tools <list>         Only expose these tools/groups (XACTIONS_MCP_TOOLS)
+  --exclude <list>       Hide these tools/groups (XACTIONS_MCP_EXCLUDE)
+  --list-groups          Print every group with its tools and exit
+
+Safety
+  --require-approval     Hold write tools as drafts for x_approve_draft (XACTIONS_MCP_REQUIRE_APPROVAL=1)
+
+  -h, --help             Show this help
+
+Groups: ${GROUP_NAMES.join(', ')}
+Bearer auth for --http: set XACTIONS_MCP_TOKEN and send "Authorization: Bearer <token>".
+`;
+
+/**
+ * Parse the server's own flags. Unknown flags are ignored rather than
+ * rejected so a host that appends its own arguments does not break startup.
+ *
+ * @param {string[]} argv
+ * @returns {{
+ *   http: boolean, port?: number, host?: string,
+ *   tools: string[], exclude: string[], requireApproval?: boolean,
+ *   listGroups: boolean, help: boolean,
+ * }}
+ */
+function parseCliArgs(argv) {
+  const out = { http: false, tools: [], exclude: [], listGroups: false, help: false };
+  const takeValue = (i) => {
+    const eq = argv[i].indexOf('=');
+    if (eq !== -1) return [argv[i].slice(eq + 1), i];
+    return [argv[i + 1], i + 1];
+  };
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    const key = arg.includes('=') ? arg.slice(0, arg.indexOf('=')) : arg;
+    switch (key) {
+      case '--http': out.http = true; break;
+      case '--stdio': out.http = false; break;
+      case '--port': { const [v, j] = takeValue(i); out.port = Number(v); i = j; break; }
+      case '--host': { const [v, j] = takeValue(i); out.host = v; i = j; break; }
+      case '--tools': { const [v, j] = takeValue(i); if (v) out.tools.push(v); i = j; break; }
+      case '--exclude': { const [v, j] = takeValue(i); if (v) out.exclude.push(v); i = j; break; }
+      case '--require-approval': out.requireApproval = true; break;
+      case '--no-require-approval': out.requireApproval = false; break;
+      case '--list-groups': out.listGroups = true; break;
+      case '-h':
+      case '--help': out.help = true; break;
+      default: break;
+    }
+  }
+  if (out.port !== undefined && (!Number.isInteger(out.port) || out.port < 0 || out.port > 65535)) {
+    throw new Error(`--port must be an integer between 0 and 65535, got "${out.port}"`);
+  }
+  return out;
+}
+
+/** Turn parsed flags into createMcpServer() overrides (undefined means "use env"). */
+function serverOptionsFromCli(cli) {
+  return {
+    tools: cli.tools.length ? cli.tools : undefined,
+    exclude: cli.exclude.length ? cli.exclude : undefined,
+    requireApproval: cli.requireApproval,
+  };
+}
+
+/** Log what the filter and gate are doing so a misconfigured allowlist is obvious at startup. */
+function printFilterStatus(serverOverrides) {
+  const options = resolveServerOptions(serverOverrides);
+  const { all, filter } = buildToolFilter(options);
+  if (filter.active) {
+    const visible = filter.filter(all).length;
+    console.error(`🔎 Tool filter active: ${visible}/${all.length} tools exposed`);
+    if (filter.include) console.error(`   include: ${[...filter.include].length} tools`);
+    if (filter.exclude.size) console.error(`   exclude: ${filter.exclude.size} tools`);
+    if (filter.unknown.length) {
+      console.error(`   ⚠️  unknown selection tokens ignored: ${filter.unknown.join(', ')}`);
+      console.error(`   groups: ${GROUP_NAMES.join(', ')}`);
+    }
+  }
+  if (options.requireApproval) {
+    console.error('🛡️  Approval mode: write tools are held as drafts in ' + drafts.getDraftsPath());
+    console.error('   Approve with `xactions drafts approve <id>` in a terminal; agents can inspect with x_list_drafts / x_draft_status.');
+  }
+  if (filter.active || options.requireApproval) console.error('');
+}
+
+// ============================================================================
+// HTTP Transport (Streamable HTTP, for remote clients and hosted deploys)
+// ============================================================================
+
+/**
+ * Bearer-token guard for /mcp. Off when XACTIONS_MCP_TOKEN is unset, which
+ * is fine for a loopback bind and exactly why the default host is
+ * 127.0.0.1. Constant-time compare so the token cannot be sniffed by timing.
+ */
+function createBearerAuth(token) {
+  return (req, res, next) => {
+    if (!token) return next();
+    const header = req.headers.authorization || '';
+    const presented = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+    const a = Buffer.from(presented);
+    const b = Buffer.from(token);
+    const ok = a.length === b.length && timingSafeEqual(a, b);
+    if (ok) return next();
+    res.set('WWW-Authenticate', 'Bearer realm="xactions-mcp"');
+    res.status(401).json({
+      jsonrpc: '2.0',
+      error: { code: -32001, message: 'Unauthorized: send "Authorization: Bearer <XACTIONS_MCP_TOKEN>"' },
+      id: null,
+    });
+  };
+}
 
 /**
  * Start the MCP server with Streamable HTTP transport.
  * Each client session gets its own Server + Transport pair.
  *
- * Set MCP_TRANSPORT=http to use this mode.
- * Listens on PORT (default 3001) at /mcp.
+ * Enable with `--http` or MCP_TRANSPORT=http. Listens on --port / PORT
+ * (default 8787) at --host / XACTIONS_MCP_HOST (default 127.0.0.1), path /mcp.
  *
  * x402 micropayments are enabled automatically when X402_PAY_TO_ADDRESS is set.
  * Per-tool pricing is available at GET /mcp/pricing.
+ *
+ * @param {{ port?: number, host?: string, serverOverrides?: object }} [config]
+ * @returns {Promise<import('node:http').Server>}
  */
-async function startHttpTransport() {
+async function startHttpTransport({ port, host, serverOverrides = {} } = {}) {
   const { default: express } = await import('express');
   const { createMcpPaymentMiddleware, mcpPricingHandler } = await import('./x402-mcp.js');
 
   const app = express();
-  app.use(express.json());
+
+  // Binding to 127.0.0.1 does not keep a browser out. Any page the user
+  // visits can POST to http://127.0.0.1:8787/mcp, and the browser will
+  // happily resolve a hostile hostname to 127.0.0.1 for it (DNS rebinding),
+  // which would let a web page drive the user's X account. The MCP spec
+  // requires validating the Host header for exactly this reason, and the
+  // SDK ships the check, so this runs before anything else looks at a body.
+  app.use(localhostHostValidation());
+  app.use(express.json({ limit: '4mb' }));
 
   /** @type {Map<string, { server: Server, transport: StreamableHTTPServerTransport }>} */
   const sessions = new Map();
+  const token = process.env.XACTIONS_MCP_TOKEN || '';
 
-  // Health check
+  // Health check (unauthenticated, no session data)
   app.get('/health', (_req, res) => {
-    res.json({ status: 'ok', transport: 'http', tools: TOOLS.length, sessions: sessions.size });
+    res.json({ status: 'ok', transport: 'http', tools: TOOLS.length, sessions: sessions.size, auth: token ? 'bearer' : 'none' });
   });
 
-  // x402 pricing discovery (free endpoint — no payment required)
+  // x402 pricing discovery (free endpoint, no payment required)
   app.get('/mcp/pricing', mcpPricingHandler);
 
-  // x402 payment middleware — gates priced tool calls before reaching the MCP handler
+  // Bearer auth gates everything under /mcp except pricing discovery
+  app.use('/mcp', createBearerAuth(token));
+
+  // x402 payment middleware gates priced tool calls before reaching the MCP handler
   app.use(createMcpPaymentMiddleware());
 
-  // MCP endpoint — handles POST (messages), GET (SSE stream), DELETE (session close)
+  // MCP endpoint: POST (messages), GET (SSE stream), DELETE (session close)
   app.all('/mcp', async (req, res) => {
     const sessionId = req.headers['mcp-session-id'];
 
@@ -4153,7 +5013,7 @@ async function startHttpTransport() {
       return;
     }
 
-    // New session (only via POST — the initialize request)
+    // New session (only via POST, the initialize request)
     if (req.method === 'POST' && !sessionId) {
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
@@ -4171,7 +5031,7 @@ async function startHttpTransport() {
         }
       };
 
-      const srv = createMcpServer();
+      const srv = createMcpServer(serverOverrides);
       await srv.connect(transport);
       await transport.handleRequest(req, res, req.body);
       return;
@@ -4185,25 +5045,37 @@ async function startHttpTransport() {
     });
   });
 
-  const port = process.env.PORT || 3001;
-  app.listen(port, () => {
-    console.error(`✅ Server running on HTTP — http://0.0.0.0:${port}/mcp`);
-    console.error('   Ready for remote MCP client connections.');
-    if (process.env.X402_PAY_TO_ADDRESS) {
-      console.error(`💰 x402 payments enabled — pricing: http://0.0.0.0:${port}/mcp/pricing`);
-    } else {
-      console.error('ℹ️  x402 payments disabled (set X402_PAY_TO_ADDRESS to enable per-tool billing)');
-    }
-    console.error('');
+  const listenPort = port ?? Number(process.env.PORT || 8787);
+  const listenHost = host || process.env.XACTIONS_MCP_HOST || '127.0.0.1';
+
+  return await new Promise((resolve, reject) => {
+    const httpServer = app.listen(listenPort, listenHost, () => {
+      const actual = httpServer.address();
+      const shownPort = typeof actual === 'object' && actual ? actual.port : listenPort;
+      console.error(`✅ Server running on Streamable HTTP: http://${listenHost}:${shownPort}/mcp`);
+      console.error(token
+        ? '🔐 Bearer auth required (XACTIONS_MCP_TOKEN set)'
+        : (listenHost === '127.0.0.1' || listenHost === 'localhost' || listenHost === '::1'
+          ? 'ℹ️  No bearer token (loopback bind only). Set XACTIONS_MCP_TOKEN before exposing this port.'
+          : '⚠️  No bearer token on a non-loopback bind. Set XACTIONS_MCP_TOKEN.'));
+      if (process.env.X402_PAY_TO_ADDRESS) {
+        console.error(`💰 x402 payments enabled: pricing at http://${listenHost}:${shownPort}/mcp/pricing`);
+      } else {
+        console.error('ℹ️  x402 payments disabled (set X402_PAY_TO_ADDRESS to enable per-tool billing)');
+      }
+      console.error('');
+      resolve(httpServer);
+    });
+    httpServer.on('error', reject);
   });
 }
 
 // ============================================================================
-// Stdio Transport (default — for Claude Desktop, Cursor, etc.)
+// Stdio Transport (default, for Claude Desktop, Cursor, etc.)
 // ============================================================================
 
-async function startStdioTransport() {
-  const server = createMcpServer();
+async function startStdioTransport(serverOverrides = {}) {
+  const server = createMcpServer(serverOverrides);
   const transport = new StdioServerTransport();
   await server.connect(transport);
 
@@ -4216,29 +5088,78 @@ async function startStdioTransport() {
 // Main
 // ============================================================================
 
-async function main() {
+async function main(argv = process.argv.slice(2)) {
+  const cli = parseCliArgs(argv);
+
+  // `xactions-mcp --list-groups | head` closes the pipe early; that is not an error worth a stack trace.
+  process.stdout.on('error', (err) => {
+    if (err.code === 'EPIPE') process.exit(0);
+    throw err;
+  });
+
+  if (cli.help) {
+    process.stdout.write(CLI_USAGE);
+    return;
+  }
+  if (cli.listGroups) {
+    const groups = buildGroups(TOOLS);
+    for (const g of GROUP_NAMES) {
+      if (groups[g]) process.stdout.write(`${g} (${groups[g].length})\n  ${groups[g].join(', ')}\n`);
+    }
+    process.stdout.write(`always available: ${ALWAYS_AVAILABLE_TOOLS.join(', ')}\n`);
+    return;
+  }
+
   await initializeBackend();
 
   const pluginCount = await initializePlugins();
   const pluginToolCount = getPluginTools().length;
 
-  const transportMode = process.env.MCP_TRANSPORT || 'stdio';
+  const serverOverrides = serverOptionsFromCli(cli);
+  const transportMode = cli.http ? 'http' : (process.env.MCP_TRANSPORT || 'stdio');
   printBanner(pluginCount, pluginToolCount);
+  printFilterStatus(serverOverrides);
 
   if (transportMode === 'http') {
-    await startHttpTransport();
+    await startHttpTransport({ port: cli.port, host: cli.host, serverOverrides });
   } else {
-    await startStdioTransport();
+    await startStdioTransport(serverOverrides);
   }
 }
 
-main().catch((error) => {
-  console.error('❌ Fatal error:', error.message);
-  if (process.env.DEBUG) {
-    console.error(error.stack);
+/**
+ * Is this module the process entry point?
+ *
+ * The `xactions-mcp` bin is a symlink npm creates into node_modules/.bin, so
+ * `process.argv[1]` is the symlink path while `import.meta.url` is the real
+ * one. Comparing them directly would never match under npx and the server
+ * would refuse to start. Resolving argv[1] through realpath first makes the
+ * comparison hold for `node src/mcp/server.js`, `npm run mcp` and
+ * `npx -y xactions-mcp` alike.
+ *
+ * @returns {boolean}
+ */
+function isEntryPoint() {
+  if (!process.argv[1]) return false;
+  try {
+    return realpathSync(process.argv[1]) === fileURLToPath(import.meta.url);
+  } catch {
+    return false;
   }
-  process.exit(1);
-});
+}
 
-// Export for testing without starting the stdio transport
-export { TOOLS };
+// Importing this module must not start a server. `xactions doctor`, the test
+// suite and anything else that wants the tool list would otherwise open a
+// stdio transport as a side effect and then hang waiting for a client.
+if (isEntryPoint()) {
+  main().catch((error) => {
+    console.error('❌ Fatal error:', error.message);
+    if (process.env.DEBUG) {
+      console.error(error.stack);
+    }
+    process.exit(1);
+  });
+}
+
+// Exported so the tool list can be inspected without starting a transport.
+export { TOOLS, main, createMcpServer, executeTool, startHttpTransport, parseCliArgs };

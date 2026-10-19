@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
  * 💾 Full Account Backup
@@ -38,7 +38,9 @@
  * ============================================================
  */
 
-const CONFIG = {
+// `var` (not `const`): a repeated top-level `const` paste in the same
+// DevTools tab throws "already been declared" instead of re-running.
+var CONFIG = {
   // How many items to collect per category
   maxTweets: 100,
   maxLikes: 100,
@@ -92,16 +94,20 @@ const CONFIG = {
   // Helper to extract tweet data
   const extractTweetData = (tweetEl) => {
     const textEl = tweetEl.querySelector($tweetText);
-    const linkEl = tweetEl.querySelector('a[href*="/status/"]');
     const timeEl = tweetEl.querySelector('time');
-    const userLink = tweetEl.querySelector('a[href^="/"]');
-    
+    // The timestamp's enclosing anchor is the tweet's own permalink; the first
+    // /status/ link in the article can belong to a quoted tweet
+    const linkEl = (timeEl && timeEl.closest('a[href*="/status/"]')) ||
+                   tweetEl.querySelector('a[href*="/status/"]');
+    const userLink = tweetEl.querySelector('[data-testid="User-Name"] a[href^="/"]') ||
+                     tweetEl.querySelector('a[href^="/"]');
+
     return {
       text: textEl?.textContent || '',
       url: linkEl?.href || '',
       tweetId: linkEl?.href?.match(/status\/(\d+)/)?.[1] || '',
       timestamp: timeEl?.dateTime || '',
-      username: userLink?.href?.replace('https://x.com/', '').split('/')[0] || ''
+      username: userLink?.getAttribute('href')?.replace('/', '')?.split('/')[0] || ''
     };
   };
   
@@ -113,7 +119,7 @@ const CONFIG = {
     
     return {
       name: nameEl?.textContent?.split('@')[0]?.trim() || '',
-      username: linkEl?.href?.replace('https://x.com/', '') || '',
+      username: linkEl?.getAttribute('href')?.replace('/', '')?.split('/')[0] || '',
       bio: bioEl?.textContent || '',
       url: linkEl?.href || ''
     };

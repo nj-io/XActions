@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Client — Scraper Class
  *
@@ -6,7 +6,7 @@
  * No Puppeteer required — uses HTTP-only requests.
  *
  * @author nich (@nichxbt)
- * @license MIT
+ * @license Apache-2.0
  */
 
 import * as fs from 'node:fs/promises';
@@ -19,6 +19,8 @@ import * as dmsApi from './api/dms.js';
 import { ScraperError, AuthenticationError } from './errors.js';
 import { validateUsername, validateTweetId, validateTweetText, validateCount } from './validation.js';
 import { TokenManager } from './auth/TokenManager.js';
+import { getTransactionId, isTransactionIdEnabled } from '../scrapers/twitter/http/transactionId.js';
+import { withHttp2 } from '../utils/http2.js';
 
 /**
  * Search mode enum for Twitter search.
@@ -32,6 +34,65 @@ export const SearchMode = Object.freeze({
 });
 
 /**
+ * Turn an unhelpful HTTP failure into an actionable one.
+ *
+ * X answers guest-token requests to login-only endpoints (search, bookmarks,
+ * DMs, home timeline) with a bare 404 and an empty body, which is
+ * indistinguishable from a missing resource unless you already know the
+ * endpoint needs a session. Raising `HTTP 404: Not Found` sent people hunting
+ * for a bug in XActions when the real answer was "log in first".
+ *
+ * Errors are also constructed with the object-form options ScraperError
+ * actually declares. The previous positional calls silently dropped
+ * `endpoint`, `httpStatus`, and `rateLimitReset` on every thrown error.
+ *
+ * @param {Response} res - The failed fetch response
+ * @param {string} url - Requested URL
+ * @param {boolean} authenticated - Whether the request carried a session
+ * @returns {ScraperError} Error ready to throw
+ * @private
+ */
+function describeHttpFailure(res, url, authenticated) {
+  const endpoint = (() => {
+    try {
+      return new URL(url).pathname;
+    } catch {
+      return url;
+    }
+  })();
+
+  if (res.status === 429) {
+    const reset = res.headers?.get?.('x-rate-limit-reset');
+    return new ScraperError(
+      'Rate limited (429). X throttles guest tokens aggressively. Wait for the reset, ' +
+        'authenticate to raise the ceiling, or slow the request rate.',
+      'RATE_LIMITED',
+      {
+        endpoint,
+        httpStatus: res.status,
+        rateLimitReset: reset ? new Date(Number(reset) * 1000) : null,
+      },
+    );
+  }
+
+  if (!authenticated && (res.status === 401 || res.status === 403 || res.status === 404)) {
+    return new AuthenticationError(
+      `HTTP ${res.status} on ${endpoint} while unauthenticated. X restricts this endpoint ` +
+        'to logged-in sessions. Authenticate first with scraper.login(...), ' +
+        'scraper.setCookies(...), or scraper.loadCookies(...) using your auth_token cookie ' +
+        '(DevTools > Application > Cookies > x.com > auth_token), then retry.',
+      'AUTH_REQUIRED',
+      { endpoint, httpStatus: res.status },
+    );
+  }
+
+  return new ScraperError(`HTTP ${res.status}: ${res.statusText}`, 'HTTP_ERROR', {
+    endpoint,
+    httpStatus: res.status,
+  });
+}
+
+/**
  * Lightweight HTTP wrapper that delegates to fetch.
  * In Track 03 this will be replaced by the full HttpClient.
  * @private
@@ -42,8 +103,33 @@ class SimpleHttp {
     this._fetchFn = options.fetch || globalThis.fetch;
     this._proxy = options.proxy || null;
     this._transform = options.transform || null;
+    this._transactionId = options.transactionId;
     this._cookies = null;
     this._authenticated = false;
+  }
+
+  /**
+   * Attach `x-client-transaction-id` to a request's headers, in place.
+   *
+   * x.com signs every GraphQL and internal REST call with it; a session that
+   * omits the header answers a bare 404 with an empty body on operations the
+   * pinned query table addresses, which reads as "endpoint is broken" rather
+   * than "request looked unsigned". Best-effort by design: a signing failure
+   * leaves the headers untouched and the request still goes out.
+   *
+   * @param {string} method
+   * @param {string} url
+   * @param {object} headers Mutated in place
+   * @private
+   */
+  async _sign(method, url, headers) {
+    if (headers['x-client-transaction-id']) return;
+    if (!isTransactionIdEnabled({ enabled: this._transactionId })) return;
+    const id = await getTransactionId(method, url, {
+      enabled: this._transactionId,
+      fetch: this._fetchFn,
+    });
+    if (id) headers['x-client-transaction-id'] = id;
   }
 
   /**
@@ -60,20 +146,13 @@ class SimpleHttp {
 
     let req = { method: 'GET', headers };
     if (this._transform) req = this._transform(req) || req;
+    req.headers = req.headers || headers;
 
+    await this._sign('GET', url, req.headers);
+    await withHttp2(req, this._fetchFn);
     const res = await this._fetchFn(url, req);
     if (!res.ok) {
-      if (res.status === 429) {
-        const reset = res.headers?.get?.('x-rate-limit-reset');
-        throw new ScraperError(
-          `Rate limited (${res.status})`,
-          'RATE_LIMITED',
-          url,
-          res.status,
-          reset ? new Date(Number(reset) * 1000) : null,
-        );
-      }
-      throw new ScraperError(`HTTP ${res.status}: ${res.statusText}`, 'HTTP_ERROR', url, res.status);
+      throw describeHttpFailure(res, url, this._authenticated);
     }
     return res.json();
   }
@@ -102,13 +181,13 @@ class SimpleHttp {
 
     let req = { method: 'POST', headers, body: payload };
     if (this._transform) req = this._transform(req) || req;
+    req.headers = req.headers || headers;
 
+    await this._sign('POST', url, req.headers);
+    await withHttp2(req, this._fetchFn);
     const res = await this._fetchFn(url, req);
     if (!res.ok) {
-      if (res.status === 429) {
-        throw new ScraperError('Rate limited', 'RATE_LIMITED', url, res.status);
-      }
-      throw new ScraperError(`HTTP ${res.status}: ${res.statusText}`, 'HTTP_ERROR', url, res.status);
+      throw describeHttpFailure(res, url, this._authenticated);
     }
     return res.json();
   }
@@ -141,6 +220,9 @@ export class Scraper {
    * @param {string} [options.proxy] - Proxy URL
    * @param {Function} [options.fetch] - Custom fetch function
    * @param {Function} [options.transform] - Request transform function
+   * @param {boolean} [options.transactionId] - Sign requests with an
+   *   `x-client-transaction-id` header, the way x.com's own web client does.
+   *   Defaults to on outside vitest; signing never blocks a request.
    */
   constructor(options = {}) {
     /** @private */
@@ -259,7 +341,9 @@ export class Scraper {
    */
   async saveCookies(filePath) {
     const cookies = await this.getCookies();
-    await fs.writeFile(filePath, JSON.stringify(cookies, null, 2), 'utf-8');
+    // Session cookies: readable by their owner only.
+    await fs.writeFile(filePath, JSON.stringify(cookies, null, 2), { encoding: 'utf-8', mode: 0o600 });
+    await fs.chmod(filePath, 0o600);
   }
 
   /**
@@ -309,25 +393,25 @@ export class Scraper {
   /**
    * Get followers of a user.
    *
-   * @param {string} userId - Twitter user ID
+   * @param {string} userId - Twitter user ID, or a @handle to resolve to one
    * @param {number} [count=100] - Maximum number of followers to return
    * @returns {AsyncGenerator<import('./models/Profile.js').Profile>}
    */
   async *getFollowers(userId, count = 100) {
     const validCount = validateCount(count, 1, 10000);
-    yield* usersApi.getFollowers(this._http, userId, validCount);
+    yield* usersApi.getFollowers(this._http, await this._userIdOrResolve(userId), validCount);
   }
 
   /**
    * Get users that a user is following.
    *
-   * @param {string} userId - Twitter user ID
+   * @param {string} userId - Twitter user ID, or a @handle to resolve to one
    * @param {number} [count=100] - Maximum number of following to return
    * @returns {AsyncGenerator<import('./models/Profile.js').Profile>}
    */
   async *getFollowing(userId, count = 100) {
     const validCount = validateCount(count, 1, 10000);
-    yield* usersApi.getFollowing(this._http, userId, validCount);
+    yield* usersApi.getFollowing(this._http, await this._userIdOrResolve(userId), validCount);
   }
 
   /**
@@ -628,7 +712,7 @@ export class Scraper {
    * Get DM conversations.
    *
    * @param {number} [count=50] - Maximum conversations to return
-   * @returns {AsyncGenerator<{id: string, type: string, participants: string[], lastMessage: string, updatedAt: string}>}
+   * @returns {AsyncGenerator<import('./api/dms.js').DmConversation>}
    */
   async *getDmConversations(count = 50) {
     this._requireAuth();
@@ -663,6 +747,24 @@ export class Scraper {
         'AUTH_REQUIRED',
       );
     }
+  }
+
+  /**
+   * Accept what a caller actually has: a numeric user ID passes straight
+   * through, anything else is treated as a handle and resolved. X's GraphQL
+   * follower queries parse `rest_id` as an int, so a handle answers HTTP 200
+   * with `strconv.ParseInt: parsing "NASA": invalid syntax` in `errors` and no
+   * data — which the CLI reports as "no followers", the one message that sends
+   * people looking for a rate limit that was never hit.
+   *
+   * @private
+   * @param {string} idOrUsername
+   * @returns {Promise<string>}
+   */
+  async _userIdOrResolve(idOrUsername) {
+    const value = String(idOrUsername ?? '').replace(/^@/, '').trim();
+    if (/^\d+$/.test(value)) return value;
+    return this._resolveUserId(validateUsername(value));
   }
 
   /**

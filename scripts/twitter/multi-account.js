@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
  * 👥 Multi-Account Manager
@@ -33,7 +33,9 @@
  * ============================================================
  */
 
-const CONFIG = {
+// `var` (not `const`): a repeated top-level `const` paste in the same
+// DevTools tab throws "already been declared" instead of re-running.
+var CONFIG = {
   // Storage key prefix
   storagePrefix: 'xactions_multi_',
   
@@ -79,9 +81,14 @@ const CONFIG = {
   const getCurrentUsername = () => {
     const accountBtn = document.querySelector('[data-testid="SideNav_AccountSwitcher_Button"]');
     if (accountBtn) {
-      const usernameEl = accountBtn.querySelector('div[dir="ltr"] span');
-      if (usernameEl) {
-        return usernameEl.textContent.replace('@', '').toLowerCase();
+      // The button holds both the display name and the @handle; the first
+      // span is the display name, so look for the span starting with "@"
+      const spans = accountBtn.querySelectorAll('span');
+      for (const span of spans) {
+        const text = span.textContent.trim();
+        if (text.startsWith('@')) {
+          return text.slice(1).toLowerCase();
+        }
       }
     }
     return null;
@@ -303,10 +310,13 @@ const CONFIG = {
       const json = JSON.stringify(accounts, null, 2);
       console.log('📋 Account data (copy this):');
       console.log(json);
-      
-      // Also copy to clipboard
-      navigator.clipboard?.writeText(json);
-      console.log('✅ Copied to clipboard!');
+
+      // Also copy to clipboard (only claim success when the write succeeds)
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(json)
+          .then(() => console.log('✅ Copied to clipboard!'))
+          .catch(() => console.warn('⚠️ Clipboard copy failed. Copy the JSON above manually.'));
+      }
     },
     
     // Import accounts

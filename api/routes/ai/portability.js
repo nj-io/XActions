@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * AI Portability Endpoints
  *
@@ -14,7 +14,7 @@ import crypto from 'crypto';
 const router = express.Router();
 
 const generateOperationId = () =>
-  `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+  `ai-${Date.now()}-${crypto.randomBytes(16).toString('hex')}`;
 
 const errorResponse = (res, statusCode, error, message, extras = {}) =>
   res.status(statusCode).json({
@@ -69,7 +69,7 @@ router.post('/export-account', async (req, res) => {
 
   const validFormats = ['json', 'csv', 'txt'];
   const validSections = ['profile', 'tweets', 'followers', 'following', 'bookmarks', 'dms', 'likes'];
-  const effectiveFormats = formats.filter(f => validFormats.includes(f));
+  const effectiveFormats = (Array.isArray(formats) ? formats : [formats]).filter(f => validFormats.includes(f));
   const effectiveSections = Array.isArray(only) ? only.filter(s => validSections.includes(s)) : validSections;
   const effectiveLimit = Math.min(Math.max(parseInt(limit) || 1000, 100), 10000);
 
@@ -116,6 +116,12 @@ router.post('/migrate', async (req, res) => {
   if (!validPlatforms.includes(platform)) {
     return res.status(400).json({ error: 'INVALID_INPUT', message: `platform must be one of: ${validPlatforms.join(', ')}` });
   }
+  if (!dryRun) {
+    return res.status(400).json({
+      error: 'LIVE_MIGRATION_UNAVAILABLE',
+      message: 'Live migration needs credentials for the target platform, which this API does not accept. Send dryRun: true for the full migration plan: every post fitted to the platform and every follow matched to an account there.',
+    });
+  }
 
   try {
     const operationId = generateOperationId();
@@ -137,7 +143,7 @@ router.post('/migrate', async (req, res) => {
       operationId, status: 'queued', type: 'migrate-account',
       config: { platform, dryRun: !!dryRun },
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 15000 },
-    }, { note: dryRun ? 'Dry run — no data will be written to target platform' : `Live migration to ${platform}` });
+    }, { note: 'Dry run: the plan is built from real data, and nothing is written to the target platform' });
   } catch (error) {
     return errorResponse(res, 500, 'ACTION_FAILED', error.message);
   }
@@ -150,10 +156,10 @@ router.post('/migrate', async (req, res) => {
 router.post('/diff', async (req, res) => {
   const { exportA, exportB, dirA, dirB } = req.body;
 
-  if (!exportA && !exportB && !dirA && !dirB) {
+  if (!(exportA && exportB) && !(dirA && dirB)) {
     return res.status(400).json({
       error: 'INVALID_INPUT',
-      message: 'Provide exportA+exportB (data objects) or dirA+dirB (file paths)',
+      message: 'Provide exportA+exportB (export data objects) or dirA+dirB (exportId values returned by /export-account)',
     });
   }
 
@@ -175,7 +181,7 @@ router.post('/diff', async (req, res) => {
     });
   }
 
-  // File-path based diff
+  // Diff two exports this session stored, by exportId
   try {
     const operationId = generateOperationId();
     const { queueJob } = await import('../../services/jobQueue.js');

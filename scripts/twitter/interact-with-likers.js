@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
  * ❤️ Interact With Likers
@@ -35,7 +35,9 @@
  * ============================================================
  */
 
-const CONFIG = {
+// `var` (not `const`): a repeated top-level `const` paste in the same
+// DevTools tab throws "already been declared" instead of re-running.
+var CONFIG = {
   // Actions
   actions: {
     follow: true,
@@ -75,6 +77,8 @@ const CONFIG = {
     unfollowButton: '[data-testid$="-unfollow"]',
     verifiedBadge: '[data-testid="icon-verified"]',
     userName: '[data-testid="User-Name"]',
+    protectedIcon: '[data-testid="icon-lock"]',
+    defaultAvatar: 'img[src*="default_profile"]',
   };
   
   console.log('╔════════════════════════════════════════════════════════════╗');
@@ -106,12 +110,22 @@ const CONFIG = {
   const passesFilters = (userCell) => {
     // Skip if already following
     if (userCell.querySelector(SELECTORS.unfollowButton)) return false;
-    
+
     // Skip verified if configured
     if (CONFIG.filters.skipVerified && userCell.querySelector(SELECTORS.verifiedBadge)) {
       return false;
     }
-    
+
+    // Skip protected/private accounts if configured (was declared but never checked)
+    if (CONFIG.filters.skipPrivate && userCell.querySelector(SELECTORS.protectedIcon)) {
+      return false;
+    }
+
+    // Skip accounts still on the default avatar if configured (was declared but never checked)
+    if (CONFIG.filters.skipNoPhoto && userCell.querySelector(SELECTORS.defaultAvatar)) {
+      return false;
+    }
+
     return true;
   };
   
@@ -132,7 +146,9 @@ const CONFIG = {
       console.log('🚀 Starting to follow likers...');
       state.isRunning = true;
       state.stats = { followed: 0, skipped: 0 };
-      
+
+      let emptyScrolls = 0;
+
       while (state.isRunning && state.stats.followed < CONFIG.limits.follows) {
         const userCells = document.querySelectorAll(SELECTORS.userCell);
         
@@ -177,6 +193,17 @@ const CONFIG = {
         if (allProcessed && newCells.length > 0) {
           console.log('📄 Reached end of likers list.');
           break;
+        }
+
+        // Nothing rendered at all: stop after a few tries instead of looping forever
+        if (newCells.length === 0) {
+          emptyScrolls++;
+          if (emptyScrolls >= 5) {
+            console.log('⚠️ No likers found after 5 scrolls. Stopping.');
+            break;
+          }
+        } else {
+          emptyScrolls = 0;
         }
       }
       

@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Social Graph API Routes
  *
@@ -12,11 +12,12 @@
  *   DELETE /api/graph/:id             — Delete a saved graph
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 import express from 'express';
 import { authenticate } from '../middleware/auth.js';
+import { authTokenForUser } from '../services/xSession.js';
 
 const router = express.Router();
 
@@ -67,7 +68,7 @@ router.post('/build', async (req, res) => {
         maxFollowers,
         maxFollowing,
         maxNodes,
-        authToken: authToken || req.user?.sessionCookie,
+        authToken: authToken || (await authTokenForUser(req.user?.id)),
       });
 
       buildPromise.then((result) => {
@@ -96,7 +97,7 @@ router.post('/build', async (req, res) => {
       maxFollowers,
       maxFollowing,
       maxNodes,
-      authToken: authToken || req.user?.sessionCookie,
+      authToken: authToken || (await authTokenForUser(req.user?.id)),
     });
 
     res.status(201).json(result);

@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Client — CookieJar
  *
@@ -7,7 +7,7 @@
  * for Twitter's auth cookies (auth_token, ct0, twid, guest_id, personalization_id).
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 import { promises as fs } from 'node:fs';
@@ -173,9 +173,13 @@ export class CookieJar {
    * @returns {Promise<void>}
    */
   async saveToFile(filePath) {
-    await fs.mkdir(dirname(filePath), { recursive: true });
+    // A cookie jar is a live login: whoever can read this file can post as the account.
+    // Create it owner-only and chmod after writing, so an existing file written under a
+    // looser umask is tightened too.
+    await fs.mkdir(dirname(filePath), { recursive: true, mode: 0o700 });
     const data = JSON.stringify(this.toJSON(), null, 2);
-    await fs.writeFile(filePath, data, 'utf-8');
+    await fs.writeFile(filePath, data, { encoding: 'utf-8', mode: 0o600 });
+    await fs.chmod(filePath, 0o600);
   }
 
   /**

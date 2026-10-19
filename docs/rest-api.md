@@ -294,8 +294,48 @@ Content-Type: application/json
 ### Get Conversations
 
 ```http
-GET /api/messages/conversations
+GET /api/messages/conversations?limit=20
 ```
+
+Queues a job and answers with its `operationId`. The finished job's `result`
+holds `{ success, count, conversations }`, each conversation shaped like the
+entries of `GET /api/messages/groups` below plus a `type` of `ONE_TO_ONE` or
+`GROUP_DM`.
+
+### List DM Groups
+
+```http
+GET /api/messages/groups?limit=50
+```
+
+Reads the group DMs your saved X session belongs to, straight from X, and
+answers immediately. `limit` is 1 to 100 (default 50). One-to-one
+conversations are left out, and up to 500 conversations are scanned to find
+the groups. It needs a session saved with `POST /api/session/save-session`.
+
+```json
+{
+  "count": 1,
+  "groups": [
+    {
+      "id": "1700000000000000001",
+      "name": "Launch crew",
+      "avatar": "https://pbs.twimg.com/dm_group_img/.../photo.jpg",
+      "participants": ["111", "222", "333"],
+      "adminUserIds": ["111"],
+      "lastMessage": "ship it",
+      "unreadCount": 2,
+      "updatedAt": "2026-09-22T10:13:20.000Z"
+    }
+  ]
+}
+```
+
+| Status | `code` | Meaning |
+|---|---|---|
+| 400 | `NO_SESSION` | No X session is saved for this account |
+| 401 | `SESSION_EXPIRED` | X rejected the saved session; save a fresh one |
+| 502 | `CSRF_UNAVAILABLE` or `X_REQUEST_FAILED` | X did not answer usefully; retry shortly |
 
 ### Export DMs
 
@@ -823,8 +863,11 @@ GET  /api/settings/
 PUT  /api/settings/protected     { "enabled": true }
 GET  /api/settings/blocked
 GET  /api/settings/muted
-POST /api/settings/download-data
 ```
+
+X only builds a data archive after the account holder confirms their password
+and a code sent by email or SMS, so there is no endpoint that requests one.
+Request it at [x.com/settings/download_your_data](https://x.com/settings/download_your_data).
 
 ---
 

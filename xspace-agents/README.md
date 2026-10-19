@@ -147,8 +147,6 @@ Full docs live in [docs/](docs/). Key guides:
 | [Providers](docs/providers.md) | LLM, STT, and TTS provider setup |
 | [Admin Panel](docs/admin-page.md) | Web dashboard guide |
 | [Environment Variables](docs/env-vars-reference.md) | All config options |
-| [Multi-Space Support](docs/multi-space-support.md) | Run agents across multiple Spaces |
-| [Agent Memory & RAG](docs/agent-memory-rag.md) | Persistent memory and retrieval |
 | [TypeScript Migration](docs/typescript-migration.md) | TypeScript usage guide |
 
 ## Project Structure

@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 // Vercel serverless entry point — wraps Express auth/user API
 // by nichxbt
 import express from 'express';
@@ -6,6 +6,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import { paymentGatePath } from './utils/paymentGatePath.js';
 
 dotenv.config();
 
@@ -14,6 +15,7 @@ import userRoutes from './routes/user.js';
 import twitterRoutes from './routes/twitter.js';
 import videoRoutes from './routes/video.js';
 import unfollowersRoutes from './routes/unfollowers.js';
+import askRoutes from './routes/ask.js';
 import { generateSpec, generateWellKnown } from './openapi.js';
 import {
   PAY_TO_ADDRESS,
@@ -21,6 +23,7 @@ import {
   NETWORK,
   AI_OPERATION_PRICES,
   isX402Configured,
+  operationForPath,
 } from './config/x402-config.js';
 
 const app = express();
@@ -75,24 +78,35 @@ const USDC_ADDRESSES = {
  * without requiring the full @x402/express SDK.
  */
 function x402Gate(req, res, next) {
-  const isAiPath = req.path.startsWith('/api/ai/');
-  if (!isAiPath) return next();
+  // Compared the way Express routes it, so a mixed-case path cannot skip it.
+  const gatePath = paymentGatePath(req.path);
+  if (!gatePath.startsWith('/api/ai/')) return next();
 
   // Free endpoints pass through
   if (
-    req.path === '/api/ai/' ||
-    req.path === '/api/ai/health' ||
-    req.path === '/api/ai/pricing'
+    gatePath === '/api/ai/health' ||
+    gatePath === '/api/ai/pricing'
   ) return next();
 
-  // Check if already has payment header
-  if (req.headers['x-payment']) return next();
+  // A payment header is not proof of payment: anyone can set a header, and this
+  // entry point has no facilitator client to check one with. It also executes no
+  // AI work (every /api/ai/* route below answers 503), so the honest answer to a
+  // paid call here is "not deployed", not "payment accepted".
+  if (req.headers['x-payment'] || req.headers['payment-signature']) {
+    return res.status(503).json({
+      error: 'AI_EXECUTION_UNAVAILABLE',
+      message:
+        'This deployment serves the payment terms only; it does not execute AI operations and cannot verify or settle a payment. ' +
+        'Nothing was charged. Call the endpoint on a deployment that runs the full backend.',
+      docs: 'https://github.com/nirholas/XActions/blob/main/docs/x402.md',
+    });
+  }
 
   if (!isX402Configured()) return next();
 
-  // Derive operation from path — only intercept routes with a configured price
-  const match = req.path.match(/^\/api\/ai\/([^/]+)\/([^/]+)/);
-  const operation = match ? `${match[1]}:${match[2]}` : null;
+  // Derive the operation from the whole path, the same way every other gate
+  // does, so a three-segment route is not read as its first two.
+  const operation = operationForPath(req.path);
   const price = operation ? AI_OPERATION_PRICES[operation] : null;
   if (!price) return next(); // free or unknown endpoint — pass through
 
@@ -154,14 +168,19 @@ app.get('/api/ai/pricing', (req, res) => {
   res.json({ pricing: AI_OPERATION_PRICES });
 });
 
+// Ask XActions: keyless free LLM lanes, so it runs on the serverless tier too
+app.use('/api/ask', askRoutes);
+
 // x402 payment gate — intercepts unpaid POST requests to /api/ai/*
 app.use(x402Gate);
 
 // AI API — catch-all after x402 gate (payment verified, execution on Railway)
 app.use('/api/ai', (req, res) => {
   res.status(503).json({
-    error: 'AI execution requires Railway deployment',
-    message: 'Payment accepted. Connect to the Railway API for execution.',
+    error: 'AI_EXECUTION_UNAVAILABLE',
+    message:
+      'This deployment publishes the x402 terms but does not execute AI operations. Nothing was charged.',
+    docs: 'https://github.com/nirholas/XActions/blob/main/docs/x402.md',
   });
 });
 

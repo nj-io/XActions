@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * AI Personas Endpoints
  *
@@ -13,7 +13,7 @@ import crypto from 'crypto';
 const router = express.Router();
 
 const generateOperationId = () =>
-  `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+  `ai-${Date.now()}-${crypto.randomBytes(16).toString('hex')}`;
 
 const errorResponse = (res, statusCode, error, message, extras = {}) =>
   res.status(statusCode).json({
@@ -68,7 +68,7 @@ router.post('/presets', async (req, res) => {
       {
         id: 'content-creator',
         name: 'Content Creator',
-        description: 'Consistent content machine — threads, hot takes, and viral loops',
+        description: 'Consistent content machine: threads, hot takes, and viral loops',
         activityPattern: { tweetsPerDay: '3-5', threadFrequency: 'daily', replyRatio: 0.3 },
         niche: 'any',
       },
@@ -126,24 +126,25 @@ router.post('/create', async (req, res) => {
 
 /**
  * POST /api/ai/personas/list
- * List all personas
+ * List the personas this session has saved
  */
 router.post('/list', async (req, res) => {
   try {
-    const { getRecentJobs } = await import('../../services/jobQueue.js');
-    const jobs = await getRecentJobs({ type: 'personaCreate', limit: 50 });
+    const { ownerStore, ownerKeyForSession } = await import('../../services/processors/content.processors.js');
+    const personas = await ownerStore.list(ownerKeyForSession(req.sessionCookie), 'personas');
 
     return successResponse(res, {
-      personas: jobs
-        .filter(j => j.status === 'completed')
-        .map(j => ({
-          personaId: j.id,
-          name: j.config?.name,
-          niche: j.config?.niche,
-          strategy: j.config?.strategy,
-          createdAt: j.createdAt,
-          result: j.result || null,
-        })),
+      personas: personas.map((p) => ({
+        personaId: p.id,
+        name: p.name,
+        niche: p.nicheLabel,
+        strategy: p.strategy?.preset,
+        activityPattern: p.activityPattern?.preset,
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+        lastSessionAt: p.state?.lastSessionAt || null,
+      })),
+      count: personas.length,
     });
   } catch (error) {
     return errorResponse(res, 500, 'ACTION_FAILED', error.message);
@@ -152,24 +153,28 @@ router.post('/list', async (req, res) => {
 
 /**
  * POST /api/ai/personas/status
- * Get persona status
+ * A saved persona and its running totals
  */
 router.post('/status', async (req, res) => {
   const { personaId } = req.body;
   if (!personaId) return res.status(400).json({ error: 'INVALID_INPUT', message: 'personaId is required' });
 
   try {
-    const { getJobStatus } = await import('../../services/jobQueue.js');
-    const status = await getJobStatus(personaId);
+    const { ownerStore, ownerKeyForSession } = await import('../../services/processors/content.processors.js');
+    const persona = await ownerStore.get(ownerKeyForSession(req.sessionCookie), 'personas', personaId);
 
-    if (!status) return res.status(404).json({ error: 'NOT_FOUND', message: 'Persona not found' });
+    if (!persona) return res.status(404).json({ error: 'NOT_FOUND', message: 'Persona not found' });
 
+    const { engagedPosts, followedUsers, ...totals } = persona.state || {};
     return successResponse(res, {
       personaId,
-      status: status.status,
-      name: status.config?.name,
-      niche: status.config?.niche,
-      result: status.result || null,
+      name: persona.name,
+      niche: persona.nicheLabel,
+      strategy: persona.strategy?.preset,
+      activityPattern: persona.activityPattern?.preset,
+      totals: { ...totals, accountsFollowed: Object.keys(followedUsers || {}).length },
+      createdAt: persona.createdAt,
+      updatedAt: persona.updatedAt,
     });
   } catch (error) {
     return errorResponse(res, 500, 'ACTION_FAILED', error.message);
@@ -238,7 +243,7 @@ router.post('/delete', async (req, res) => {
 
 /**
  * POST /api/ai/personas/run
- * Start running a persona (continuous automation)
+ * Run engagement sessions as a persona (1 to 5 sessions, paced like a person)
  */
 router.post('/run', async (req, res) => {
   const { personaId, dryRun = false, sessions = 1 } = req.body;
@@ -265,7 +270,11 @@ router.post('/run', async (req, res) => {
       personaId,
       config: { dryRun: !!dryRun, sessions: effectiveSessions },
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 30000 },
-    }, { note: dryRun ? 'Dry run — actions will be logged but not executed' : 'Persona is now running' });
+    }, {
+      note: dryRun
+        ? 'Dry run: actions are planned and written, but nothing is posted, liked or followed'
+        : `The persona will run ${effectiveSessions} session(s), with a rest between sessions`,
+    });
   } catch (error) {
     return errorResponse(res, 500, 'ACTION_FAILED', error.message);
   }

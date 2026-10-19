@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
  * ✅ Mass Unblock
@@ -24,7 +24,9 @@
  * ============================================================
  */
 
-const CONFIG = {
+// `var` (not `const`): a repeated top-level `const` paste in the same
+// DevTools tab throws "already been declared" instead of re-running.
+var CONFIG = {
   // Unblock all blocked accounts (true) or just specific ones (false)
   unblockAll: true,
   
@@ -57,6 +59,14 @@ const CONFIG = {
 (async function massUnblock() {
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
+  // Stop switch: run window.stopMassUnblock() from the console to abort
+  // after the account currently being processed.
+  let stopped = false;
+  window.stopMassUnblock = () => {
+    stopped = true;
+    console.log('🛑 Stop requested. Finishing the current account, then exiting.');
+  };
+
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
 ║  ✅ XActions — Mass Unblock                                  ║
@@ -64,6 +74,7 @@ const CONFIG = {
 ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be unblocked           ║' : '║  🔴 LIVE MODE - Accounts WILL be unblocked                  ║'}
 ╚══════════════════════════════════════════════════════════════╝
   `);
+  console.log('💡 To stop early: window.stopMassUnblock()\n');
 
   // Check if on blocked accounts page
   if (!window.location.href.includes('/settings/blocked')) {
@@ -156,13 +167,42 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be unblocked    
   console.log('═'.repeat(60));
 
   let unblocked = 0;
+  const unblockedUsers = [];
+
+  // Unblocking a row on this page removes it from the (virtualized) list,
+  // so cell/button references captured during the initial scan can go
+  // stale after the first successful unblock. Re-resolve a live button for
+  // the username before clicking, falling back to the cached reference.
+  const findUnblockButton = (username) => {
+    for (const cell of document.querySelectorAll($userCell)) {
+      const link = cell.querySelector('a[href^="/"]');
+      const cellUsername = link?.getAttribute('href')?.replace('/', '')?.split('/')[0];
+      if (cellUsername === username) {
+        return { element: cell, button: cell.querySelector($unblockBtn) };
+      }
+    }
+    return null;
+  };
 
   for (const [username, data] of toUnblock) {
+    if (stopped) {
+      console.log('🛑 Stopped by user.');
+      break;
+    }
+
     try {
-      data.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const live = findUnblockButton(username);
+      const target = (live && live.button) ? live : data;
+
+      if (!document.body.contains(target.button)) {
+        console.log(`   ❌ @${username} is no longer in the list (already unblocked or off-screen). Skipping.`);
+        continue;
+      }
+
+      target.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
       await sleep(300);
 
-      data.button.click();
+      target.button.click();
       await sleep(500);
 
       // Check for confirmation dialog
@@ -173,6 +213,7 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be unblocked    
       }
 
       unblocked++;
+      unblockedUsers.push(username);
       console.log(`✅ Unblocked @${username}`);
 
       await sleep(CONFIG.unblockDelay);
@@ -189,7 +230,9 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be unblocked    
   const storageKey = 'xactions_unblock_log';
   const log = {
     timestamp: new Date().toISOString(),
-    unblocked: toUnblock.slice(0, unblocked).map(([u]) => u)
+    // Record the accounts actually unblocked; slicing the candidate list
+    // logs the wrong names whenever an unblock in the middle failed
+    unblocked: unblockedUsers
   };
   const existing = JSON.parse(localStorage.getItem(storageKey) || '[]');
   existing.push(log);

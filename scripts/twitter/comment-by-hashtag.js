@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * =============================================================================
  * XActions - Comment By Hashtag
@@ -107,7 +107,11 @@
   };
 
   const getTweetId = (tweet) => {
-    const link = tweet.querySelector('a[href*="/status/"]');
+    // The timestamp's enclosing anchor is the tweet's own permalink; the first
+    // /status/ link in the article can belong to a quoted tweet
+    const timeEl = tweet.querySelector('time');
+    const link = (timeEl && timeEl.closest('a[href*="/status/"]')) ||
+                 tweet.querySelector('a[href*="/status/"]');
     if (link) {
       const match = link.href.match(/\/status\/(\d+)/);
       return match ? match[1] : null;
@@ -119,10 +123,20 @@
   // MAIN FUNCTIONS
   // ===========================================================================
   const searchHashtag = async (hashtag) => {
-    log(`🔍 Searching for #${hashtag}...`);
+    // Assigning location.href reloads the page and kills this script, so only
+    // navigate when not already on the hashtag's search results, and tell the
+    // user to re-run after the reload (processed IDs persist in sessionStorage)
+    const onSearch = window.location.pathname === '/search' &&
+      decodeURIComponent(window.location.search).toLowerCase().includes(`#${hashtag.toLowerCase()}`);
+    if (onSearch) {
+      log(`🔍 On search results for #${hashtag}`);
+      return true;
+    }
+    log(`🔍 Navigating to #${hashtag} search. The page will reload; paste and run this script again to start commenting.`, 'warn');
     const searchUrl = `https://x.com/search?q=%23${encodeURIComponent(hashtag)}&src=typed_query&f=live`;
     window.location.href = searchUrl;
     await sleep(3000);
+    return false;
   };
 
   const postComment = async (tweet, comment) => {
@@ -173,21 +187,24 @@
   };
 
   const processHashtag = async (hashtag, stats) => {
-    await searchHashtag(hashtag);
+    if (!(await searchHashtag(hashtag))) return false;
     await sleep(2000);
-    
-    const processedTweets = getProcessedTweets();
+
+    // A Set that we also update locally on every mark, not just a one-time
+    // snapshot: tweets stay in the DOM across scrolls, so a stale snapshot
+    // would cause the same tweet to be re-commented on every outer iteration
+    const processedTweets = new Set(getProcessedTweets());
     let scrollAttempts = 0;
     const maxScrollAttempts = 20;
-    
+
     while (stats.commented < CONFIG.maxComments && scrollAttempts < maxScrollAttempts) {
       const tweets = document.querySelectorAll(SELECTORS.tweet);
-      
+
       for (const tweet of tweets) {
         if (stats.commented >= CONFIG.maxComments) break;
-        
+
         const tweetId = getTweetId(tweet);
-        if (!tweetId || processedTweets.includes(tweetId)) continue;
+        if (!tweetId || processedTweets.has(tweetId)) continue;
         
         // Get tweet text
         const textEl = tweet.querySelector(SELECTORS.tweetText);
@@ -219,6 +236,7 @@
         if (success) {
           stats.commented++;
           markTweetProcessed(tweetId);
+          processedTweets.add(tweetId);
           log(`✅ Comment ${stats.commented}/${CONFIG.maxComments} posted!`, 'success');
         } else {
           stats.failed++;
@@ -232,6 +250,8 @@
       await sleep(1500);
       scrollAttempts++;
     }
+
+    return true;
   };
 
   // ===========================================================================
@@ -262,7 +282,8 @@
   try {
     for (const hashtag of CONFIG.hashtags) {
       if (stats.commented >= CONFIG.maxComments) break;
-      await processHashtag(hashtag, stats);
+      const completed = await processHashtag(hashtag, stats);
+      if (!completed) break; // Page is navigating; the script must be re-run
     }
   } catch (err) {
     log(`Fatal error: ${err.message}`, 'error');

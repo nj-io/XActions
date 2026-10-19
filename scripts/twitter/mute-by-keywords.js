@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
  * 🔇 Mute By Keywords
@@ -24,7 +24,9 @@
  * ============================================================
  */
 
-const CONFIG = {
+// `var` (not `const`): a repeated top-level `const` paste in the same
+// DevTools tab throws "already been declared" instead of re-running.
+var CONFIG = {
   // Keywords to look for in bio (case-insensitive)
   muteKeywords: [
     'crypto',
@@ -58,6 +60,14 @@ const CONFIG = {
 (async function muteByKeywords() {
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
+  // Stop switch: run window.stopMuteByKeywords() from the console to abort
+  // after the account currently being processed.
+  let stopped = false;
+  window.stopMuteByKeywords = () => {
+    stopped = true;
+    console.log('🛑 Stop requested. Finishing the current account, then exiting.');
+  };
+
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
 ║  🔇 XActions — Mute By Keywords                              ║
@@ -65,6 +75,7 @@ const CONFIG = {
 ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be muted               ║' : '║  🔴 LIVE MODE - Accounts WILL be muted                      ║'}
 ╚══════════════════════════════════════════════════════════════╝
   `);
+  console.log('💡 To stop early: window.stopMuteByKeywords()\n');
 
   if (!window.location.pathname.includes('/followers') && !window.location.pathname.includes('/following')) {
     console.error('❌ Please navigate to a followers or following page first!');
@@ -81,7 +92,7 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be muted        
   let retries = 0;
   let scrollCount = 0;
 
-  while (scrollCount < CONFIG.maxScrolls && retries < CONFIG.maxRetries) {
+  while (!stopped && scrollCount < CONFIG.maxScrolls && retries < CONFIG.maxRetries) {
     const prevSize = scanned.size;
 
     document.querySelectorAll($userCell).forEach(cell => {
@@ -151,6 +162,11 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be muted        
     const toMute = matches.slice(0, CONFIG.maxMutes);
 
     for (const user of toMute) {
+      if (stopped) {
+        console.log('🛑 Stopped by user.');
+        break;
+      }
+
       try {
         user.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
         await sleep(500);

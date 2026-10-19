@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * Build SEO-Optimized HTML Pages from docs/examples/*.md
  * Generates dashboard/docs/<slug>.html for each markdown file
@@ -487,7 +487,7 @@ function generateHTML(slug, markdown) {
       </div>
     </div>
     <div class="footer-bottom">
-      <p>© 2024-2026 XActions. MIT License. No API fees. No limits.</p>
+      <p>© 2024-2026 XActions. Apache-2.0 licensed. No API fees. No limits.</p>
     </div>
   </footer>
 </body>
@@ -534,7 +534,10 @@ const TUTORIAL_CATEGORIES = {
 };
 
 function stripFrontmatter(markdown) {
-  return markdown.replace(/^---[\s\S]*?---\n*/m, '');
+  // Anchored, no `m` flag: with it, `^---` matched horizontal rules mid-file
+  // and deleted every line between two of them.
+  if (!markdown.startsWith('---')) return markdown;
+  return markdown.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n*/, '');
 }
 
 function extractFrontmatterField(markdown, field) {

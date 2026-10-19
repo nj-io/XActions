@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * AI Action Endpoints
  * 
@@ -14,11 +14,25 @@
 import express from 'express';
 import crypto from 'crypto';
 import { errorResponse } from '../../utils/errorResponse.js';
+import { parseBulkActions, tweetIdOf } from '../../services/processors/engagement.processors.js';
 
 const router = express.Router();
 
 const generateOperationId = () =>
-  `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+  `ai-${Date.now()}-${crypto.randomBytes(16).toString('hex')}`;
+
+/** The post id in a tweetUrl or tweetId, or null when neither holds one. */
+const postIdFrom = (tweetUrl, tweetId) => {
+  for (const value of [tweetUrl, tweetId]) {
+    if (!value) continue;
+    try {
+      return tweetIdOf(value);
+    } catch {
+      // not a post id or URL; try the other field
+    }
+  }
+  return null;
+};
 
 /**
  * POST /api/ai/action/validate-session
@@ -716,10 +730,9 @@ router.post('/like', async (req, res) => {
   const { tweetUrl, tweetId } = req.body;
   if (!tweetUrl && !tweetId) return res.status(400).json({ error: 'INVALID_INPUT', message: 'tweetUrl or tweetId is required' });
 
-  let effectiveTweetId = tweetId;
-  if (tweetUrl) {
-    const match = tweetUrl.match(/status\/(\d+)/);
-    if (match) effectiveTweetId = match[1];
+  const effectiveTweetId = postIdFrom(tweetUrl, tweetId);
+  if (!effectiveTweetId) {
+    return res.status(400).json({ error: 'INVALID_INPUT', message: 'tweetUrl must be a post URL, or tweetId a numeric post id' });
   }
 
   try {
@@ -754,10 +767,9 @@ router.post('/retweet', async (req, res) => {
   const { tweetUrl, tweetId } = req.body;
   if (!tweetUrl && !tweetId) return res.status(400).json({ error: 'INVALID_INPUT', message: 'tweetUrl or tweetId is required' });
 
-  let effectiveTweetId = tweetId;
-  if (tweetUrl) {
-    const match = tweetUrl.match(/status\/(\d+)/);
-    if (match) effectiveTweetId = match[1];
+  const effectiveTweetId = postIdFrom(tweetUrl, tweetId);
+  if (!effectiveTweetId) {
+    return res.status(400).json({ error: 'INVALID_INPUT', message: 'tweetUrl must be a post URL, or tweetId a numeric post id' });
   }
 
   try {
@@ -793,10 +805,9 @@ router.post('/quote-tweet', async (req, res) => {
   if (!text) return res.status(400).json({ error: 'INVALID_INPUT', message: 'text is required' });
   if (!tweetUrl && !tweetId) return res.status(400).json({ error: 'INVALID_INPUT', message: 'tweetUrl or tweetId is required' });
 
-  let effectiveTweetId = tweetId;
-  if (tweetUrl) {
-    const match = tweetUrl.match(/status\/(\d+)/);
-    if (match) effectiveTweetId = match[1];
+  const effectiveTweetId = postIdFrom(tweetUrl, tweetId);
+  if (!effectiveTweetId) {
+    return res.status(400).json({ error: 'INVALID_INPUT', message: 'tweetUrl must be a post URL, or tweetId a numeric post id' });
   }
 
   try {
@@ -994,11 +1005,29 @@ router.post('/auto-retweet', async (req, res) => {
 router.post('/bulk-execute', async (req, res) => {
   const { actions, delayMs = 3000, stopOnError = false } = req.body;
 
-  if (!Array.isArray(actions) || actions.length === 0) {
-    return res.status(400).json({ error: 'INVALID_INPUT', message: 'actions array is required' });
+  const effectiveActions = Array.isArray(actions) ? actions.slice(0, 100) : actions;
+  try {
+    parseBulkActions(effectiveActions);
+  } catch (err) {
+    return res.status(400).json({
+      error: 'INVALID_INPUT',
+      message: err.message,
+      schema: {
+        actions: {
+          type: 'array',
+          items: {
+            action: 'like|unlike|retweet|unretweet|bookmark|unbookmark|reply|quote|follow|unfollow|mute|unmute|block|unblock',
+            target: 'post id or URL for post actions, username for account actions',
+            text: 'required for reply and quote',
+          },
+          alsoAccepted: 'strings like "like:1234567890" or "follow:@nasa"',
+          maxItems: 100,
+        },
+        delayMs: { type: 'number', default: 3000 },
+        stopOnError: { type: 'boolean', default: false },
+      },
+    });
   }
-
-  const effectiveActions = actions.slice(0, 100);
 
   try {
     const operationId = generateOperationId();
@@ -1118,7 +1147,7 @@ router.get('/history', async (req, res) => {
   try {
     const { getRecentJobs } = await import('../../services/jobQueue.js');
     const jobs = await getRecentJobs({
-      source: 'ai-api',
+      sessionCookie: req.sessionCookie,
       limit: Math.min(parseInt(limit) || 20, 100),
     });
     

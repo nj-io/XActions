@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * Tests for DM operations — sendDM, sendDMByUsername, getInbox,
  * getConversation, deleteMessage, markRead.
@@ -6,7 +6,7 @@
  * All tests use mocked fetch — no real network requests.
  *
  * @author nichxbt
- * @license MIT
+ * @license Apache-2.0
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -46,20 +46,24 @@ function createMockClient(overrides = {}) {
 // Test Data
 // ============================================================================
 
-const MOCK_DM_EVENT = {
-  event: {
-    id: '111222333',
-    type: 'message_create',
-    created_timestamp: '1700000000000',
-    message_create: {
-      sender_id: '999',
-      target: { recipient_id: '123' },
-      message_data: {
-        text: 'Hello!',
+/** dm/new2.json's answer: the created message as an inbox entry. */
+const MOCK_DM_SENT = {
+  entries: [
+    {
+      message: {
+        id: '111222333',
+        time: '1700000000000',
+        conversation_id: '123-999',
+        message_data: { id: '111222333', sender_id: '999', text: 'Hello!' },
       },
     },
-  },
+  ],
 };
+
+/** Answers verify_credentials (the sender is 999) and the DM send. */
+function dmRequest(sent = MOCK_DM_SENT) {
+  return vi.fn(async (url) => (url.includes('verify_credentials') ? { id_str: '999' } : sent));
+}
 
 const MOCK_INBOX = {
   inbox_initial_state: {
@@ -170,33 +174,44 @@ describe('DM Operations', () => {
   // --------------------------------------------------------------------------
 
   describe('sendDM()', () => {
-    it('should construct correct POST body for sending a DM', async () => {
-      const client = createMockClient({
-        requestImpl: vi.fn().mockResolvedValue(MOCK_DM_EVENT),
-      });
+    it('sends the web client\'s new2 body in the sender and recipient\'s conversation', async () => {
+      const client = createMockClient({ requestImpl: dmRequest() });
 
       const result = await sendDM(client, '123', 'Hello!');
 
-      expect(client.request).toHaveBeenCalledOnce();
-      const [url, opts] = client.request.mock.calls[0];
-
+      expect(client.request).toHaveBeenCalledTimes(2);
+      expect(client.request.mock.calls[0][0]).toContain('/1.1/account/verify_credentials.json');
+      const [url, opts] = client.request.mock.calls[1];
       expect(url).toContain('/1.1/dm/new2.json');
       expect(opts.method).toBe('POST');
-
-      // Body should be the DM event payload
-      const body = opts.body;
-      expect(body).toEqual({
-        event: {
-          type: 'message_create',
-          message_create: {
-            target: { recipient_id: '123' },
-            message_data: { text: 'Hello!' },
-          },
-        },
+      expect(opts.body).toMatchObject({
+        conversation_id: '123-999',
+        recipient_ids: false,
+        text: 'Hello!',
+        dm_users: false,
       });
+      expect(opts.body.request_id).toMatch(/^[0-9a-f-]{36}$/);
+      expect(opts.body).not.toHaveProperty('media_id');
 
-      expect(result.messageId).toBe('111222333');
-      expect(result.createdAt).toBeTruthy();
+      expect(result).toEqual({
+        messageId: '111222333',
+        conversationId: '123-999',
+        createdAt: new Date(1700000000000).toISOString(),
+      });
+    });
+
+    it('skips the account lookup when the sender id is given, and keeps the request id', async () => {
+      const client = createMockClient({ requestImpl: dmRequest() });
+      await sendDM(client, '5', 'hi', { senderId: '40', requestId: 'fixed-id' });
+      expect(client.request).toHaveBeenCalledOnce();
+      expect(client.request.mock.calls[0][1].body).toMatchObject({ conversation_id: '5-40', request_id: 'fixed-id' });
+    });
+
+    it('throws when X does not confirm the message, and refuses a message to itself', async () => {
+      const refused = createMockClient({ requestImpl: dmRequest({ errors: [{ code: 349, message: 'You cannot send messages to this user.' }] }) });
+      await expect(sendDM(refused, '123', 'hi')).rejects.toThrow('X did not send the message: You cannot send messages to this user.');
+      const self = createMockClient({ requestImpl: dmRequest() });
+      await expect(sendDM(self, '999', 'hi')).rejects.toThrow(/itself/);
     });
 
     it('should throw when recipientId is missing', async () => {
@@ -218,7 +233,7 @@ describe('DM Operations', () => {
     it('should resolve username to user ID and then send DM', async () => {
       const client = createMockClient({
         graphqlImpl: vi.fn().mockResolvedValue(MOCK_USER_RESPONSE),
-        requestImpl: vi.fn().mockResolvedValue(MOCK_DM_EVENT),
+        requestImpl: dmRequest(),
       });
 
       const result = await sendDMByUsername(client, 'testuser', 'Hey!');
@@ -229,10 +244,9 @@ describe('DM Operations', () => {
       expect(opName).toBe('UserByScreenName');
       expect(vars.screen_name).toBe('testuser');
 
-      // Should have called request to send the DM with resolved ID
-      expect(client.request).toHaveBeenCalledOnce();
-      const [, opts] = client.request.mock.calls[0];
-      expect(opts.body.event.message_create.target.recipient_id).toBe('12345');
+      // Then sent the DM into the conversation with the resolved ID
+      const [, opts] = client.request.mock.calls.find(([url]) => url.includes('/dm/new2.json'));
+      expect(opts.body.conversation_id).toBe('999-12345');
 
       expect(result.messageId).toBe('111222333');
     });
@@ -240,7 +254,7 @@ describe('DM Operations', () => {
     it('should strip @ from username', async () => {
       const client = createMockClient({
         graphqlImpl: vi.fn().mockResolvedValue(MOCK_USER_RESPONSE),
-        requestImpl: vi.fn().mockResolvedValue(MOCK_DM_EVENT),
+        requestImpl: dmRequest(),
       });
 
       await sendDMByUsername(client, '@testuser', 'Hey!');
@@ -425,31 +439,24 @@ describe('DM Operations', () => {
   describe('Media attachment', () => {
     it('should include media attachment when mediaId is provided', async () => {
       const client = createMockClient({
-        requestImpl: vi.fn().mockResolvedValue(MOCK_DM_EVENT),
+        requestImpl: dmRequest(),
       });
 
-      await sendDM(client, '123', 'Check this out', { mediaId: 'media_456' });
+      await sendDM(client, '123', 'Check this out', { mediaId: 'media_456', senderId: '999' });
 
       const [, opts] = client.request.mock.calls[0];
-      const msgData = opts.body.event.message_create.message_data;
-
-      expect(msgData.attachment).toEqual({
-        type: 'media',
-        media: { id: 'media_456' },
-      });
+      expect(opts.body.media_id).toBe('media_456');
     });
 
     it('should NOT include attachment when no mediaId', async () => {
       const client = createMockClient({
-        requestImpl: vi.fn().mockResolvedValue(MOCK_DM_EVENT),
+        requestImpl: dmRequest(),
       });
 
-      await sendDM(client, '123', 'Just text');
+      await sendDM(client, '123', 'Just text', { senderId: '999' });
 
       const [, opts] = client.request.mock.calls[0];
-      const msgData = opts.body.event.message_create.message_data;
-
-      expect(msgData.attachment).toBeUndefined();
+      expect(opts.body).not.toHaveProperty('media_id');
     });
   });
 

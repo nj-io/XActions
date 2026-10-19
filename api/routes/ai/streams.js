@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * AI Streams Endpoints
  *
@@ -9,11 +9,12 @@
 
 import express from 'express';
 import crypto from 'crypto';
+import { monitors, sessionOwnerKey } from '../../services/processors/messaging.processors.js';
 
 const router = express.Router();
 
 const generateOperationId = () =>
-  `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+  `ai-${Date.now()}-${crypto.randomBytes(16).toString('hex')}`;
 
 const errorResponse = (res, statusCode, error, message, extras = {}) =>
   res.status(statusCode).json({
@@ -34,8 +35,30 @@ router.use((req, res, next) => {
     return res.status(400).json({ error: 'SESSION_REQUIRED', message: 'Session cookie is required' });
   }
   req.sessionCookie = sessionCookie;
+  req.ownerKey = sessionOwnerKey(sessionCookie);
   next();
 });
+
+/**
+ * The stream a streamId names, if it belongs to this session. A start that is
+ * still queued has not created it yet, so the queued job is reported instead.
+ */
+async function findStream(req, res, streamId) {
+  const stream = await monitors.get(req.ownerKey, String(streamId));
+  if (stream && stream.type === 'streamStart') return stream;
+  const { getJob } = await import('../../services/jobQueue.js');
+  const job = await getJob(String(streamId));
+  if (job && job.type === 'streamStart' && ['queued', 'processing'].includes(job.status)) {
+    successResponse(res, { streamId, status: job.status === 'queued' ? 'starting' : 'taking first reading', itemsCollected: 0, latestItems: [] });
+    return null;
+  }
+  if (job && job.type === 'streamStart' && job.status === 'failed') {
+    res.status(422).json({ success: false, error: 'STREAM_FAILED', message: job.error || 'The stream failed to start' });
+    return null;
+  }
+  res.status(404).json({ success: false, error: 'NOT_FOUND', message: 'No stream with that id belongs to this session' });
+  return null;
+}
 
 /**
  * POST /api/ai/streams/start
@@ -79,12 +102,14 @@ router.post('/start', async (req, res) => {
       createdAt: new Date().toISOString(),
     });
 
+    const manage = (endpoint) => ({ method: 'POST', endpoint: `/api/ai/streams/${endpoint}`, body: { streamId: operationId } });
     return successResponse(res, {
       streamId: operationId,
-      status: 'started',
+      status: 'starting',
       type,
       config: { intervalSeconds: effectiveInterval, maxItems: effectiveMax },
-      polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: effectiveInterval * 1000 },
+      polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 3000 },
+      manage: { status: manage('status'), history: manage('history'), pause: manage('pause'), resume: manage('resume'), stop: manage('stop') },
     });
   } catch (error) {
     return errorResponse(res, 500, 'ACTION_FAILED', error.message);
@@ -100,10 +125,17 @@ router.post('/stop', async (req, res) => {
   if (!streamId) return res.status(400).json({ error: 'INVALID_INPUT', message: 'streamId is required' });
 
   try {
-    const { cancelJob } = await import('../../services/jobQueue.js');
-    await cancelJob(streamId);
-
-    return successResponse(res, { streamId, status: 'stopped', stoppedAt: new Date().toISOString() });
+    const stopped = await monitors.stop(req.ownerKey, String(streamId));
+    if (stopped && stopped.type === 'streamStart') {
+      return successResponse(res, { streamId, status: stopped.status, stoppedAt: stopped.updatedAt, itemsCollected: stopped.stats?.events ?? 0 });
+    }
+    const { cancelJob, getJob } = await import('../../services/jobQueue.js');
+    const job = await getJob(String(streamId));
+    if (job && job.type === 'streamStart' && job.status === 'queued') {
+      await cancelJob(String(streamId));
+      return successResponse(res, { streamId, status: 'cancelled', stoppedAt: new Date().toISOString() });
+    }
+    return res.status(404).json({ success: false, error: 'NOT_FOUND', message: 'No running stream with that id belongs to this session' });
   } catch (error) {
     return errorResponse(res, 500, 'ACTION_FAILED', error.message);
   }
@@ -111,24 +143,25 @@ router.post('/stop', async (req, res) => {
 
 /**
  * POST /api/ai/streams/list
- * List active and recent streams
+ * List this session's streams
  */
 router.post('/list', async (req, res) => {
   const { limit = 20 } = req.body;
 
   try {
-    const { getRecentJobs } = await import('../../services/jobQueue.js');
-    const jobs = await getRecentJobs({ type: 'streamStart', limit: Math.min(parseInt(limit) || 20, 100) });
+    const streams = (await monitors.list(req.ownerKey, { type: 'streamStart' })).slice(0, Math.min(parseInt(limit) || 20, 100));
 
     return successResponse(res, {
-      streams: jobs.map(j => ({
-        streamId: j.id,
-        type: j.config?.streamType,
-        status: j.status,
-        createdAt: j.createdAt,
-        completedAt: j.completedAt || null,
+      streams: streams.map(s => ({
+        streamId: s.monitorId,
+        type: s.params?.streamType,
+        label: s.label,
+        status: s.status,
+        itemsCollected: s.stats?.events ?? 0,
+        createdAt: s.createdAt,
+        completedAt: ['stopped', 'completed', 'failed'].includes(s.status) ? s.updatedAt : null,
       })),
-      count: jobs.length,
+      count: streams.length,
     });
   } catch (error) {
     return errorResponse(res, 500, 'ACTION_FAILED', error.message);
@@ -154,7 +187,10 @@ router.post('/pause', async (req, res) => {
       createdAt: new Date().toISOString(),
     });
 
-    return successResponse(res, { streamId, status: 'paused', pausedAt: new Date().toISOString() });
+    return successResponse(res, {
+      streamId, operationId, status: 'pausing',
+      polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 2000 },
+    });
   } catch (error) {
     return errorResponse(res, 500, 'ACTION_FAILED', error.message);
   }
@@ -179,7 +215,10 @@ router.post('/resume', async (req, res) => {
       createdAt: new Date().toISOString(),
     });
 
-    return successResponse(res, { streamId, status: 'resumed', resumedAt: new Date().toISOString() });
+    return successResponse(res, {
+      streamId, operationId, status: 'resuming',
+      polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 2000 },
+    });
   } catch (error) {
     return errorResponse(res, 500, 'ACTION_FAILED', error.message);
   }
@@ -194,18 +233,27 @@ router.post('/status', async (req, res) => {
   if (!streamId) return res.status(400).json({ error: 'INVALID_INPUT', message: 'streamId is required' });
 
   try {
-    const { getJobStatus } = await import('../../services/jobQueue.js');
-    const status = await getJobStatus(streamId);
-
-    if (!status) return res.status(404).json({ error: 'NOT_FOUND', message: 'Stream not found' });
+    const stream = await findStream(req, res, streamId);
+    if (!stream) return;
+    const latestItems = await monitors.events(req.ownerKey, String(streamId), { limit: 10 });
 
     return successResponse(res, {
       streamId,
-      status: status.status,
-      progress: status.progress || null,
-      itemsCollected: status.result?.items?.length || 0,
-      latestItems: (status.result?.items || []).slice(-10),
-      timing: { startedAt: status.startedAt, updatedAt: status.updatedAt },
+      status: stream.status,
+      statusReason: stream.statusReason,
+      label: stream.label,
+      progress: stream.latest,
+      itemsCollected: stream.stats?.events ?? 0,
+      maxItems: stream.maxItems,
+      latestItems,
+      timing: {
+        startedAt: stream.createdAt,
+        updatedAt: stream.updatedAt,
+        lastPollAt: stream.stats?.lastPollAt ?? null,
+        nextPollAt: stream.nextPollAt,
+        intervalSeconds: Math.round(stream.intervalMs / 1000),
+      },
+      lastError: stream.stats?.lastError ?? null,
     });
   } catch (error) {
     return errorResponse(res, 500, 'ACTION_FAILED', error.message);
@@ -214,7 +262,7 @@ router.post('/status', async (req, res) => {
 
 /**
  * POST /api/ai/streams/history
- * Get historical items collected by a stream
+ * Get historical items collected by a stream, newest first
  */
 router.post('/history', async (req, res) => {
   const { streamId, limit = 100, eventType } = req.body;
@@ -223,17 +271,13 @@ router.post('/history', async (req, res) => {
   const effectiveLimit = Math.min(Math.max(parseInt(limit) || 100, 1), 1000);
 
   try {
-    const { getJobStatus } = await import('../../services/jobQueue.js');
-    const status = await getJobStatus(streamId);
-
-    if (!status) return res.status(404).json({ error: 'NOT_FOUND', message: 'Stream not found' });
-
-    let items = status.result?.items || [];
-    if (eventType) items = items.filter(i => i.type === eventType);
-    items = items.slice(-effectiveLimit);
+    const stream = await findStream(req, res, streamId);
+    if (!stream) return;
+    const items = await monitors.events(req.ownerKey, String(streamId), { limit: effectiveLimit, type: eventType });
 
     return successResponse(res, {
       streamId,
+      status: stream.status,
       items,
       count: items.length,
       filters: { eventType: eventType || null, limit: effectiveLimit },

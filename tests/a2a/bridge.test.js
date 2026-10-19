@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * Tests — src/a2a/bridge.js
  * @author nich (@nichxbt)
@@ -84,12 +84,11 @@ describe('execute (remote mode)', () => {
 describe('batchExecute', () => {
   it('executes multiple tasks sequentially', async () => {
     const bridge = createBridge({ mode: 'local' });
-    // batchExecute takes { tool, params } objects
+    // batchExecute takes { tool, params } objects. x_list_platforms answers
+    // from the local scraper registry, so the test never touches the network.
     const tasks = [
-      { tool: 'x_get_profile', params: { username: 'elonmusk' } },
+      { tool: 'x_list_platforms', params: {} },
     ];
-    // This will likely fail because local-tools isn't available in test env,
-    // but it should not throw — it returns an array of step results
     const result = await bridge.batchExecute(tasks);
     expect(result).toBeDefined();
     expect(Array.isArray(result)).toBe(true);

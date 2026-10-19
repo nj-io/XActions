@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions A2A — Protocol Bridge (A2A ↔ MCP)
  *
@@ -6,7 +6,7 @@
  * and converts responses back to A2A artifact parts.
  *
  * @author nich (@nichxbt)
- * @license MIT
+ * @license Apache-2.0
  */
 
 import { getSkillById } from './skillRegistry.js';

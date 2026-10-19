@@ -56,6 +56,14 @@
       "dest": "/dashboard/manifest.json"
     },
     {
+      "src": "/ask",
+      "dest": "/dashboard/ask.html"
+    },
+    {
+      "src": "/data/(.*)",
+      "dest": "/dashboard/data/$1"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "/api/serverless.js"
     },
@@ -166,6 +174,10 @@
     {
       "src": "/docs/([^/]+)/([^/]+?)(\\.html)?$",
       "dest": "/dashboard/docs/$1/$2.html"
+    },
+    {
+      "src": "/docs/(architecture|automation|case\\-studies|extras|guides|launch|learn|project|prompts|research|skills|step\\-by\\-step)/?$",
+      "dest": "/dashboard/docs/$1/index.html"
     },
     {
       "src": "/docs/([^/]+?)(\\.html)?$",

@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Workflow Store
  * Persistence layer for workflow definitions and execution logs
@@ -8,7 +8,7 @@
  * - JSON files (fallback, stores in ~/.xactions/workflows/)
  * 
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 import fs from 'fs/promises';

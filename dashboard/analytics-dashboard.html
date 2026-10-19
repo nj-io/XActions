@@ -18,10 +18,15 @@
     .toolbar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
     .input { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg3); color: var(--text); font-size: 13px; }
     .btn { padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg3); color: var(--text); cursor: pointer; font-size: 13px; transition: all .2s; }
-    .btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
-    .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); transform: translateY(-2px); }
+    .btn.primary { background: linear-gradient(135deg,#1d9bf0,#22d3ee); color: #fff; border-color: transparent; box-shadow: 0 8px 24px -8px rgba(29,155,240,.6); }
+    .btn:focus-visible, .input:focus-visible { box-shadow: 0 0 0 3px rgba(29,155,240,.28); outline: none; }
     .overview-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
-    .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+    .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 18px; transition: transform 0.26s cubic-bezier(.22,1,.36,1), border-color 0.26s cubic-bezier(.22,1,.36,1), box-shadow 0.26s cubic-bezier(.22,1,.36,1); }
+    .card:hover { transform: translateY(-3px); border-color: rgba(29,155,240,.4); box-shadow: 0 10px 34px -12px rgba(0,0,0,.6); }
+    body::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;background:radial-gradient(1000px 560px at 82% -6%,rgba(29,155,240,.1),transparent 60%)}
+    .offline-note{display:flex;gap:12px;align-items:flex-start;background:rgba(29,155,240,0.06);border:1px solid rgba(29,155,240,0.3);border-radius:14px;padding:16px 18px;color:#aab4c0;font-size:.92rem;margin:16px 0}
+    .offline-note strong{color:#e7e9ea}.offline-note a{color:#1d9bf0}.offline-note .offline-ic{font-size:1.2rem;line-height:1.3}
     .card .label { font-size: 13px; color: var(--text2); margin-bottom: 4px; }
     .card .value { font-size: 28px; font-weight: 700; color: #fff; }
     .card .change { font-size: 13px; margin-top: 4px; }
@@ -111,6 +116,23 @@
   <script>
     const API_BASE = window.location.origin;
     let charts = {};
+    let offlineWarned = false;
+
+    const OFFLINE_HTML = '<div class="offline-note" role="status"><span class="offline-ic">📡</span><div><strong>Backend offline.</strong> The hosted API is being migrated, so the figures below are an illustrative sample. Browser scripts, the CLI, and docs work without it. <a href="/docs">Read the docs →</a></div></div>';
+    function showOfflineNote() {
+      if (!offlineWarned) { console.warn('Analytics API offline. Backend is being migrated; showing sample data.'); offlineWarned = true; }
+      const main = document.querySelector('.main');
+      if (main && !document.getElementById('analyticsOffline')) {
+        const note = document.createElement('div');
+        note.id = 'analyticsOffline';
+        note.innerHTML = OFFLINE_HTML;
+        main.insertBefore(note, document.querySelector('.toolbar').nextSibling);
+      }
+    }
+    function clearOfflineNote() {
+      const n = document.getElementById('analyticsOffline');
+      if (n) n.remove();
+    }
 
     const chartDefaults = {
       responsive: true,
@@ -201,12 +223,14 @@
         const response = await fetch(`${API_BASE}/api/analytics/history/${username}?days=${days}`);
         if (response.ok) {
           const data = await response.json();
+          clearOfflineNote();
           updateDashboard(data);
           return;
         }
-      } catch { /* API not available, use demo data */ }
+      } catch { /* API not available, fall back to sample data below */ }
 
-      // Demo data
+      // Backend offline: surface a notice, then render an illustrative sample.
+      showOfflineNote();
       loadDemoData(username, days);
     }
 

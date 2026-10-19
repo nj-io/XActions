@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * x402 Payment Client for XActions API
  * 
@@ -11,7 +11,7 @@
  * 
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @see https://x402.org
- * @license MIT
+ * @license Apache-2.0
  */
 
 import crypto from 'crypto';
@@ -153,6 +153,12 @@ async function getChainForNetwork(networkName) {
  * @param {string} config.sessionCookie - X/Twitter session cookie (optional)
  * @param {string} config.network - Preferred network ('base-sepolia', 'base', 'ethereum', 'arbitrum')
  * @param {boolean} config.autoSelectNetwork - Auto-select cheapest network from options (default: true)
+ * @param {number} config.maxPriceUsd - Refuse to sign a single payment above this many USD.
+ *   Defaults to X402_MAX_PRICE_USD, or $1.00. The amount in a 402 is chosen by the
+ *   server being called, so without a ceiling an agent signs whatever it is asked for.
+ * @param {number} config.maxTotalUsd - Refuse once this much has been paid in this
+ *   session. Defaults to X402_MAX_TOTAL_USD, or $10.00.
+ * @param {string[]} config.allowedPayees - If set, only pay these addresses.
  */
 export async function createX402Client(config) {
   const { 
@@ -161,7 +167,15 @@ export async function createX402Client(config) {
     sessionCookie,
     network = 'base-sepolia', // Default to testnet
     autoSelectNetwork = true, // Auto-select best network from 402 response
+    maxPriceUsd = Number(process.env.X402_MAX_PRICE_USD ?? 1),
+    maxTotalUsd = Number(process.env.X402_MAX_TOTAL_USD ?? 10),
+    allowedPayees = (process.env.X402_ALLOWED_PAYEES || '')
+      .split(',').map((a) => a.trim().toLowerCase()).filter(Boolean),
   } = config;
+
+  // Everything paid in this client's lifetime, in USD. The cap is per process,
+  // which is the unit an agent session actually maps to.
+  let spentUsd = 0;
   
   if (!privateKey) {
     console.error('⚠️  X402_PRIVATE_KEY not set - payments will fail');
@@ -174,32 +188,94 @@ export async function createX402Client(config) {
     console.error(`   Available networks: ${Object.keys(NETWORK_CONFIGS).join(', ')}`);
   }
   
-  // Set up wallet for signing payments (lazy loaded)
+  /**
+   * USD value of an `accepts` entry. USDC and USDT are 6-decimal, which is what
+   * every x402 amount in this client is denominated in.
+   * @param {object} accept
+   * @returns {number}
+   */
+  const priceOf = (accept) => {
+    const atomic = Number(accept?.amount ?? accept?.maxAmountRequired ?? NaN);
+    return Number.isFinite(atomic) ? atomic / 1_000_000 : NaN;
+  };
+
+  /**
+   * Refuse terms that break this client's spending limits.
+   *
+   * Throws rather than returning false: a payment that should not happen must
+   * not fall through to a signature.
+   *
+   * @param {object} accept - The chosen `accepts` entry from the 402
+   * @throws {Error} with code PAYMENT_LIMIT_EXCEEDED or PAYEE_NOT_ALLOWED
+   */
+  function assertWithinLimits(accept) {
+    const usd = priceOf(accept);
+    if (!Number.isFinite(usd)) {
+      const error = new Error('402 did not state an amount this client can read; refusing to sign.');
+      error.code = 'PAYMENT_LIMIT_EXCEEDED';
+      throw error;
+    }
+    if (maxPriceUsd >= 0 && usd > maxPriceUsd) {
+      const error = new Error(
+        `Refusing to pay $${usd.toFixed(6)} for one call: over the $${maxPriceUsd} per-call limit. ` +
+        'Raise it with X402_MAX_PRICE_USD or maxPriceUsd if this price is expected.'
+      );
+      error.code = 'PAYMENT_LIMIT_EXCEEDED';
+      throw error;
+    }
+    if (maxTotalUsd >= 0 && spentUsd + usd > maxTotalUsd) {
+      const error = new Error(
+        `Refusing to pay $${usd.toFixed(6)}: this session has already paid $${spentUsd.toFixed(6)} of a ` +
+        `$${maxTotalUsd} budget. Raise it with X402_MAX_TOTAL_USD or maxTotalUsd.`
+      );
+      error.code = 'PAYMENT_LIMIT_EXCEEDED';
+      throw error;
+    }
+    const payTo = String(accept?.payTo || '').toLowerCase();
+    if (allowedPayees.length > 0 && !allowedPayees.includes(payTo)) {
+      const error = new Error(
+        `Refusing to pay ${accept?.payTo || '(no address)'}: not in X402_ALLOWED_PAYEES.`
+      );
+      error.code = 'PAYEE_NOT_ALLOWED';
+      throw error;
+    }
+    spentUsd += usd;
+    console.error(`   Within limits: $${usd.toFixed(6)} this call, $${spentUsd.toFixed(6)} of $${maxTotalUsd} spent`);
+  }
+
+  // The wallet is built on first use, not here.
+  //
+  // viem is several megabytes and constructing a client should not pay for it:
+  // most calls to this client never reach a 402, and the spend limits above are
+  // a security control that must work whether or not a signing library loaded.
   let wallet = null;
   let account = null;
   let currentNetwork = network;
-  
-  if (privateKey) {
-    try {
-      const { viem, viemAccounts } = await loadViem();
-      
-      // Ensure private key has 0x prefix
-      const pk = privateKey.startsWith('0x') ? privateKey : `0x${privateKey}`;
-      account = viemAccounts.privateKeyToAccount(pk);
-      
-      const chain = await getChainForNetwork(network);
-      wallet = viem.createWalletClient({
-        account,
-        chain,
-        transport: viem.http(),
-      });
-      
-      console.error(`💰 x402 wallet initialized: ${account.address}`);
-      console.error(`   Default network: ${NETWORK_CONFIGS[network]?.name || network}`);
-      console.error(`   Auto-select: ${autoSelectNetwork ? 'enabled' : 'disabled'}`);
-    } catch (e) {
-      console.error(`⚠️  Failed to initialize wallet: ${e.message}`);
+  let walletReady = null;
+
+  /**
+   * Build the signing wallet once, on the first payment.
+   * @returns {Promise<void>}
+   */
+  async function ensureWallet() {
+    if (!privateKey || wallet) return;
+    if (!walletReady) {
+      walletReady = (async () => {
+        try {
+          const { viem, viemAccounts } = await loadViem();
+          const pk = privateKey.startsWith('0x') ? privateKey : `0x${privateKey}`;
+          account = viemAccounts.privateKeyToAccount(pk);
+          const chain = await getChainForNetwork(network);
+          wallet = viem.createWalletClient({ account, chain, transport: viem.http() });
+          console.error(`💰 x402 wallet ready: ${account.address}`);
+          console.error(`   Default network: ${NETWORK_CONFIGS[network]?.name || network}`);
+          console.error(`   Auto-select: ${autoSelectNetwork ? 'enabled' : 'disabled'}`);
+        } catch (e) {
+          console.error(`⚠️  Failed to initialize wallet: ${e.message}`);
+        }
+      })();
     }
+    await walletReady;
   }
   
   /**
@@ -236,7 +312,7 @@ export async function createX402Client(config) {
     if (response.status === 402) {
       console.error(`💳 Payment required (402)`);
       
-      if (!wallet) {
+      if (!privateKey) {
         const error = new Error('Payment required but no wallet configured');
         error.code = 'PAYMENT_REQUIRED';
         
@@ -291,6 +367,19 @@ export async function createX402Client(config) {
       console.error(`   Amount: ${selectedAccept?.maxAmountRequired || 'unknown'}`);
       console.error(`   Network: ${selectedAccept?.extra?.networkName || selectedNetwork}`);
       console.error(`   Asset: USDC`);
+
+      // The server picks the amount and the recipient. Signing whatever a 402
+      // asks for means one hostile or compromised endpoint can drain the
+      // wallet, so the terms are checked against this client's limits first.
+      assertWithinLimits(selectedAccept);
+
+      // Only now is a signing library needed.
+      await ensureWallet();
+      if (!wallet || !account) {
+        const error = new Error('Payment required but the wallet could not be initialized');
+        error.code = 'PAYMENT_REQUIRED';
+        throw error;
+      }
       
       // Sign payment for the selected network
       const payment = await signPayment(wallet, account, paymentRequired, selectedNetwork, selectedAccept);

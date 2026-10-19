@@ -1,7 +1,7 @@
 ---
 name: skill-id
 description: One sentence describing what this skill does and when to use it. Include key actions, relevant features, and use cases. Used by agents to decide which skill to load.
-license: MIT
+license: Apache-2.0
 metadata:
   author: nichxbt
   version: "1.0"
@@ -15,7 +15,7 @@ Brief description of the skill — what it does and when to use it.
 
 | Goal | Solution |
 |------|----------|
-| Do X | `path/to/script.js` or `xactions command` |
+| Do X | `path/to/script.js` or `xactions <command>` |
 | Do Y | `path/to/other.js` |
 
 ## Implementation Details

@@ -104,7 +104,7 @@ site/video/
 
 ### Customizing Props
 
-Edit `defaultProps` in [Root.jsx](site/video/src/Root.jsx) or pass input data via Remotion's `--props` flag:
+Edit `defaultProps` in [Root.jsx](../site/video/src/Root.jsx) or pass input data via Remotion's `--props` flag:
 
 ```bash
 npx remotion render site/video/src/index.js TweetVideo --props='{"author":"YourName","text":"Your tweet text","likes":100}'

@@ -59,7 +59,7 @@ API endpoints include:
 - `POST /api/v1/follow/by-keyword`
 - `GET /api/v1/monitor/unfollowers`
 
-See [API Reference](docs/API_REFERENCE.md) for full documentation.
+See [API Reference](API_REFERENCE.md) for full documentation.
 
 ### Python SDK
 
@@ -149,7 +149,7 @@ export:
   output_dir: ./output
 ```
 
-See [Configuration Guide](docs/CONFIGURATION.md) for all options.
+See the [Installation Guide](INSTALLATION.md) for all configuration options.
 
 ## Project Structure
 
@@ -226,20 +226,20 @@ provider = OllamaProvider(
 
 ## Documentation
 
-- [Installation Guide](docs/INSTALLATION.md)
-- [CLI Reference](docs/CLI_REFERENCE.md)
-- [API Reference](docs/API_REFERENCE.md)
-- [Features Guide](docs/FEATURES.md)
-- [Configuration](docs/CONFIGURATION.md)
-- [Examples](docs/EXAMPLES.md)
+- [Installation Guide](INSTALLATION.md)
+- [CLI Reference](CLI_REFERENCE.md)
+- [API Reference](API_REFERENCE.md)
+- [Features Guide](FEATURES.md)
+- [Configuration](INSTALLATION.md#configuration)
+- [Examples](EXAMPLES.md)
 
 ## Contributing
 
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) first.
+Contributions are welcome! Please read our [Contributing Guide](../../../CONTRIBUTING.md) first.
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+Apache 2.0 License - see [LICENSE](../../../LICENSE) for details.
 
 ## Disclaimer
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * x402 Integration Tests
  *
@@ -33,8 +33,76 @@ async function apiRequest(method, path, { body, headers } = {}) {
   return { status: res.status, headers: res.headers, body: data };
 }
 
-// Skip all tests if server isn't running
-const describeWithServer = process.env.CI ? describe.skip : describe;
+/**
+ * Decide whether these tests can say anything meaningful right now.
+ *
+ * This used to key off `process.env.CI`, which had the logic backwards: CI
+ * skipped, and every contributor running `npm test` on a laptop with no server
+ * got 21 red ECONNREFUSED failures on a clean checkout. Probe the real thing
+ * instead.
+ *
+ * Two conditions have to hold, and both are "cannot evaluate" rather than
+ * "failed":
+ *
+ *   1. A server is listening.
+ *   2. It is not rate limiting us. The API ships an express-rate-limit of 100
+ *      requests per window, and this suite alone sends more than 20. Running
+ *      `npm test` a few times against one long-lived dev server exhausts it,
+ *      after which every assertion here fails with a 429 that says nothing
+ *      about the payment code under test.
+ *
+ * Start a server first to run these:  npm run dev &  npm run test:x402:integration
+ *
+ * @returns {Promise<{ready: boolean, reason: string}>}
+ */
+async function probeServer() {
+  let health;
+  try {
+    health = await fetch(`${API_URL}/health`, { signal: AbortSignal.timeout(2000) });
+  } catch {
+    return {
+      ready: false,
+      reason:
+        `No server at ${API_URL}. Run "npm run dev" in another shell ` +
+        '(or set TEST_API_URL) to exercise these tests.',
+    };
+  }
+
+  if (!health.ok) {
+    return { ready: false, reason: `Server at ${API_URL} answered /health with ${health.status}.` };
+  }
+
+  // A paid endpoint should answer 402. A 429 means the limiter is spent.
+  try {
+    const paid = await fetch(`${API_URL}/api/ai/scrape/profile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'probe' }),
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (paid.status === 429) {
+      return {
+        ready: false,
+        reason:
+          `Server at ${API_URL} is rate limiting (429). Restart it to reset the ` +
+          'window, then re-run.',
+      };
+    }
+  } catch {
+    return { ready: false, reason: `Server at ${API_URL} did not answer a paid endpoint.` };
+  }
+
+  return { ready: true, reason: '' };
+}
+
+const { ready: SERVER_READY, reason: SKIP_REASON } = await probeServer();
+
+if (!SERVER_READY) {
+  console.info(`[x402-integration] Skipping: ${SKIP_REASON}`);
+}
+
+const describeWithServer = SERVER_READY ? describe : describe.skip;
 
 describeWithServer('x402 Payment Integration', () => {
 
@@ -95,7 +163,9 @@ describeWithServer('x402 Payment Integration', () => {
       const accept = decoded.accepts[0];
       expect(accept.network).toMatch(/^eip155:\d+$/);
       expect(accept.payTo).toMatch(/^0x[a-fA-F0-9]{40}$/);
-      expect(accept.maxAmountRequired).toBeDefined();
+      // x402 v2 renamed the v1 `maxAmountRequired` field to `amount`.
+      // Accept either so this passes against both protocol versions.
+      expect(accept.amount ?? accept.maxAmountRequired).toBeDefined();
     });
 
     it('returns JSON content-type for 402 responses', async () => {

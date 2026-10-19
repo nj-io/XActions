@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * MCP Server — Tool Definition Tests
  *
@@ -6,21 +6,20 @@
  * Follows the same no-mock pattern as the rest of the test suite.
  */
 
-import { describe, it, before } from 'node:test';
+// This suite must use Vitest's runner, not `node:test`. Importing `describe`/
+// `it` from `node:test` registers the suite with Node's own runner, which
+// Vitest never executes — the file reported "No test suite found" and all 144
+// tool definitions went unchecked for months. Assertions stay on
+// `node:assert/strict`, which works under either runner.
+import { describe, it, beforeAll } from 'vitest';
 import assert from 'node:assert/strict';
 
-// We need to stub the stdio transport before importing the server so it
-// doesn't block on stdin. Use a lightweight import-time trick: set an env
-// var that the server checks, or intercept the module. Since the project
-// uses Vitest, we rely on its ESM mock support via importMock / vi.mock.
-// For now we import TOOLS directly — the server guards main() behind an
-// explicit call so importing it is safe.
-
+// The server guards main() behind an explicit call, so importing it does not
+// start the stdio transport and does not block on stdin.
 let TOOLS;
 
 describe('MCP Tool Definitions', () => {
-  before(async () => {
-    // Dynamically import so vitest has time to apply any setup
+  beforeAll(async () => {
     const mod = await import('../../src/mcp/server.js');
     TOOLS = mod.TOOLS;
   });

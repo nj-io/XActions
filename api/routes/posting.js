@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth.js';
@@ -9,12 +9,24 @@ const prisma = new PrismaClient();
 
 router.use(authMiddleware);
 
+/**
+ * Posting runs through the X session the user saved. The OAuth connection is
+ * granted read and follow scopes only (no tweet.write), so a post queued for
+ * an OAuth-only account could never be published.
+ */
+function hasPostingSession(req, res) {
+  if (req.user.sessionCookie) return true;
+  res.status(400).json({
+    error: 'X session required',
+    message: 'Posting needs a saved X session. Save one with POST /api/session/save-session, then try again.',
+  });
+  return false;
+}
+
 // Post a tweet
 router.post('/tweet', async (req, res) => {
   try {
-    if (!req.user.twitterAccessToken && !req.user.sessionCookie) {
-      return res.status(400).json({ error: 'Twitter account not connected' });
-    }
+    if (!hasPostingSession(req, res)) return;
 
     const { text, replyTo, quoteTweetId } = req.body;
     if (!text) return res.status(400).json({ error: 'Tweet text is required' });
@@ -34,7 +46,7 @@ router.post('/tweet', async (req, res) => {
       operationId: operation.id,
       userId: req.user.id,
       authMethod: req.user.authMethod || 'oauth',
-      config: { text, replyTo, quoteTweetId, sessionCookie: req.user.sessionCookie },
+      config: { text, replyTo, quoteTweetId },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Tweet queued' });
@@ -47,9 +59,7 @@ router.post('/tweet', async (req, res) => {
 // Post a thread
 router.post('/thread', async (req, res) => {
   try {
-    if (!req.user.twitterAccessToken && !req.user.sessionCookie) {
-      return res.status(400).json({ error: 'Twitter account not connected' });
-    }
+    if (!hasPostingSession(req, res)) return;
 
     const { tweets } = req.body;
     if (!tweets || !Array.isArray(tweets) || tweets.length < 2) {
@@ -70,7 +80,7 @@ router.post('/thread', async (req, res) => {
       operationId: operation.id,
       userId: req.user.id,
       authMethod: req.user.authMethod || 'oauth',
-      config: { tweets, sessionCookie: req.user.sessionCookie },
+      config: { tweets },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Thread queued' });
@@ -83,9 +93,7 @@ router.post('/thread', async (req, res) => {
 // Create a poll
 router.post('/poll', async (req, res) => {
   try {
-    if (!req.user.twitterAccessToken && !req.user.sessionCookie) {
-      return res.status(400).json({ error: 'Twitter account not connected' });
-    }
+    if (!hasPostingSession(req, res)) return;
 
     const { question, options, durationMinutes = 1440 } = req.body;
     if (!question) return res.status(400).json({ error: 'Poll question is required' });
@@ -107,7 +115,7 @@ router.post('/poll', async (req, res) => {
       operationId: operation.id,
       userId: req.user.id,
       authMethod: req.user.authMethod || 'oauth',
-      config: { question, options, durationMinutes, sessionCookie: req.user.sessionCookie },
+      config: { question, options, durationMinutes },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Poll queued' });
@@ -120,15 +128,16 @@ router.post('/poll', async (req, res) => {
 // Schedule a post
 router.post('/schedule', async (req, res) => {
   try {
-    if (!req.user.twitterAccessToken && !req.user.sessionCookie) {
-      return res.status(400).json({ error: 'Twitter account not connected' });
-    }
+    if (!hasPostingSession(req, res)) return;
 
     const { text, scheduledAt } = req.body;
     if (!text) return res.status(400).json({ error: 'Tweet text is required' });
     if (!scheduledAt) return res.status(400).json({ error: 'Schedule time is required' });
 
     const scheduleDate = new Date(scheduledAt);
+    if (Number.isNaN(scheduleDate.getTime())) {
+      return res.status(400).json({ error: 'Schedule time must be a valid ISO 8601 date' });
+    }
     if (scheduleDate <= new Date()) {
       return res.status(400).json({ error: 'Schedule time must be in the future' });
     }
@@ -147,7 +156,7 @@ router.post('/schedule', async (req, res) => {
       operationId: operation.id,
       userId: req.user.id,
       authMethod: req.user.authMethod || 'oauth',
-      config: { text, scheduledAt, sessionCookie: req.user.sessionCookie },
+      config: { text, scheduledAt },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Scheduled post queued' });
@@ -160,9 +169,7 @@ router.post('/schedule', async (req, res) => {
 // Delete a tweet
 router.delete('/tweet/:tweetId', async (req, res) => {
   try {
-    if (!req.user.twitterAccessToken && !req.user.sessionCookie) {
-      return res.status(400).json({ error: 'Twitter account not connected' });
-    }
+    if (!hasPostingSession(req, res)) return;
 
     const { tweetId } = req.params;
 
@@ -180,7 +187,7 @@ router.delete('/tweet/:tweetId', async (req, res) => {
       operationId: operation.id,
       userId: req.user.id,
       authMethod: req.user.authMethod || 'oauth',
-      config: { tweetId, sessionCookie: req.user.sessionCookie },
+      config: { tweetId },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Delete queued' });

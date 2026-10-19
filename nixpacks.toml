@@ -1,6 +1,11 @@
-# Nixpacks configuration for Railway
+# Nixpacks configuration for Railway.
+#
+# INERT TODAY: railway.json sets the Dockerfile builder, so Railway builds from
+# ./Dockerfile and never reads this file. It applies only if you set the builder
+# back to NIXPACKS, which is why the Chromium setup Puppeteer needs is kept here.
+# See deploy/README.md.
 [phases.setup]
-nixPkgs = ["nodejs_20", "chromium"]
+nixPkgs = ["nodejs_22", "chromium"]
 
 [phases.install]
 cmds = ["npm ci"]

@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * Performance Benchmark — HTTP Scraper vs Puppeteer
  *
@@ -21,7 +21,7 @@ import { PROFILE_RESPONSE, mockResponse } from './fixtures/responses.js';
 // ---------------------------------------------------------------------------
 
 /** Strip the outer `data` wrapper — see integration.test.js for rationale */
-const graphqlBody = (fixture) => fixture.data ?? fixture;
+const graphqlBody = (fixture) => fixture;
 
 /**
  * Time how many milliseconds a function takes to execute.

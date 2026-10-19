@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 // scripts/bulkDeleteTweets.js
 // Browser console script for bulk deleting tweets with filters
 // Paste in DevTools console on x.com/YOUR_USERNAME (your profile)
@@ -18,9 +18,10 @@
       onlyRetweets: false,    // Only delete retweets
       onlyReplies: false,     // Only delete replies
     },
-    dryRun: true,             // START WITH TRUE! Preview before deleting
-    delay: 2000,
-    scrollDelay: 2000,
+    dryRun: false,            // false = tweets are PERMANENTLY deleted. true = preview only.
+    delay: 5000,              // Between deletions. X throttles bursts, so keep this unhurried.
+    scrollDelay: 4000,        // After each scroll, to let the next page of posts render
+    menuDelay: 1200,          // Wait after opening / clicking through a post's menu
     maxScrolls: 50,
   };
   // =============================================
@@ -48,12 +49,39 @@
     console.log('🗑️ BULK DELETE TWEETS — XActions by nichxbt');
     console.log(CONFIG.dryRun ? '🔍 DRY RUN — preview only' : '⚠️ LIVE MODE — tweets WILL be deleted!');
 
-    const pathMatch = window.location.pathname.match(/^\/([A-Za-z0-9_]+)/);
-    if (!pathMatch || ['home', 'explore', 'notifications', 'messages', 'i', 'search', 'settings'].includes(pathMatch[1])) {
-      console.error('❌ Navigate to your profile page first! (x.com/YOUR_USERNAME)');
+    // Live mode deletes for real, so give the run a stoppable head start.
+    if (!CONFIG.dryRun) {
+      for (let i = 5; i > 0; i--) {
+        console.warn(`⚠️ Starting in ${i}s. Reload the page now to stop.`);
+        await sleep(1000);
+      }
+    }
+
+    // Accept the profile itself and its tabs (/with_replies, /media, ...); a
+    // feed, a single status, or a reserved section is not a profile timeline.
+    const PROFILE_TABS = ['with_replies', 'media', 'likes', 'highlights', 'articles', 'superfollows', 'affiliates'];
+    const RESERVED = ['home', 'explore', 'notifications', 'messages', 'i', 'search', 'settings', 'compose',
+      'hashtag', 'bookmarks', 'lists', 'topics', 'communities', 'jobs'];
+    const pathMatch = window.location.pathname.match(/^\/([A-Za-z0-9_]{1,15})(?:\/([A-Za-z0-9_]+))?\/?$/);
+    const pathUser = pathMatch && !RESERVED.includes(pathMatch[1].toLowerCase()) ? pathMatch[1] : null;
+    const onProfile = Boolean(pathUser) && (!pathMatch[2] || PROFILE_TABS.includes(pathMatch[2].toLowerCase()));
+
+    const navHref = document.querySelector('a[data-testid="AppTabBar_Profile_Link"]')?.getAttribute('href') || '';
+    const switcher = document.querySelector('[data-testid="SideNav_AccountSwitcher_Button"]')?.textContent || '';
+    const ownHandle = (navHref.match(/^\/([A-Za-z0-9_]{1,15})$/) || switcher.match(/@([A-Za-z0-9_]{1,15})/) || [])[1] || null;
+
+    if (!onProfile) {
+      console.error(ownHandle
+        ? `❌ Run this on your profile timeline: https://x.com/${ownHandle}`
+        : '❌ Run this on your profile timeline (x.com/YOUR_USERNAME)');
       return;
     }
-    const profileUser = pathMatch[1];
+    if (ownHandle && pathUser.toLowerCase() !== ownHandle.toLowerCase()) {
+      console.error(`❌ This is @${pathUser}'s profile. You can only delete your own posts: https://x.com/${ownHandle}`);
+      return;
+    }
+
+    const profileUser = ownHandle || pathUser;
     console.log(`👤 Profile: @${profileUser}`);
 
     const f = CONFIG.filters;
@@ -123,9 +151,9 @@
           if (!caret) continue;
 
           caret.scrollIntoView({ block: 'center' });
-          await sleep(300);
+          await sleep(400);
           caret.click();
-          await sleep(800);
+          await sleep(CONFIG.menuDelay);
 
           const menuItems = document.querySelectorAll('[role="menuitem"]');
           let deleteBtn = null;
@@ -136,12 +164,12 @@
 
           if (!deleteBtn) {
             document.body.click();
-            await sleep(300);
+            await sleep(600);
             continue;
           }
 
           deleteBtn.click();
-          await sleep(800);
+          await sleep(CONFIG.menuDelay);
 
           const confirm = document.querySelector('[data-testid="confirmationSheetConfirm"]');
           if (confirm) {
@@ -154,7 +182,7 @@
         } catch (e) {
           errors++;
           document.body.click();
-          await sleep(1000);
+          await sleep(1500);
         }
       }
 

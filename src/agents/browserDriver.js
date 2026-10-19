@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 // XActions — Browser Driver
 // Puppeteer stealth wrapper for X.com automation
 // by nichxbt
@@ -136,8 +136,10 @@ class BrowserDriver {
     try {
       const cookies = await this.page.cookies();
       const dir = path.dirname(this.sessionPath);
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      fs.writeFileSync(this.sessionPath, JSON.stringify(cookies, null, 2));
+      // The session file is a live login; keep it readable only by its owner.
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+      fs.writeFileSync(this.sessionPath, JSON.stringify(cookies, null, 2), { mode: 0o600 });
+      fs.chmodSync(this.sessionPath, 0o600);
       console.log(`💾 Session saved (${cookies.length} cookies)`);
     } catch (err) {
       console.log(`⚠️ Failed to save session: ${err.message}`);

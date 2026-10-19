@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Local Scheduler
  * Cron-based task scheduler with job history and webhook triggers.
@@ -6,7 +6,7 @@
  * Kills: Phantombuster (cloud scheduling), Apify (actors + schedules)
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 import cron from 'node-cron';
@@ -58,6 +58,10 @@ export class Scheduler extends EventEmitter {
 
     if (!name || !cronExpr || !command) {
       throw new Error('Job requires: name, cron, command');
+    }
+    // The name becomes part of the history file path, so it must be a plain name.
+    if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(name) || name.includes('..')) {
+      throw new Error(`Invalid job name "${String(name).slice(0, 64)}": use letters, digits, ".", "-" and "_"`);
     }
 
     if (!cron.validate(cronExpr)) {
@@ -203,9 +207,11 @@ export class Scheduler extends EventEmitter {
   // ── Internal ──
 
   _registerJob(config) {
-    const task = cron.schedule(config.cron, () => {
+    // createTask, not schedule: node-cron 4 starts a scheduled task
+    // immediately, and jobs here must stay idle until start() is called.
+    const task = cron.createTask(config.cron, () => {
       this._executeJob(this.jobs.get(config.name));
-    }, { scheduled: false });
+    });
 
     this.jobs.set(config.name, {
       config,

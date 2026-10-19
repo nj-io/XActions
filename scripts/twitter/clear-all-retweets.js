@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
  * 🔄 Clear All Retweets
@@ -27,7 +27,9 @@
  * ============================================================
  */
 
-const CONFIG = {
+// `var` (not `const`): a repeated top-level `const` paste in the same
+// DevTools tab throws "already been declared" instead of re-running.
+var CONFIG = {
   // Maximum retweets to undo (0 = unlimited)
   maxUndo: 0,
   
@@ -58,7 +60,7 @@ const CONFIG = {
   const $unretweetBtn = '[data-testid="unretweet"]';
   const $unretweetConfirm = '[data-testid="unretweetConfirm"]';
   const $tweet = '[data-testid="tweet"]';
-  const $retweetIndicator = 'span[data-testid="socialContext"]';
+  const $retweetIndicator = '[data-testid="socialContext"]';
   
   console.log('╔════════════════════════════════════════════════════════════╗');
   console.log('║  🔄 CLEAR ALL RETWEETS                                     ║');
@@ -141,9 +143,11 @@ const CONFIG = {
       
       for (const tweet of tweets) {
         if (isRetweet(tweet)) {
-          foundRetweet = true;
-          
+          // Only count a pass as progress when an undo succeeds; otherwise a
+          // tweet that looks like a retweet but cannot be undone would spin
+          // this loop forever with no scroll, retry, or delay
           if (await undoRetweet(tweet)) {
+            foundRetweet = true;
             totalUndone++;
             retries = 0;
             console.log(`🔄 Undid retweet ${totalUndone}${CONFIG.maxUndo > 0 ? '/' + CONFIG.maxUndo : ''}`);

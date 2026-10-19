@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * Tests for Twitter HTTP Actions — postTweet, postThread, deleteTweet,
  * replyToTweet, quoteTweet, schedulePost.
@@ -6,7 +6,7 @@
  * All tests use mocked client — no real network requests.
  *
  * @author nichxbt
- * @license MIT
+ * @license Apache-2.0
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -70,6 +70,16 @@ describe('postTweet', () => {
 
   beforeEach(() => {
     client = createMockClient();
+  });
+
+  it('throws X\'s in-body refusal instead of returning it as the post', async () => {
+    const refused = createMockClient({
+      graphqlResult: { errors: [{ code: 187, message: 'Status is a duplicate.' }], data: {} },
+    });
+    const error = await postTweet(refused, 'again').catch((e) => e);
+    expect(error).toBeInstanceOf(TwitterApiError);
+    expect(error.message).toBe('X did not create the post: Status is a duplicate. (code 187)');
+    expect(error.data.errors[0].code).toBe(187);
   });
 
   it('should construct correct POST body for a simple tweet', async () => {

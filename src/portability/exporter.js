@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Account Exporter
  * Orchestrates full account export: profile, tweets, followers, following, bookmarks, likes
@@ -8,7 +8,7 @@
  * Generates index.html archive viewer via archive-viewer.js
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 import { promises as fs } from 'fs';
@@ -29,11 +29,11 @@ function sanitize(username) {
 /**
  * Convert array of objects to CSV string
  */
-function toCSV(data) {
+export function toCSV(data) {
   if (!data || data.length === 0) return '';
   const headers = Object.keys(data[0]);
   const escape = (v) => {
-    const s = String(v ?? '');
+    const s = v !== null && typeof v === 'object' ? JSON.stringify(v) : String(v ?? '');
     return s.includes(',') || s.includes('"') || s.includes('\n')
       ? `"${s.replace(/"/g, '""')}"`
       : s;
@@ -45,7 +45,7 @@ function toCSV(data) {
 /**
  * Convert tweets array to readable Markdown
  */
-function tweetsToMarkdown(tweets, username) {
+export function tweetsToMarkdown(tweets, username) {
   let md = `# Tweets by @${username}\n\nExported ${today()} via XActions\n\n---\n\n`;
   for (const t of tweets) {
     md += `### ${t.timestamp || 'Unknown date'}\n\n`;
@@ -64,7 +64,7 @@ function tweetsToMarkdown(tweets, username) {
 /**
  * Convert followers/following to Markdown
  */
-function usersToMarkdown(users, title) {
+export function usersToMarkdown(users, title) {
   let md = `# ${title}\n\nExported ${today()} via XActions\n\nTotal: ${users.length}\n\n---\n\n`;
   for (const u of users) {
     md += `### @${u.username || u.handle || 'unknown'}`;
@@ -80,7 +80,7 @@ function usersToMarkdown(users, title) {
 /**
  * Convert profile to Markdown
  */
-function profileToMarkdown(profile) {
+export function profileToMarkdown(profile) {
   let md = `# @${profile.username || 'unknown'}\n\n`;
   if (profile.name) md += `**${profile.name}**\n\n`;
   if (profile.bio) md += `${profile.bio}\n\n`;
@@ -97,7 +97,7 @@ function profileToMarkdown(profile) {
 /**
  * Convert bookmarks to Markdown
  */
-function bookmarksToMarkdown(bookmarks) {
+export function bookmarksToMarkdown(bookmarks) {
   let md = `# Bookmarks\n\nExported ${today()} via XActions\n\nTotal: ${bookmarks.length}\n\n---\n\n`;
   for (const b of bookmarks) {
     if (b.author) md += `**@${b.author}**\n\n`;

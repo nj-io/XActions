@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * AI Posting Endpoints
  *
@@ -14,7 +14,7 @@ import crypto from 'crypto';
 const router = express.Router();
 
 const generateOperationId = () =>
-  `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+  `ai-${Date.now()}-${crypto.randomBytes(16).toString('hex')}`;
 
 const errorResponse = (res, statusCode, error, message, extras = {}) =>
   res.status(statusCode).json({
@@ -64,6 +64,9 @@ router.post('/tweet', async (req, res) => {
 
   if (text.length > 280) {
     return res.status(400).json({ error: 'INVALID_INPUT', message: 'text exceeds 280 characters' });
+  }
+  if (!Array.isArray(mediaUrls) || mediaUrls.length > 4 || mediaUrls.some((u) => typeof u !== 'string')) {
+    return res.status(400).json({ error: 'INVALID_INPUT', message: 'mediaUrls must be an array of at most 4 URLs' });
   }
 
   try {
@@ -138,7 +141,10 @@ router.post('/poll', async (req, res) => {
 
   if (!question) return res.status(400).json({ error: 'INVALID_INPUT', message: 'question is required' });
   if (!Array.isArray(options) || options.length < 2 || options.length > 4) {
-    return res.status(400).json({ error: 'INVALID_INPUT', message: 'options must be 2–4 choices' });
+    return res.status(400).json({ error: 'INVALID_INPUT', message: 'options must be 2 to 4 choices' });
+  }
+  if (options.some((o) => typeof o !== 'string' || !o.trim() || o.trim().length > 25)) {
+    return res.status(400).json({ error: 'INVALID_INPUT', message: 'each poll option must be 1 to 25 characters' });
   }
 
   const effectiveDuration = Math.min(Math.max(parseInt(durationMinutes) || 1440, 5), 10080);
@@ -177,6 +183,11 @@ router.post('/schedule', async (req, res) => {
   const scheduledDate = new Date(scheduledAt);
   if (isNaN(scheduledDate.getTime()) || scheduledDate <= new Date()) {
     return res.status(400).json({ error: 'INVALID_INPUT', message: 'scheduledAt must be a valid future ISO 8601 datetime' });
+  }
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: timezone });
+  } catch {
+    return res.status(400).json({ error: 'INVALID_INPUT', message: `Unknown time zone "${timezone}"` });
   }
 
   try {

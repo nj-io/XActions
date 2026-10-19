@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
  * 🛠️ XActions Core Utilities
@@ -24,7 +24,7 @@
  * @version 2.0.0
  * @date 2026-02-24
  * @repository https://github.com/nirholas/XActions
- * @license MIT
+ * @license Apache-2.0
  */
 
 window.XActionsUtils = (() => {

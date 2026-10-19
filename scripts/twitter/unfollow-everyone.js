@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
  * 🚫 Unfollow Everyone
@@ -28,7 +28,9 @@
  * ============================================================
  */
 
-const CONFIG = {
+// `var` (not `const`): a repeated top-level `const` paste in the same
+// DevTools tab throws "already been declared" instead of re-running.
+var CONFIG = {
   // Maximum retry attempts when no buttons found
   // 💡 Increase if you have many accounts (takes longer to scroll)
   maxRetries: 5,
@@ -91,12 +93,18 @@ const CONFIG = {
   }
   
   console.log('🚀 Starting mass unfollow...');
+  console.log('💡 To stop early: window.stopUnfollow()');
   console.log('');
-  
+
   let totalUnfollowed = 0;
   let retries = 0;
-  
-  while (retries < CONFIG.maxRetries) {
+  let stopped = false;
+  window.stopUnfollow = () => {
+    stopped = true;
+    console.log('🛑 Stopping after the current unfollow...');
+  };
+
+  while (retries < CONFIG.maxRetries && !stopped) {
     // Scroll to bottom to load more users
     window.scrollTo(0, document.body.scrollHeight);
     await sleep(CONFIG.scrollDelay);
@@ -111,13 +119,16 @@ const CONFIG = {
       continue;
     }
     
-    retries = 0; // Reset retries when we find buttons
-    
+    let confirmedThisPass = 0;
+
     for (const btn of buttons) {
+      if (stopped) break;
+
       // Check max unfollows limit
       if (CONFIG.maxUnfollows > 0 && totalUnfollowed >= CONFIG.maxUnfollows) {
         console.log(`\n✅ Reached limit of ${CONFIG.maxUnfollows} unfollows!`);
         console.log(`📊 Total unfollowed: ${totalUnfollowed}`);
+        delete window.stopUnfollow;
         return { total: totalUnfollowed };
       }
       
@@ -131,24 +142,36 @@ const CONFIG = {
         if (confirmBtn) {
           confirmBtn.click();
           totalUnfollowed++;
+          confirmedThisPass++;
           console.log(`✅ Unfollowed #${totalUnfollowed}`);
           await sleep(CONFIG.confirmDelay);
         }
-        
+
         await sleep(CONFIG.unfollowDelay);
-        
+
       } catch (e) {
         console.warn('⚠️ Error unfollowing:', e.message);
       }
     }
+
+    // Only reset retries on real progress; otherwise a button that never
+    // confirms would keep this loop spinning forever
+    if (confirmedThisPass > 0) {
+      retries = 0;
+    } else {
+      retries++;
+      console.log(`⏳ No unfollows confirmed this pass. Retry ${retries}/${CONFIG.maxRetries}...`);
+    }
   }
-  
+
+  delete window.stopUnfollow;
+
   console.log('');
   console.log('╔════════════════════════════════════════════════════════════╗');
-  console.log('║  ✅ COMPLETE!                                              ║');
+  console.log(stopped ? '║  🛑 STOPPED BY USER                                        ║' : '║  ✅ COMPLETE!                                              ║');
   console.log('╚════════════════════════════════════════════════════════════╝');
   console.log(`📊 Total unfollowed: ${totalUnfollowed}`);
   console.log('');
-  
+
   return { total: totalUnfollowed };
 })();

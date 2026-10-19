@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Client — Profile Data Model
  *
@@ -6,7 +6,7 @@
  * Use Profile.fromGraphQL(raw) to parse raw API responses.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 /**
@@ -78,52 +78,85 @@ export class Profile {
     // Handle UserUnavailable
     if (raw.__typename === 'UserUnavailable') return null;
 
-    const legacy = raw.legacy;
-    if (!legacy) return null;
+    // X served every field inside a flat `legacy` block for years. During
+    // 2026 it moved them into typed sub-objects (core, avatar, banner,
+    // location, privacy, profile_bio, relationship_counts, tweet_counts,
+    // action_counts, verification) and stopped sending `legacy` at all on
+    // UserByScreenName. Requiring `legacy` made every profile read fail with
+    // "Could not parse user". Read the typed shape first and fall back to
+    // legacy, so both eras parse and a partial response still yields a
+    // profile rather than null.
+    const legacy = raw.legacy || {};
+    const core = raw.core || {};
+    const bio = raw.profile_bio || {};
+    const rel = raw.relationship_counts || {};
+    const tweets = raw.tweet_counts || {};
+    const actions = raw.action_counts || {};
+
+    const username = core.screen_name || legacy.screen_name || '';
+    const id = raw.rest_id || legacy.id_str || '';
+    // Without at least an id or a handle there is nothing usable here.
+    if (!id && !username) return null;
 
     const profile = new Profile();
 
     // Core fields
-    profile.id = raw.rest_id || legacy.id_str || '';
-    profile.username = legacy.screen_name || '';
-    profile.name = legacy.name || '';
-    profile.bio = legacy.description || '';
-    profile.location = legacy.location || '';
+    profile.id = id;
+    profile.username = username;
+    profile.name = core.name || legacy.name || '';
+    profile.bio = bio.description ?? legacy.description ?? '';
+    profile.location = raw.location?.location ?? legacy.location ?? '';
 
     // Website — expand t.co URL from entities
-    const websiteEntity = legacy.entities?.url?.urls?.[0];
-    profile.website = websiteEntity?.expanded_url || websiteEntity?.url || legacy.url || '';
+    const websiteEntity =
+      bio.entities?.url?.urls?.[0] || legacy.entities?.url?.urls?.[0];
+    profile.website = websiteEntity?.expanded_url || websiteEntity?.url || raw.website?.url || legacy.url || '';
 
     // Join date
-    if (legacy.created_at) {
-      profile.joined = new Date(legacy.created_at);
+    const createdAt = core.created_at || legacy.created_at;
+    if (createdAt) {
+      profile.joined = new Date(createdAt);
     }
 
-    // Counts
-    profile.followersCount = parseInt(legacy.followers_count, 10) || 0;
-    profile.followingCount = parseInt(legacy.friends_count, 10) || 0;
-    profile.tweetCount = parseInt(legacy.statuses_count, 10) || 0;
-    profile.likesCount = parseInt(legacy.favourites_count, 10) || 0;
-    profile.listedCount = parseInt(legacy.listed_count, 10) || 0;
-    profile.mediaCount = parseInt(legacy.media_count, 10) || 0;
+    // Counts. The typed shape drops listed_count entirely, so it stays 0
+    // unless a legacy block is present rather than being invented.
+    const num = (...candidates) => {
+      for (const c of candidates) {
+        const n = parseInt(c, 10);
+        if (Number.isFinite(n)) return n;
+      }
+      return 0;
+    };
+    profile.followersCount = num(rel.followers, legacy.followers_count);
+    profile.followingCount = num(rel.following, legacy.friends_count);
+    profile.tweetCount = num(tweets.tweets, legacy.statuses_count);
+    profile.likesCount = num(actions.favorites_count, legacy.favourites_count);
+    profile.listedCount = num(legacy.listed_count);
+    profile.mediaCount = num(tweets.media_tweets, legacy.media_count);
 
     // Images
-    profile.avatar = (legacy.profile_image_url_https || '').replace('_normal', '_400x400');
-    profile.banner = legacy.profile_banner_url || '';
+    const avatarUrl = raw.avatar?.image_url || legacy.profile_image_url_https || '';
+    profile.avatar = avatarUrl.replace('_normal', '_400x400');
+    profile.banner = raw.banner?.image_url || legacy.profile_banner_url || '';
 
     // Verification
-    profile.verified = legacy.verified || false;
+    profile.verified = raw.verification?.verified ?? legacy.verified ?? false;
     profile.isBlueVerified = raw.is_blue_verified || false;
-    profile.protected = legacy.protected || false;
+    profile.protected = raw.privacy?.protected ?? legacy.protected ?? false;
 
     // Pinned tweets
-    profile.pinnedTweetIds = (legacy.pinned_tweet_ids_str || []).slice();
+    const pinned =
+      legacy.pinned_tweet_ids_str ||
+      raw.pinned_items?.pinned_tweet_ids_str ||
+      [];
+    profile.pinnedTweetIds = Array.isArray(pinned) ? pinned.slice() : [];
 
     // Business/government affiliations
     const affiliateLabels = raw.affiliates_highlighted_label?.label || {};
-    if (affiliateLabels.userLabelType === 'GovernmentLabel') {
+    const verifiedType = raw.verification?.verified_type || legacy.verified_type || '';
+    if (affiliateLabels.userLabelType === 'GovernmentLabel' || verifiedType === 'Government') {
       profile.isGovernment = true;
-    } else if (affiliateLabels.userLabelType === 'BusinessLabel') {
+    } else if (affiliateLabels.userLabelType === 'BusinessLabel' || verifiedType === 'Business') {
       profile.isBusiness = true;
     }
     profile.affiliatesCount = parseInt(raw.business_account?.affiliates_count, 10) || 0;

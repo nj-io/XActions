@@ -1,16 +1,44 @@
 # XActions CLI Reference
 
 > **The Complete X/Twitter Automation Toolkit**  
-> Version 3.0.0 | Author: nich ([@nichxbt](https://x.com/nichxbt))
+> Author: nich ([@nichxbt](https://x.com/nichxbt)). Run `xactions --version` for the version you have installed.
 
-The XActions CLI provides powerful command-line tools for X/Twitter automation, scraping, and data extraction. No Twitter API required — saves you $100-$5,000+/month in API costs.
+The XActions CLI provides command-line tools for X/Twitter automation, scraping, and data extraction. No Twitter API required, which saves $100-$5,000+/month in API costs.
+
+**Most read commands need no account at all.** Profiles, timelines, threads, and media all work on the guest tier the moment you install. Logging in unlocks search, followers, following, likes, bookmarks, and DMs. `xactions doctor` tells you which tier you are on right now.
 
 ---
+
+
+## ask
+
+Ask how to do something with XActions and get a sourced answer plus what to run. No API key needed.
+
+```bash
+xactions ask "how do I unfollow everyone?"
+xactions ask "scrape followers" --json
+echo "how do I download a video" | xactions ask
+```
+
+| Option | Description |
+|---|---|
+| `--json` | Print the answer, sources and actions as JSON |
+| `-q, --quiet` | Answer only, no progress or lane line |
+| `--no-sources` | Skip the source list |
+| `-p, --provider <name>` | Answer with your own key (`groq`, `openrouter`, `xai`, `openai`, `gemini`, `mistral`, `cerebras`) |
+| `-k, --key <key>` | API key for `--provider` (defaults to `<PROVIDER>_API_KEY`) |
+| `-m, --model <model>` | Model override for `--provider` |
+
+The answer streams as it is written and ends with a **Run it** block naming the browser script, CLI command or MCP tool that does the job. Retrieval is local to the install, so it answers with no network once the free lanes are unreachable. Full guide: [Ask XActions](ask.md).
 
 ## Table of Contents
 
 - [Installation](#installation)
 - [Quick Start](#quick-start)
+- [Finding your way around](#finding-your-way-around)
+  - [xactions quickstart](#xactions-quickstart)
+  - [xactions completion](#xactions-completion)
+  - [xactions skills](#xactions-skills)
 - [Authentication](#authentication)
   - [xactions login](#xactions-login)
   - [xactions logout](#xactions-logout)
@@ -52,6 +80,7 @@ The XActions CLI provides powerful command-line tools for X/Twitter automation, 
 - [Import/Export Compatibility](#importexport-compatibility)
 - [MCP Config](#mcp-config)
 - [Output Formats](#output-formats)
+  - [Compact output for agents](#compact-output-for-agents)
 - [Environment Variables](#environment-variables)
 - [Configuration](#configuration)
 - [Troubleshooting](#troubleshooting)
@@ -70,34 +99,86 @@ Verify the installation:
 
 ```bash
 xactions --version
-# Output: 3.0.0
-
-xactions --help
+xactions doctor      # checks Node, the browser, the MCP server, and what works right now
 ```
 
 ### Requirements
 
 - **Node.js**: v18.0.0 or higher
 - **npm**: v8.0.0 or higher
-- A valid X/Twitter account for authentication
+- An X/Twitter account **only** for search, followers, following, likes, bookmarks, and DMs. Everything else works logged out.
 
 ---
 
 ## Quick Start
 
 ```bash
-# 1. Install XActions
 npm install -g xactions
 
-# 2. Authenticate with your X account
-xactions login
+xactions quickstart          # guided first run, adapts to what you have set up
+xactions doctor              # verify the install and see which tier you are on
 
-# 3. Scrape a profile
-xactions profile elonmusk
+xactions profile NASA        # works with no account
+xactions tweets NASA --limit 20
+xactions analyze NASA        # engagement rate, cadence, content mix, best posting hour
 
-# 4. Get followers and save to file
-xactions followers elonmusk --limit 500 --output followers.json
+xactions connect             # log in once, in a real browser, to unlock the rest
+xactions search "your topic" --limit 50
+xactions followers yourhandle --limit 500 --output followers.json
 ```
+
+`xactions connect` drives a real browser: you log in normally and the session is captured for you. `xactions login` now also imports cookies without DevTools, via `--from-browser` (reads your browser's cookie DB) or `--cookies-file` (an exported cookies file); with no flags it prompts you to paste `auth_token` and `ct0`.
+
+---
+
+## Finding your way around
+
+There are more than fifty commands. Running `xactions` with no arguments prints them grouped by task rather than alphabetically:
+
+```
+Start here              Set up and verify the install
+Read an account         Works with no login at all
+Followers and audience  Who follows whom, and who is worth your time
+Search and monitor      Find posts, then keep watching them
+Write and grow          Draft, sharpen, schedule, and recycle posts
+Automate                Run it without you
+Move data               Export, import, convert, migrate, diff
+Low level               The raw HTTP client
+```
+
+`xactions help <command>` gives the full flag list for any one command.
+
+### xactions quickstart
+
+A guided first run. Reads what you already have configured and prints the three commands that will produce a result on your machine, then the directions worth exploring next.
+
+```bash
+xactions quickstart
+xactions quickstart --json    # just the detected setup state, for scripts
+```
+
+The JSON form reports the config directory, whether a session is saved, and which tier (`guest` or `session`) you are on.
+
+### xactions completion
+
+Tab completion for bash, zsh, and fish. The script is generated from the live command tree, so it covers every command, sub-command, and flag, and stays correct as commands are added.
+
+```bash
+# bash
+xactions completion bash > /etc/bash_completion.d/xactions
+# or, without root:
+echo 'source <(xactions completion bash)' >> ~/.bashrc
+
+# zsh
+xactions completion zsh > "${fpath[1]}/_xactions" && compinit
+# or:
+echo 'source <(xactions completion zsh)' >> ~/.zshrc
+
+# fish
+xactions completion fish > ~/.config/fish/completions/xactions.fish
+```
+
+Regenerate it after upgrading XActions so newly added commands complete.
 
 ---
 
@@ -107,42 +188,77 @@ XActions uses your X/Twitter session cookie for authentication. This approach by
 
 ### xactions login
 
-Set up authentication with your X/Twitter session cookie.
+Set up authentication with your X/Twitter session cookie. Four ways in, fastest first.
 
 **Syntax:**
 
 ```bash
-xactions login
+xactions login [--from-browser [browser]] [--cookies-file <path>]
 ```
 
-**Usage:**
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--from-browser [browser]` | Read x.com cookies from a locally installed browser: `chrome`, `chromium`, `brave`, `edge`, `arc`, or `firefox` (default `firefox`). |
+| `--cookies-file <path>` | Import cookies from a file: Netscape `cookies.txt`, Cookie-Editor / EditThisCookie JSON, Playwright / Puppeteer `storageState`, or a raw `auth_token=...; ct0=...` string. |
+
+With no flags, `xactions login` prompts you to paste `auth_token` and `ct0` by hand.
+
+**1. Read cookies from your browser (no DevTools, no copy/paste):**
+
+```bash
+$ xactions login --from-browser firefox
+✔ Imported 4 x.com cookies from firefox
+  Saved to ~/.xactions/cookies.json (owner-only)
+  auth_token + ct0 captured. Session-tier commands are unlocked.
+```
+
+`--from-browser` reads the browser's own cookie database. It works headlessly for
+Firefox on every platform, and for Chromium-family browsers on Linux (default
+keyring-less key) and macOS (via the Keychain). If a Chromium browser seals its
+cookies with the system keyring (GNOME Keyring / KWallet), or you are on Windows,
+the command prints the exact `--cookies-file` export path to use instead. Nothing
+is faked and nothing is sent anywhere.
+
+**2. Import a cookies file you exported:**
+
+```bash
+$ xactions login --cookies-file ~/Downloads/x.com_cookies.txt
+✔ Imported 4 x.com cookies
+  Saved to ~/.xactions/cookies.json (owner-only)
+  auth_token + ct0 captured. Session-tier commands are unlocked.
+```
+
+Accepted formats (auto-detected):
+
+- **Netscape `cookies.txt`** — what curl, wget, and the "Get cookies.txt LOCALLY" extension write (tab-separated, `#HttpOnly_` prefixes supported).
+- **Cookie-Editor / EditThisCookie JSON** — a `[{name, value, domain, ...}]` array.
+- **Playwright / Puppeteer `storageState`** — a `{ cookies: [...] }` object.
+- **Raw header string** — `auth_token=...; ct0=...`.
+
+Only x.com / twitter.com cookies are extracted; anything else in the export is dropped.
+
+**3. Log in through a real browser window:** run `xactions connect`. It opens a real Chrome window, you log in normally (2FA included), and the session is captured when you finish.
+
+**4. Paste the two cookies by hand:**
 
 ```bash
 $ xactions login
 
 ⚡ XActions Login Setup
-
-To get your auth_token cookie:
-1. Go to x.com and log in
-2. Open DevTools (F12) → Application → Cookies
-3. Find "auth_token" and copy its value
-
+...
 ? Enter your auth_token cookie: ********
+? Enter your ct0 cookie (optional, press Enter to skip): ********
 
 ✓ Authentication saved!
 ```
 
-**How to get your auth_token:**
+To find them in DevTools: open [x.com](https://x.com) logged in, press `F12`, go to
+the **Application** tab (Chrome) or **Storage** tab (Firefox), expand **Cookies** →
+`https://x.com`, and copy the values of `auth_token` and `ct0`.
 
-1. Open [x.com](https://x.com) in your browser and log in
-2. Press `F12` to open Developer Tools
-3. Go to **Application** tab (Chrome) or **Storage** tab (Firefox)
-4. Expand **Cookies** → click on `https://x.com`
-5. Find the cookie named `auth_token`
-6. Copy the **Value** (a long hexadecimal string)
-7. Paste it when prompted by `xactions login`
-
-> ⚠️ **Security Note**: Your auth_token is stored locally in `~/.xactions/config.json`. Never share this token with anyone.
+> ⚠️ **Security Note**: Your session is stored locally in `~/.xactions/cookies.json` and `~/.xactions/config.json` with owner-only permissions. Never share these values with anyone.
 
 ---
 
@@ -635,6 +751,49 @@ xactions media artist -l 200 -o artist-media.json
 
 ---
 
+### xactions engage
+
+Like, repost, and reply across a profile, a search, or a list, with replies from templates or from an LLM given a brief. Needs a logged-in session (`xactions connect`) for anything but `--dry-run`.
+
+```bash
+xactions engage [username] [options]
+xactions engage --search "<query>" [options]
+xactions engage --list <id> [options]
+```
+
+| Option | Description |
+|--------|-------------|
+| `--search <query>` / `--list <id>` | Sweep a search or a list instead of a profile |
+| `--mode <Latest\|Top>` | Search ranking (default Latest) |
+| `--like` / `--repost` / `--comment` | Actions to take (at least one) |
+| `-l, --limit <n>` | Posts to engage this run (default 100) |
+| `--replies` / `--reposts` | Include replies / reposts of other accounts |
+| `--since <date>` | Only posts on or after this date |
+| `--from <handles>` / `--skip-user <handles>` | Author allow and block lists |
+| `--keyword <words>` / `--skip-keyword <words>` | Text must contain / must not contain |
+| `--min-likes <n>` / `--max-likes <n>` | Like floor and ceiling (0 = no ceiling) |
+| `--template <text>` | Reply template, repeatable (`{author}`, `{name}`) |
+| `--templates-file <path>` | One template per line |
+| `--prompt <brief>` | AI replies: how they should sound |
+| `--persona <text>` | Optional persona line for the model |
+| `--provider <name>` | `openrouter` (default), `openai`, `xai`, `anthropic`, `ollama`, `custom` |
+| `--model <name>` | Model override |
+| `--api-key <key>` | Or the provider's env var (`OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `XAI_API_KEY`, `ANTHROPIC_API_KEY`) |
+| `--base-url <url>` | Chat-completions URL for `custom` |
+| `--delay <s>` / `--jitter <s>` | Pacing between posts (default 20 ± 10) |
+| `--dry-run` | Preview, including generated replies, post nothing |
+| `--reset` / `--no-resume` | Forget saved progress / ignore it for this run |
+| `--json` | Report as JSON on stdout |
+
+```bash
+xactions engage nasa --like --repost --dry-run
+xactions engage nasa --like --comment --template "Solid work on this, {name}."
+xactions engage --search "open source AI" --like --comment --prompt "curious builder" --max-likes 50
+xactions engage --list 1234567890 --like --keyword solana,rust --limit 25
+```
+
+Progress is saved per feed in `~/.xactions/engage/`, so a second run skips what the first finished. Full guide, including the browser-console and MCP versions: [engage.md](engage.md).
+
 ### xactions info
 
 Display XActions information, version, and links.
@@ -650,7 +809,7 @@ xactions info
 ```bash
 $ xactions info
 
-⚡ XActions v3.0.0
+⚡ XActions v3.5.0
 
 The Complete X/Twitter Automation Toolkit
 
@@ -2250,7 +2409,7 @@ DEBUG=xactions:* xactions followers nichxbt
 
 ## License
 
-MIT License - see [LICENSE](../LICENSE) for details.
+Apache 2.0 License - see [LICENSE](../LICENSE) for details.
 
 ---
 
@@ -2259,3 +2418,158 @@ MIT License - see [LICENSE](../LICENSE) for details.
   Built by <a href="https://x.com/nichxbt">nich (@nichxbt)</a><br>
   <a href="https://xactions.app">https://xactions.app</a>
 </p>
+
+---
+
+## Skills
+
+### xactions skills
+
+Install the bundled agent skills (the `skills/*/SKILL.md` files) where your coding agent reads them. Resolves the skills directory relative to the package, so it works from a global npm install.
+
+```bash
+xactions skills list [--json]
+xactions skills show <name> [--json]
+xactions skills install [names...] [--all] [--target <target>] [--global] [--json]
+xactions skills uninstall [names...] [--all] [--target <target>] [--global] [--json]
+```
+
+| Option | Description | Default |
+|---|---|---|
+| `-a, --all` | Every bundled skill | |
+| `-t, --target <target>` | `claude`, `project`, `cursor`, `codex`, `windsurf` | `claude` |
+| `-g, --global` | Home directory instead of the current project (`claude` and `codex` only) | |
+| `--json` | Report as JSON | |
+
+| Target | Path |
+|---|---|
+| `claude` | `~/.claude/skills/<id>/` with `--global`, else `./.claude/skills/<id>/` |
+| `project` | `./.claude/skills/<id>/` |
+| `cursor` | `./.cursor/rules/<id>.mdc` |
+| `codex` | `~/.codex/skills/<id>/` or `./.codex/skills/<id>/`, plus a managed block in `./AGENTS.md` |
+| `windsurf` | `./.windsurf/rules/<id>.md` |
+
+```bash
+xactions skills install --all --global
+# Output:
+#   + a2a-multi-agent                claude    installed /home/you/.claude/skills/a2a-multi-agent
+#   + account-backup                 claude    installed /home/you/.claude/skills/account-backup
+#   ...
+#   49 installed
+
+xactions skills install account-backup --global
+#   = account-backup                 claude    unchanged /home/you/.claude/skills/account-backup
+
+xactions skills list
+#   account-backup                 claude (global)
+#                                  Export and backup your X/Twitter account data ...
+```
+
+Names match a skill id (`account-backup`) or its display name, case-insensitively. Every run is idempotent; `doctor` counts installs per target. The full target table and what each wrapper contains are in [skills.md](skills.md#install-into-your-agent).
+
+---
+
+## Compact output for agents
+
+`--compact` is a global flag for the read commands: `profile`, `tweets`, `search`, `thread`, `followers`, `following`, `non-followers`, `hashtag`, `media`, and `analyze`. It prints one record per line as tab-separated `key=value` pairs with only the essential fields, no colours, no spinner, no box drawing. It costs a fraction of the tokens of `--json` and is trivial to `cut` or `awk`.
+
+```bash
+xactions tweets nasa --limit 3 --compact
+# id=2092744659667673582	username=NASA	date=2026-08-27T01:23:02.000Z	likes=2958	retweets=665	replies=89	views=467791	text=A partial lunar eclipse will pass over the Americas ...
+# id=2092721435663798658	username=NASA	date=2026-08-26T23:50:45.000Z	likes=776	retweets=91	replies=30	views=376104	text=On Aug. 30, @NASARoman is scheduled to lift off ...
+
+xactions profile nasa --compact --fields username,followers,verified
+# username=NASA	followers=92350973	verified=false
+
+xactions analyze nasa --compact
+# username=NASA	followers=92350972	following=118	postsPerDay=2.78	engagementRate=0.004	medianEngagement=3890	mediaShare=100	bestWeekday=Wednesday
+```
+
+`--fields id,text,likes` picks exactly those columns, in that order. The names are the same on every command, so `likes` means likes whether the record came from `tweets`, `search`, or `thread`:
+
+| Kind | Default columns |
+|---|---|
+| tweets, search, thread, hashtag | `id username date likes retweets replies views text` |
+| profile | `id username name followers following tweets verified bio` |
+| followers, following, non-followers | `id username name followers verified bio` |
+| media | `type url tweetUrl` |
+| analyze | `username followers following postsPerDay engagementRate medianEngagement mediaShare bestHourUTC bestWeekday` |
+
+Any raw field of the underlying record can also be named in `--fields` (for example `permanentUrl` or `isRetweet`); a field the record lacks is skipped rather than printed empty. Newlines and tabs inside a value become single spaces so a line is always one record. Dates print as ISO 8601.
+
+`--compact` outranks `--output` and `--google-sheets`, the same way `--json` does. When stdout is a pipe, both `--json` and `--compact` keep the spinner completely silent, so nothing lands on stderr but a real error.
+
+---
+
+## Drafts (approve MCP write calls from the terminal)
+
+When an MCP client runs with `XACTIONS_MCP_REQUIRE_APPROVAL=1`, every write tool call (post, reply, like, follow, DM, delete, ...) is held in `~/.xactions/mcp-drafts.json` instead of running. `xactions drafts` is the terminal side of that queue: read exactly what the agent wanted to do, release it, or drop it. `XACTIONS_HOME` moves the store; the MCP server and this command read the same file.
+
+```bash
+xactions drafts list                    # newest first: id, status, age, tool, args
+xactions drafts list --status pending   # pending, executed, failed, or all
+xactions drafts show 3f9c1a2b           # full arguments, and the result or error once it ran
+xactions drafts approve 3f9c1a2b        # run it now, exactly as submitted
+xactions drafts approve --all           # every pending draft, oldest first
+xactions drafts discard 3f9c1a2b        # delete without running
+xactions drafts clear                   # drop executed and failed drafts, keep pending ones
+```
+
+```
+  ID        STATUS    AGE       TOOL                      ARGS
+  3f9c1a2b  pending   4m        x_post_tweet              text="Shipping approval mode today."
+  a81d02c7  executed  2h        x_follow_user             username="nasa"
+
+  2 drafts, 1 pending. Approve one with `xactions drafts approve <id>`, everything with `--all`.
+```
+
+Approval replays the call through the MCP server's own dispatcher, so an approved draft runs the same code path the live tool would have. A draft that already ran is refused, so nothing posts twice; a failed run keeps the draft with its error so you can read it with `show` and retry by re-creating it. Every sub-command takes `--json`; errors under `--json` come back as `{"error": "..."}` with exit code 1. The MCP server is only loaded by `approve`, so `list`, `show`, `discard` and `clear` are instant.
+
+## Archive (the X data export, without scraping)
+
+X hands you your full history as a zip (Settings > Your account > Download an archive of your data). `xactions archive` reads that zip, or the folder you extracted it to, straight from disk. Nothing here needs a login or the network.
+
+```bash
+xactions archive summary twitter-2026-01-01-abc123.zip
+xactions archive summary ./twitter-export --sections tweets,likes --top 5 --json
+xactions archive export twitter-2026-01-01-abc123.zip --out exports/me
+xactions archive export twitter-2026-01-01-abc123.zip --out exports/me --formats json,csv
+xactions archive migrate twitter-2026-01-01-abc123.zip --to bluesky
+xactions archive migrate twitter-2026-01-01-abc123.zip --to bluesky --execute --handle me.bsky.social --password app-pass
+xactions archive migrate twitter-2026-01-01-abc123.zip --to mastodon --execute --instance https://fosstodon.org --token ...
+```
+
+| Sub-command | Does |
+|-------------|------|
+| `summary <zip-or-folder>` | Counts per section, tweet date range, tweets per year, busiest year, top hashtags and mentions, likes and retweets received. `--sections` reads only the named sections (fast on a multi-gigabyte zip), `--top <n>` sizes the hashtag and mention lists. |
+| `export <zip-or-folder> --out <dir>` | Writes the archive in the same layout `xactions export` produces: `profile.json`, `tweets.json`, `following.json`, ... plus CSV, Markdown and an `index.html` viewer. `--formats json,csv,md,html` picks a subset. The result works with `xactions diff` and `xactions migrate` unchanged. |
+| `migrate <zip-or-folder> --to bluesky\|mastodon` | Stages `tweets.json` and `following.json` from the archive (into `--out`, default `exports/<archive>_migration`) and runs the migration. Dry run by default; `--execute` needs `--handle` and `--password` (Bluesky app password) or `--token` and `--instance` (Mastodon). |
+
+```
+✔ Read twitter-2026-01-01-abc123.zip (zip)
+
+  X archive for @nichxbt (zip)
+  Account created: 2019-03-01
+  Tweets span:     2024-01-01 to 2025-03-16
+
+  Tweets       5 (3 original, 1 replies, 1 retweets, 2 with media)
+  Likes        2
+  Following    3
+  ...
+  Top hashtags
+    #xactions  3
+```
+
+A spinner tracks the scan (`Scanning 4/12 data/tweets.js`, `Parsed tweets (18,204 records) from data/tweets.js`). Under `--json` with stdout piped, the spinner is silent and only the document is printed, so `xactions archive summary me.zip --json | jq .counts` works as expected.
+
+## Doctor: query IDs and account pool
+
+`xactions doctor` has two extra lines beyond the environment and session checks:
+
+- **GraphQL query IDs.** X rotates the persisted query IDs of its GraphQL operations whenever it ships a new web bundle, and a stale one answers `404 Query not found`. The line reports how many discovered IDs are cached in `~/.xactions/query-ids.json`, how old they are, and warns past the 24 hour freshness window. `xactions doctor --refresh-ids` discovers the current IDs from x.com before running the checks and reports the refresh result. With no cache, the pinned table in `src/scrapers/twitter/http/endpoints.js` is in use, which is fine until X rotates.
+- **Accounts.** If a multi-account pool exists (`~/.xactions/accounts.db`), the line reports how many accounts are configured, how many can serve right now, how many are cooling down on a rate limit (with the next reset), and how many are locked after a 401/403. With no pool it says so as a warning and moves on; doctor never creates one.
+
+```
+  ✓ GraphQL query IDs   142 query IDs cached, 3h old (/home/me/.xactions/query-ids.json)
+  ! Accounts            No account pool at /home/me/.xactions/accounts.db; every call uses the single saved session
+```

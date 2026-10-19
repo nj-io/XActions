@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
  * 🚫 Mass Block
@@ -24,7 +24,9 @@
  * ============================================================
  */
 
-const CONFIG = {
+// `var` (not `const`): a repeated top-level `const` paste in the same
+// DevTools tab throws "already been declared" instead of re-running.
+var CONFIG = {
   // List of usernames to block (without @)
   usersToBlock: [
     // 'username1',
@@ -48,6 +50,28 @@ const CONFIG = {
 (async function massBlock() {
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
+  // Navigate within the SPA. Assigning window.location.href triggers a full
+  // page load, which destroys this console script after the first user.
+  const spaNavigate = (url) => {
+    try {
+      const target = new URL(url, window.location.href);
+      if (target.origin === window.location.origin) {
+        window.history.pushState({}, '', target.href);
+        window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
+        return;
+      }
+    } catch (e) {}
+    window.location.href = url;
+  };
+
+  // Stop switch: run window.stopMassBlock() from the console to abort after
+  // the account currently being processed.
+  let stopped = false;
+  window.stopMassBlock = () => {
+    stopped = true;
+    console.log('🛑 Stop requested. Finishing the current account, then exiting.');
+  };
+
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
 ║  🚫 XActions — Mass Block                                    ║
@@ -55,6 +79,7 @@ const CONFIG = {
 ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be blocked             ║' : '║  🔴 LIVE MODE - Accounts WILL be blocked                    ║'}
 ╚══════════════════════════════════════════════════════════════╝
   `);
+  console.log('💡 To stop early: window.stopMassBlock()\n');
 
   if (CONFIG.usersToBlock.length === 0) {
     console.log('❌ No users to block! Edit CONFIG.usersToBlock and add usernames.');
@@ -84,22 +109,27 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be blocked      
   };
 
   for (const username of CONFIG.usersToBlock) {
+    if (stopped) {
+      console.log('🛑 Stopped by user.');
+      break;
+    }
     console.log(`\n⏳ Processing @${username}...`);
 
     try {
-      // Navigate to user's profile
+      // Navigate to user's profile (SPA navigation keeps this script alive)
       const profileUrl = `https://x.com/${username}`;
-      
-      // Create a fetch to check if profile exists
-      // Then use the menu approach
-      
-      // Open the profile in current tab
-      window.location.href = profileUrl;
+      spaNavigate(profileUrl);
       await sleep(3000); // Wait for page load
 
-      // Find the more button
-      const moreButton = document.querySelector('[data-testid="userActions"]');
-      
+      // Find the more button (poll briefly: profiles can render slowly)
+      let moreButton = document.querySelector('[data-testid="userActions"]');
+      let waited = 0;
+      while (!moreButton && waited < 5000) {
+        await sleep(500);
+        waited += 500;
+        moreButton = document.querySelector('[data-testid="userActions"]');
+      }
+
       if (!moreButton) {
         console.log(`   ❌ Could not find user menu for @${username}`);
         results.notFound.push(username);

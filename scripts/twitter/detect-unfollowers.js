@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
  * 🔍 Detect Unfollowers
@@ -31,7 +31,10 @@
  * ============================================================
  */
 
-const CONFIG = {
+// `var` (not `const`): this script's whole point is "run it again later" in
+// the same tab, and DevTools throws "already been declared" on a repeated
+// top-level `const` paste - which would silently break that workflow.
+var CONFIG = {
   // Delay between scrolls
   scrollDelay: 2000,
   

@@ -1,10 +1,10 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Auto-Snapshot — Periodic account metric snapshots
  * Automatically captures follower counts, engagement, and growth metrics on a schedule.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 import { saveAccountSnapshot, saveDailyEngagement } from './historyStore.js';

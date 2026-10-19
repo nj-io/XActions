@@ -9,9 +9,9 @@ XActions has two deployable components:
 | Component | What | Needs |
 |---|---|---|
 | **Static Frontend** | `dashboard/` — HTML/CSS/JS pages | Any static host (CDN) |
-| **API Backend** | `api/server.js` — Express + Puppeteer + WebSocket | Node.js 20+, Chromium, Postgres, Redis |
+| **API Backend** | `api/server.js` — Express + Puppeteer + WebSocket | Node.js 22.12+, Chromium, Postgres, Redis |
 
-You can deploy them together (Docker, Fly.io, Railway) or split them across services (Cloudflare Pages + Railway).
+You can deploy them together (Docker, Fly.io, Railway) or split them across services (Cloudflare Workers for the site and edge API + Railway for the optional reads/analytics backend). X account actions run in the [browser extension](https://xactions.app/extension), not on any backend.
 
 ---
 
@@ -34,7 +34,8 @@ You can deploy them together (Docker, Fly.io, Railway) or split them across serv
 
 | Platform | Frontend | Backend | Free Tier | Config File |
 |---|---|---|---|---|
-| **Cloudflare Pages** | ✅ | ❌ | Unlimited bandwidth | `wrangler.toml` |
+| **Cloudflare Pages/Workers** | ✅ | Edge API + proxy | 100k req/day | `wrangler.toml` |
+| **Google Cloud Run** | ❌ | ✅ | Pay-per-use, no idle cost | `deploy/gcp/cloudbuild-api.yaml` |
 | **Vercel** | ✅ | ❌ | 100GB bandwidth | `vercel.json` |
 | **Railway** | ❌ | ✅ | $5 credit/mo | `railway.json` |
 | **Fly.io** | ❌ | ✅ | 3 shared VMs | `fly.toml` |
@@ -42,44 +43,102 @@ You can deploy them together (Docker, Fly.io, Railway) or split them across serv
 | **Docker** | ✅ | ✅ | Free (self-host) | `docker-compose.yml` |
 | **Coolify** | ✅ | ✅ | Free (self-host) | `docker-compose.coolify.yml` |
 
-**Recommended combo:** Cloudflare Pages (frontend) + Railway (backend)
+**Recommended combo (what xactions.app runs today):** Cloudflare Pages (static site + dashboard) + Google Cloud Run (`xactions-api`, backed by Cloud SQL Postgres and a shared Memorystore Redis instance). Railway, Fly, and Render remain fully supported for self-hosters who prefer them.
 
 ---
 
-## Cloudflare Pages (Frontend)
+## Cloudflare Workers (Full Site + Edge API)
 
-Free: unlimited requests, 500 builds/month, global edge CDN.
+xactions.app runs on a single Cloudflare Worker. It serves the entire public
+surface (landing page, dashboard, docs, blog, static assets) from Workers
+static assets, and handles the dynamic surface natively.
 
-### Option A: GitHub Integration (Recommended)
+### The hosted model
 
-1. Go to [Cloudflare Dashboard](https://dash.cloudflare.com/) → Pages
-2. Create a project → Connect GitHub → Select `nirholas/XActions`
-3. Build configuration:
-   - **Build command:** (leave empty)
-   - **Build output directory:** `dashboard`
-4. Deploy
+| Surface | Where it runs |
+|---|---|
+| All pages, docs, blog, assets | Workers static assets (global CDN) |
+| `/api/health`, `/api/ai/health`, `/api/ai/pricing` | Worker, at the edge |
+| `/openapi.json`, `/.well-known/x402` | Worker, at the edge |
+| `/api/ai/*` x402 payment gate (paid **reads**: scrape, analytics) | Worker, at the edge → `API_ORIGIN` |
+| **X account actions** (follow, unfollow, like, reply, post) | **The [browser extension](https://xactions.app/extension)** |
+| Other `/api/*` (auth, user, analytics) | Proxied to `API_ORIGIN` when set |
 
-### Option B: CLI
+**Account actions are never executed server-side by the hosted service.**
+Follow/unfollow/like/reply need your logged-in X session; running them from a
+server would mean custodying your session token and driving your account from a
+datacenter IP (an account-safety and X-ToS problem). Those routes return `501`
+with a pointer to the extension, which performs them locally in your own
+browser session. Self-hosters who want server-side execution can still run the
+full Node backend (below) and set `API_ORIGIN`.
+
+### Deploy
 
 ```bash
-npm install -g wrangler
-wrangler login
-wrangler pages deploy dashboard --project-name=xactions
+npx wrangler login          # once
+npm run deploy:cloudflare   # builds dist-cloudflare/ and deploys the Worker
 ```
 
-### Option C: GitHub Actions (Automatic)
+`npm run build:cloudflare` assembles `dist-cloudflare/` from `site/`,
+`dashboard/`, `public/`, and the `llms*.txt` files, mirroring the old
+`vercel.json` route table with plain file placement.
 
-Set these GitHub secrets:
-- `CLOUDFLARE_API_TOKEN` — [Create token](https://dash.cloudflare.com/profile/api-tokens) with "Cloudflare Pages: Edit" permission
-- `CLOUDFLARE_ACCOUNT_ID` — Found in Cloudflare dashboard sidebar
+### Connect a backend (optional)
 
-Deploys automatically on push to `main` when `dashboard/` changes.
+Reads (server-side scraping, analytics) and account features can run on the
+full Node backend. Deploy it to Google Cloud Run (below, what production
+uses), Railway, Fly, or Docker, then point the Worker/Pages proxy at it:
+
+```bash
+npx wrangler deploy --var API_ORIGIN:https://your-api.example.com
+```
+
+or set `API_ORIGIN` in `wrangler.toml`. On Cloudflare Pages, the same wiring
+is a `dashboard/_redirects` rule (`/api/* https://your-api.example.com/api/:splat 200`).
+Until it is set, those routes return a 503 explaining exactly this, and
+everything else keeps working.
 
 ### Custom Domain
 
+Cloudflare dashboard → Workers & Pages → `xactions` → Settings → Domains &
+Routes → Add → `xactions.app`. If the DNS zone is already on Cloudflare this is
+one step; TLS is automatic. (Delete any leftover apex A/CNAME record pointing
+at a previous host first, or the attach is refused.)
+
+---
+
+## Google Cloud Run (Backend, current production)
+
+xactions.app's `/api/*` traffic is proxied to a Cloud Run service named
+`xactions-api`, backed by a dedicated Cloud SQL Postgres instance and a
+Memorystore Redis instance shared with other services on the same GCP
+project (Bull queue keys are namespaced with a `xactions` prefix so they
+never collide — see `api/services/jobQueue.js`).
+
+### One-time setup
+
 ```bash
-wrangler pages project list
-# In Cloudflare dashboard: Pages → xactions → Custom domains → Add
+gcloud auth login   # once per machine — needs a browser
+bash deploy/gcp/provision-api.sh
+```
+
+This creates the Cloud SQL instance, Secret Manager entries
+(`xactions-database-url`, `xactions-jwt-secret`, `xactions-session-secret`,
+`xactions-admin-api-key`), the required IAM bindings, then builds and deploys
+the image via Cloud Build. It prints the Cloud Run URL and the command to map
+`api.xactions.app` to it.
+
+### Redeploy after a code change
+
+```bash
+gcloud builds submit --config deploy/gcp/cloudbuild-api.yaml \
+  --region us-central1 --project aerial-vehicle-466722-p5
+```
+
+### Health check
+
+```bash
+curl https://api.xactions.app/api/health
 ```
 
 ---
@@ -289,7 +348,7 @@ See `.env.example` for the full list. Required for production:
 |---|---|---|
 | `DATABASE_URL` | ✅ | PostgreSQL connection string |
 | `JWT_SECRET` | ✅ | Auth token signing key |
-| `SESSION_SECRET` | Recommended | Session encryption key |
+| `SESSION_SECRET` | ✅ | Encrypts saved X sessions. The API and the worker must share it; `docker compose` refuses to start without it. Changing it makes saved sessions unreadable. |
 | `REDIS_HOST` | Recommended | Redis host for job queue |
 | `REDIS_PORT` | Recommended | Redis port (default: 6379) |
 | `NODE_ENV` | Recommended | Set to `production` |

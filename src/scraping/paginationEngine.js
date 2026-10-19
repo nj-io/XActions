@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Robust Pagination & Retry Engine
  * Smart pagination, retries, deduplication, and dataset storage for scrapers.
@@ -6,7 +6,7 @@
  * Kills: Apify (robust pagination, retries, dataset storage)
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 import fs from 'fs';
@@ -229,10 +229,37 @@ export class RetryPolicy {
 // DatasetStore (Apify-style)
 // ============================================================================
 
+/** A dataset name: letters, digits, dot, dash and underscore; no leading dot. */
+const DATASET_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+
+/** Thrown for a dataset name that is not a plain name inside the datasets directory. */
+export class InvalidDatasetNameError extends Error {
+  constructor(name) {
+    super(`Invalid dataset name "${String(name).slice(0, 80)}": use letters, digits, ".", "-" and "_" only`);
+    this.name = 'InvalidDatasetNameError';
+    this.status = 400;
+  }
+}
+
+/**
+ * The directory for a dataset, refusing any name that could leave
+ * DATASETS_DIR (a "../" name once let an HTTP caller delete arbitrary
+ * directories through DELETE /api/datasets/:name).
+ */
+function datasetDir(name) {
+  if (typeof name !== 'string' || !DATASET_NAME.test(name) || name.includes('..')) {
+    throw new InvalidDatasetNameError(name);
+  }
+  const root = path.resolve(DATASETS_DIR);
+  const dir = path.resolve(root, name);
+  if (path.dirname(dir) !== root) throw new InvalidDatasetNameError(name);
+  return dir;
+}
+
 export class DatasetStore {
   constructor(name) {
     this.name = name;
-    this.dir = path.join(DATASETS_DIR, name);
+    this.dir = datasetDir(name);
     this.dataFile = path.join(this.dir, 'data.jsonl');
     this.metaFile = path.join(this.dir, 'meta.json');
     fs.mkdirSync(this.dir, { recursive: true });
@@ -353,6 +380,7 @@ export async function listDatasets() {
   const dirs = await fsp.readdir(DATASETS_DIR);
   const datasets = [];
   for (const dir of dirs) {
+    if (!DATASET_NAME.test(dir)) continue;
     const ds = new DatasetStore(dir);
     datasets.push(await ds.getInfo());
   }

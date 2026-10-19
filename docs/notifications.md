@@ -131,6 +131,70 @@ Create a webhook in Discord → Server Settings → Integrations → Webhooks.
 
 Create a bot via [@BotFather](https://t.me/BotFather). Get your chat ID by messaging the bot and checking `/getUpdates`.
 
+### Generic webhook (signed)
+
+Any HTTPS endpoint can receive notifications. Unlike the Slack and Discord
+channels, this one signs what it sends, retries, and keeps a delivery log you
+can replay from.
+
+```javascript
+{
+  webhook: {
+    enabled: true,
+    url: 'https://your-service.example/hooks/xactions'
+  }
+}
+```
+
+Set `XACTIONS_WEBHOOK_SECRET` and every delivery carries four headers:
+
+| Header | Meaning |
+|--------|---------|
+| `X-XActions-Signature` | `sha256=<hex>`, an HMAC of the exact request body |
+| `X-XActions-Timestamp` | Unix seconds when the body was signed |
+| `X-XActions-Event` | Event name, for example `notification` |
+| `X-XActions-Delivery` | UUID for this delivery, stable across retries |
+
+Failed deliveries are retried three times with exponential backoff and jitter.
+Every attempt is recorded in `~/.xactions/webhook-deliveries.json` (the last 500,
+honours `XACTIONS_HOME`).
+
+#### Verifying a delivery
+
+Verify against the raw body, before any JSON parsing, or the bytes will not
+match. The comparison is constant-time and rejects a timestamp older than five
+minutes, so a captured request cannot be replayed at you later.
+
+```javascript
+import express from 'express';
+import { verifyWebhookSignature } from 'xactions';
+
+const app = express();
+
+app.post('/hooks/xactions',
+  express.raw({ type: 'application/json' }),
+  (req, res) => {
+    const result = verifyWebhookSignature(req.body, req.headers, process.env.XACTIONS_WEBHOOK_SECRET);
+    if (!result.valid) return res.status(401).json({ error: result.reason });
+
+    const event = JSON.parse(req.body.toString('utf8'));
+    console.log(req.headers['x-xactions-event'], event);
+    res.json({ ok: true });
+  });
+```
+
+#### Inspecting and replaying
+
+```javascript
+import { listWebhookDeliveries, replayWebhookDelivery } from 'xactions';
+
+listWebhookDeliveries({ status: 'failed', limit: 20 });
+await replayWebhookDelivery('4b1f0c8e-...');  // same payload, new delivery id, linked by replayOf
+```
+
+`signWebhookBody` and `deliverWebhook` are exported from the package root too,
+so a script can sign or send one directly without going through the notifier.
+
 ## Severity Levels
 
 | Level | Use Case |

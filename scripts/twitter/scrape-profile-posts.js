@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
  * 🐦 Twitter/X Profile Posts Scraper (Advanced)
@@ -8,8 +8,8 @@
  * @description Scrapes posts from any Twitter/X profile with filtering,
  *              multiple export formats, and analytics
  * @author      nichxbt (https://x.com/nichxbt)
- * @version     2.0.0
- * @date        2026-01-26
+ * @version     2.2.0
+ * @date        2026-10-09
  * @repository  https://github.com/nirholas/XActions
  * 
  * ============================================================
@@ -43,7 +43,9 @@
  * 
  */
 
-const CONFIG = {
+// `var` (not `const`): a repeated top-level `const` paste in the same
+// DevTools tab throws "already been declared" instead of re-running.
+var CONFIG = {
   
   // ==========================================
   // 📊 SCRAPING SETTINGS
@@ -51,11 +53,11 @@ const CONFIG = {
   
   // Number of tweets to scrape (max)
   // 💡 Set to a higher number for more tweets, but it takes longer
-  targetCount: 300,
+  targetCount: 500,
   
   // Maximum scroll attempts before giving up
   // 💡 Increase if the profile has lots of media (slower loading)
-  maxScrollAttempts: 300,
+  maxScrollAttempts: 500,
   
   // Delay between scrolls (milliseconds)
   // 💡 Increase to 3000-30000 if tweets aren't loading properly
@@ -108,6 +110,12 @@ const CONFIG = {
     // Exclude replies (tweets that are responses to others)
     // 💡 Set to true to only see top-level posts
     excludeReplies: false,
+
+    // Exclude posts written by OTHER accounts that X renders on this profile
+    // (the parent post above a reply, conversation context on /with_replies)
+    // 💡 Retweets are always kept: the original author differs by design
+    // 💡 Set to false to also keep the other side of conversations
+    excludeOtherAuthors: true,
     
     // ---- MEDIA FILTERS ----
     // Filter by media content
@@ -164,7 +172,7 @@ const CONFIG = {
     
     // Show top performing tweets (sorted by engagement)
     // 💡 Set to 0 to disable, or 5-10 to show top posts
-    showTopPosts: 5,
+    showTopPosts: 10,
     
     // Show extracted hashtags from all tweets
     // 💡 Useful to see trending topics for this profile
@@ -176,7 +184,7 @@ const CONFIG = {
     
     // Show all URLs/links shared
     // 💡 Useful to see what resources they share
-    showLinks: false,
+    showLinks: true,
     
     // Pretty print tweets in console (formatted text view)
     // 💡 Makes it easy to read tweets directly in console
@@ -231,6 +239,7 @@ const CONFIG = {
   if (CONFIG.filters.minRetweets > 0) activeFilters.push(`Min ${CONFIG.filters.minRetweets} RTs`);
   if (CONFIG.filters.excludeRetweets) activeFilters.push('No retweets');
   if (CONFIG.filters.excludeReplies) activeFilters.push('No replies');
+  if (!CONFIG.filters.excludeOtherAuthors) activeFilters.push('Keeping other authors');
   if (CONFIG.filters.mediaFilter !== 'all') activeFilters.push(`Media: ${CONFIG.filters.mediaFilter}`);
   
   if (activeFilters.length > 0) {
@@ -253,8 +262,9 @@ const CONFIG = {
   function parseEngagement(str) {
     if (!str || str === '') return 0;
     str = str.trim().toUpperCase();
-    if (str.includes('K')) return parseFloat(str) * 3000;
-    if (str.includes('M')) return parseFloat(str) * 3000000;
+    if (str.includes('K')) return parseFloat(str) * 1000;
+    if (str.includes('M')) return parseFloat(str) * 1000000;
+    if (str.includes('B')) return parseFloat(str) * 1000000000;
     return parseInt(str.replace(/,/g, '')) || 0;
   }
   
@@ -333,6 +343,32 @@ const CONFIG = {
   }
   
   /**
+   * Read an element's text, keeping emoji. X renders emoji as <img alt="…">
+   * and innerText ignores alt text, so emoji vanish from the scraped text.
+   */
+  function textOf(el) {
+    if (!el) return '';
+    return Array.from(el.childNodes).map(n => {
+      if (n.nodeType === Node.TEXT_NODE) return n.data;
+      if (n.nodeType !== Node.ELEMENT_NODE) return '';
+      if (n.tagName === 'IMG') return n.getAttribute('alt') || '';
+      if (n.tagName === 'BR') return '\n';
+      return textOf(n);
+    }).join('');
+  }
+
+  /**
+   * Click X's "Retry" / "Try again" button when a rate-limited timeline
+   * stops loading. Without this the stall looks like the end of the timeline.
+   */
+  function clickRetryIfPresent() {
+    const btn = Array.from(document.querySelectorAll('[role="button"]'))
+      .find(b => /^(retry|try again)$/i.test((b.innerText || '').trim()));
+    if (btn) { btn.click(); return true; }
+    return false;
+  }
+
+  /**
    * Extract tweets from the current page DOM
    */
   function extractTweets() {
@@ -341,23 +377,29 @@ const CONFIG = {
     
     tweetElements.forEach(tweet => {
       try {
-        // Get tweet link (contains the unique ID)
-        const tweetLink = tweet.querySelector('a[href*="/status/"]');
-        const tweetUrl = tweetLink ? tweetLink.href : null;
-        const tweetId = tweetUrl ? tweetUrl.split('/status/')[1]?.split('?')[0] : null;
-        
-        // Skip if we've already seen this tweet or couldn't get ID
-        if (!tweetId || seenIds.has(tweetId)) return;
-        seenIds.add(tweetId);
-        
-        // Get the tweet text content
-        const textElement = tweet.querySelector('[data-testid="tweetText"]');
-        const text = textElement ? textElement.innerText : '';
-        
-        // Get the timestamp
+        // Get the timestamp element first: its enclosing anchor is the tweet's
+        // own permalink. Grabbing the first /status/ link in the article can
+        // return a quoted tweet's URL and attribute the wrong ID.
         const timeElement = tweet.querySelector('time');
         const timestamp = timeElement ? timeElement.getAttribute('datetime') : null;
         const displayTime = timeElement ? timeElement.innerText : '';
+
+        const permalinkAnchor = timeElement ? timeElement.closest('a[href*="/status/"]') : null;
+        const tweetLink = permalinkAnchor || tweet.querySelector('a[href*="/status/"]');
+        const tweetUrl = tweetLink ? tweetLink.href : null;
+        const tweetId = tweetUrl ? tweetUrl.split('/status/')[1]?.split(/[?/]/)[0] : null;
+
+        // Skip if we've already seen this tweet or couldn't get ID
+        if (!tweetId || seenIds.has(tweetId)) return;
+        seenIds.add(tweetId);
+
+        // Get the tweet text content (keeps emoji, see textOf)
+        const textElement = tweet.querySelector('[data-testid="tweetText"]');
+        const text = textOf(textElement);
+
+        // Long posts are cut off in the timeline behind a "Show more" link.
+        // Flag them so the caller knows `text` is not the full post.
+        const truncated = tweet.querySelector('[data-testid="tweet-text-show-more-link"]') !== null;
         
         // Helper function to extract engagement metrics
         const getMetric = (testId) => {
@@ -377,19 +419,39 @@ const CONFIG = {
         
         // Check for media attachments
         const hasImage = tweet.querySelector('[data-testid="tweetPhoto"]') !== null;
-        const hasVideo = tweet.querySelector('[data-testid="videoPlayer"]') !== null;
+        const hasVideo = tweet.querySelector('[data-testid="videoPlayer"], [data-testid="videoComponent"]') !== null;
         const hasCard = tweet.querySelector('[data-testid="card.wrapper"]') !== null;
-        
-        // Check if it's a retweet
-        const isRetweet = tweet.querySelector('[data-testid="socialContext"]')?.innerText?.includes('reposted') || false;
-        
-        // Check if it's a reply
-        const isReply = tweet.querySelector('[data-testid="socialContext"]')?.innerText?.includes('Replying to') || false;
+
+        // Retweets render socialContext as an <a> linking to the reposter's
+        // profile; pinned posts render it as a plain element. Checking the tag
+        // instead of the text keeps this working on non-English UIs and stops
+        // pinned posts being counted as retweets.
+        const socialContext = tweet.querySelector('[data-testid="socialContext"]');
+        const isRetweet = !!socialContext && socialContext.closest('a') !== null;
+        const isPinned = !!socialContext && !isRetweet;
+
+        // Reply detection: the "Replying to @user" line only renders with an
+        // English UI, so also check the structural marker X uses for replies.
+        const isReply = tweet.querySelector('[data-testid="in-reply-to"]') !== null ||
+          Array.from(tweet.querySelectorAll('div[dir]')).some(el =>
+            el.innerText.startsWith('Replying to'));
+
+        // Author handle. X renders other accounts' posts on a profile too (the
+        // parent of a reply, conversation context on /with_replies); without
+        // this they were silently attributed to the profile being scraped.
+        const authorLink = tweet.querySelector('[data-testid="User-Name"] a[href^="/"]');
+        const author = authorLink ? authorLink.getAttribute('href').slice(1).split(/[/?]/)[0] : null;
+        if (CONFIG.filters.excludeOtherAuthors && author && !isRetweet &&
+            author.toLowerCase() !== profileName.toLowerCase()) {
+          return;
+        }
         
         const tweetData = {
           id: tweetId,
           url: tweetUrl,
+          author: author,
           text: text,
+          truncated: truncated,
           timestamp: timestamp,
           displayTime: displayTime,
           metrics: {
@@ -405,7 +467,8 @@ const CONFIG = {
           },
           type: {
             isRetweet: isRetweet,
-            isReply: isReply
+            isReply: isReply,
+            isPinned: isPinned
           },
           extracted: {
             hashtags: extractHashtags(text),
@@ -434,29 +497,41 @@ const CONFIG = {
   // ==========================================
   
   let scrollAttempts = 0;
-  let lastTweetCount = 0;
+  let lastSeenCount = 0;
   let noNewTweetsCount = 0;
   
   while (tweets.length < CONFIG.targetCount && scrollAttempts < CONFIG.maxScrollAttempts) {
     const newCount = extractTweets();
-    
-    // Log progress
-    if (CONFIG.verbose && tweets.length !== lastTweetCount) {
-      console.log(`📊 Progress: ${tweets.length}/${CONFIG.targetCount} tweets (${newCount} new this scroll)`);
-      lastTweetCount = tweets.length;
+
+    // Track stalls on tweets *seen*, not tweets *kept*: with filters on, a
+    // run of filtered-out tweets must not be mistaken for the end of the feed
+    if (seenIds.size !== lastSeenCount) {
+      if (CONFIG.verbose) {
+        console.log(`📊 Progress: ${tweets.length}/${CONFIG.targetCount} tweets (${newCount} new this scroll, ${seenIds.size} seen)`);
+      }
+      lastSeenCount = seenIds.size;
       noNewTweetsCount = 0;
-    } else if (tweets.length === lastTweetCount) {
-      noNewTweetsCount++;
-      if (noNewTweetsCount >= 5) {
-        console.log('⚠️ No new tweets found after 5 scroll attempts. May have reached the end.');
-        break;
+    } else {
+      // A rate-limited timeline shows a Retry button instead of more posts;
+      // click it and do not count that pass as a stall
+      if (clickRetryIfPresent()) {
+        if (CONFIG.verbose) console.log('🔁 Timeline stalled with a Retry button, clicked it...');
+        await new Promise(r => setTimeout(r, CONFIG.scrollDelay * 2));
+      } else {
+        noNewTweetsCount++;
+        if (noNewTweetsCount >= 5) {
+          console.log('⚠️ No new tweets found after 5 scroll attempts. May have reached the end.');
+          break;
+        }
       }
     }
     
     if (tweets.length >= CONFIG.targetCount) break;
     
-    // Scroll down to load more tweets
-    window.scrollTo(0, document.body.scrollHeight);
+    // Scroll one screen at a time. X virtualizes the timeline, so jumping
+    // straight to the bottom lands past posts that were never rendered
+    // between two extraction passes, and those posts are lost.
+    window.scrollBy(0, window.innerHeight * 0.8);
     await new Promise(r => setTimeout(r, CONFIG.scrollDelay));
     
     scrollAttempts++;
@@ -466,7 +541,7 @@ const CONFIG = {
   extractTweets();
   
   const endTime = Date.now();
-  const duration = ((endTime - startTime) / 3000).toFixed(2);
+  const duration = ((endTime - startTime) / 1000).toFixed(2);
   
   // ==========================================
   // ANALYTICS & STATISTICS
@@ -647,10 +722,12 @@ const CONFIG = {
    * Convert tweets to CSV format
    */
   function toCSV() {
-    const headers = ['Date', 'Text', 'Likes', 'Retweets', 'Replies', 'Views', 'Has Image', 'Has Video', 'Is Retweet', 'Is Reply', 'Hashtags', 'URL'];
+    const headers = ['Date', 'Author', 'Text', 'Truncated', 'Likes', 'Retweets', 'Replies', 'Views', 'Has Image', 'Has Video', 'Is Retweet', 'Is Reply', 'Hashtags', 'URL'];
     const rows = finalTweets.map(t => [
       t.displayTime,
+      t.author || '',
       `"${t.text.replace(/"/g, '""').replace(/\n/g, ' ')}"`,
+      t.truncated,
       parseEngagement(t.metrics.likes),
       parseEngagement(t.metrics.retweets),
       parseEngagement(t.metrics.replies),
@@ -706,7 +783,7 @@ const CONFIG = {
    */
   function toPlainText() {
     let txt = `TWEETS FROM @${profileName.toUpperCase()}\n`;
-    txt += `${'='.repeat(300)}\n`;
+    txt += `${'='.repeat(60)}\n`;
     txt += `Scraped: ${result.scrapedAt}\n`;
     txt += `Total: ${result.totalTweets} tweets\n\n`;
     
@@ -717,7 +794,7 @@ const CONFIG = {
     txt += `Average Likes: ${stats.avgLikes}\n\n`;
     
     txt += `TWEETS\n`;
-    txt += `${'='.repeat(300)}\n\n`;
+    txt += `${'='.repeat(60)}\n\n`;
     
     finalTweets.forEach((t, i) => {
       txt += `[${i + 1}] ${t.displayTime}\n`;
@@ -725,7 +802,7 @@ const CONFIG = {
       txt += `${t.text}\n\n`;
       txt += `Likes: ${t.metrics.likes} | RTs: ${t.metrics.retweets} | Replies: ${t.metrics.replies} | Views: ${t.metrics.views}\n`;
       txt += `URL: ${t.url}\n`;
-      txt += `\n${'='.repeat(300)}\n\n`;
+      txt += `\n${'='.repeat(60)}\n\n`;
     });
     
     return txt;
@@ -742,7 +819,7 @@ const CONFIG = {
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
     h1 { color: #1da1f2; }
-    table { width: 300%; border-collapse: collapse; margin-top: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
     th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
     th { background: #1da1f2; color: white; }
     tr:hover { background: #f5f8fa; }
@@ -784,7 +861,7 @@ const CONFIG = {
       <tr>
         <td>${i + 1}</td>
         <td>${t.displayTime}</td>
-        <td class="tweet-text">${t.text.substring(0, 1300).replace(/</g, '&lt;').replace(/>/g, '&gt;')}${t.text.length > 1300 ? '...' : ''}</td>
+        <td class="tweet-text">${t.text.substring(0, 300).replace(/</g, '&lt;').replace(/>/g, '&gt;')}${t.text.length > 300 ? '...' : ''}</td>
         <td>${t.metrics.likes}</td>
         <td>${t.metrics.retweets}</td>
         <td>${t.metrics.replies}</td>

@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). MIT License.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 // Creator Subscriptions & Revenue Sharing — by nichxbt
 // https://github.com/nirholas/XActions
 // Setup creator subscriptions, configure tiers, view subscriber analytics, and enroll in revenue sharing.

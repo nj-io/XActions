@@ -1,400 +1,443 @@
 # Tutorial: XActions CLI Mastery — Command Line Power User Guide
 
-You are my CLI tool expert. I want to master the XActions command-line interface for maximum productivity. Walk me through every command, every flag, and every workflow. I want to be able to do everything from my terminal.
+You are my CLI tool expert. I want to master the XActions command-line interface for maximum productivity. Walk me through the commands I will actually use, every flag that matters, and the workflows that string them together. I want to be able to do everything from my terminal.
 
 ## Context
 
-I'm using XActions (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit with a full CLI (`xactions` command) powered by Commander.js. The CLI uses Puppeteer headless Chrome for scraping and supports JSON/CSV output.
+I'm using XActions (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit with a full CLI (`xactions` command) built on Commander.js. It has 56 top-level commands, most with sub-commands of their own.
+
+Two things to know before anything else, because they explain most of what follows:
+
+**There are two tiers.** Profiles and public timelines are the guest tier and need no account at all. Search, followers, following, likes, bookmarks, and DMs are the session tier and need a login. A logged-out request to a session-tier endpoint comes back as a bare `404`, which reads like a bug and is not one.
+
+**There are two engines.** Most read commands (`profile`, `tweets`, `analyze`, `search`, `followers`) use a plain HTTP client against X's internal GraphQL API: fast, no browser. A few (`media`, and the write-side automation) drive real Chromium through Puppeteer, which is slower and needs a session.
 
 ## What I Need You To Do
 
-### Part 1: Installation & Setup
+### Part 1: Installation and setup
 
 1. **Install globally:**
    ```bash
    npm install -g xactions
    ```
-   Or use locally:
+   Or run it without installing:
    ```bash
-   npx xactions [command]
+   npx xactions <command>
    ```
 
-2. **Login — get your auth token first:**
+2. **See where you stand before doing anything:**
    ```bash
-   xactions login
+   xactions doctor
    ```
-   This opens an interactive prompt for your auth_token cookie.
-   
-   **How to get your auth_token:**
-   - Open x.com → F12 → Application → Cookies → auth_token
-   - Copy the value
-   
-   The token is stored in `~/.xactions/config.json`
+   It checks Node, Chromium, the MCP server, installed skills, the cached GraphQL query IDs, whether the guest tier works right now (it reads a real profile to find out), and whether a saved session exists and is still valid. Every problem it reports comes with the command that fixes it. It exits non-zero when something is genuinely broken, so a cron job can check itself before doing work.
 
-3. **Verify login:**
+   `xactions quickstart` is the friendlier walkthrough of the same ground, and `xactions quickstart --json` reduces it to `{"tier":"guest"}` or `{"tier":"session"}` for a script.
+
+3. **Log in.** Three ways, easiest first:
    ```bash
-   xactions profile YOUR_USERNAME
+   xactions connect                        # opens a real browser, you log in, it captures the session
+   xactions login --from-browser chrome    # reads x.com cookies from a browser you are already in
+   xactions login                          # paste auth_token and ct0 by hand
    ```
-   Should show your profile data.
+   `--from-browser` accepts `chrome`, `chromium`, `brave`, `edge`, `arc`, or `firefox`, and defaults to firefox. Already have a cookie file? `xactions login --cookies-file <path>` reads Netscape `cookies.txt`, Cookie-Editor or EditThisCookie JSON, a Playwright or Puppeteer `storageState`, or a raw `auth_token=...; ct0=...` string.
 
-4. **Logout:**
+   **You need both cookies.** `auth_token` says who you are; `ct0` is the CSRF token X requires as a header before it treats the request as logged in. With only the first, session-tier endpoints keep answering 404. This is the single most common setup mistake.
+
+   The session is written to `~/.xactions/cookies.json`, with a fallback copy in `~/.xactions/config.json`. Every other command reads it from there.
+
+4. **Verify:**
+   ```bash
+   xactions doctor
+   ```
+   The "Session tier" block should now say the session is saved and valid.
+
+5. **Log out:**
    ```bash
    xactions logout
    ```
 
-### Part 2: Profile Scraping
+### Part 2: Output flags, which are global
+
+These work on every command that emits records, and learning them once saves repeating yourself for the rest of this guide. **There is no `--format` flag.** Three mechanisms cover the same ground:
 
 ```bash
-xactions profile USERNAME
+# 1. --json puts data on stdout and nothing else. Progress goes to stderr,
+#    so a pipe is always clean and you still see progress while redirecting.
+xactions profile NASA --json | jq -r .name
+
+# 2. --output writes a file, and the extension picks the format: .json, .csv, .xlsx
+xactions tweets NASA --limit 500 --output nasa.csv
+xactions tweets NASA --limit 500 --output nasa.xlsx
+
+# 3. --compact prints one record per line as tab-separated key=value pairs,
+#    with no colours and no spinner. This is the shape to hand an LLM.
+xactions profile NASA --compact
+```
+```
+id=11348282	username=NASA	name=NASA	followers=92356563	following=117	tweets=74197	verified=false	bio=Making the seemingly impossible, possible. ✨
 ```
 
-**Options:**
-- `--format json|csv` — Output format (default: pretty print)
-- `--output filename` — Save to file instead of stdout
+`--fields` narrows `--compact` to the columns you want:
 
-**Examples:**
 ```bash
-# Pretty print to terminal
-xactions profile elonmusk
-
-# Save as JSON
-xactions profile elonmusk --format json --output elon.json
-
-# Quick check your own account  
-xactions profile myusername
+xactions tweets NASA --limit 3 --compact --fields id,likes,text
+```
+```
+id=2093063226351136958	likes=1639	text=Join us tomorrow at 11am ET (1500 UTC) as the Artemis II crew ...
+id=2092962731666051534	likes=0	text=RT @LearnWithNASA: Space telescopes help us understand the ...
+id=2092744659667673582	likes=6753	text=A partial lunar eclipse will pass over the Americas ...
 ```
 
-**Output includes:**
-- Display name, username, bio
-- Location, website, join date
-- Followers, following, tweet count
-- Account verification status
+One record per line means `cut`, `awk`, `grep`, and `sort` work with no JSON parser in the pipeline.
 
-### Part 3: Follower & Following Scraping
+Straight to a spreadsheet, on the commands that support it:
 
-**Scrape followers:**
 ```bash
-xactions followers USERNAME [--limit N] [--format json|csv] [--output file]
+xactions followers NASA --limit 1000 \
+  --google-sheets <spreadsheet-id> --sheet-name "Followers" --sheet-mode replace
 ```
 
-**Scrape following:**
+`--sheet-mode` takes `append`, `replace`, or `new-sheet`.
+
+### Part 3: Profile scraping
+
 ```bash
-xactions following USERNAME [--limit N] [--format json|csv] [--output file]
+xactions profile <username>
 ```
 
-**Examples:**
+No login needed.
+
 ```bash
-# Get first 200 followers as CSV
-xactions followers myusername --limit 200 --format csv --output my-followers.csv
-
-# Get following list as JSON
-xactions following myusername --limit 500 --format json --output my-following.json
-
-# Pipe to other tools
-xactions followers elonmusk --limit 50 --format json | jq '.[].username'
+xactions profile NASA                       # formatted report
+xactions profile NASA --json | jq .         # the full object
+xactions profile NASA --compact             # one line, for an agent
 ```
 
-**Output per user:**
-- Username
-- Display name
-- Bio  
-- Follows you back (Y/N)
+```
+⚡ @NASA
 
-### Part 4: Find Non-Followers
-
-The killer feature:
-
-```bash
-xactions non-followers USERNAME
+  Name:      NASA
+  Bio:       Making the seemingly impossible, possible. ✨
+  Location:  Pale Blue Dot
+  Website:   http://www.nasa.gov/
+  Joined:    2007-12-19
+  Following: 117  Followers: 92.4M
+  Tweets:    74.2K  Listed:    0
+  ✓ Verified
 ```
 
-**Examples:**
+### Part 4: Timeline scraping
+
 ```bash
-# Find who doesn't follow back
-xactions non-followers myusername
-
-# Save to file for batch unfollowing
-xactions non-followers myusername --format json --output unfollowers.json
-
-# Get CSV for spreadsheet analysis
-xactions non-followers myusername --format csv --output unfollowers.csv
-
-# Count them
-xactions non-followers myusername --format json | jq '. | length'
+xactions tweets <username> [-l|--limit N] [-o|--output file] [--json]
 ```
 
-### Part 5: Tweet Scraping
+No login needed. `--limit` defaults to 100.
 
 ```bash
-xactions tweets USERNAME [--limit N] [--format json|csv] [--output file]
+xactions tweets NASA --limit 100 --output nasa.json
+xactions tweets NASA --limit 200 --json | jq 'sort_by(-.likes) | .[:5]'
+xactions tweets NASA --limit 50 --output nasa.csv
 ```
 
-**Examples:**
+**Build post links from the id**, not from `permanentUrl`: X does not always send the author's handle on a timeline entry, so `permanentUrl` can be empty, while `https://x.com/i/web/status/<id>` needs only the id and always redirects to the real permalink.
+
 ```bash
-# Get last 100 tweets
-xactions tweets myusername --limit 100 --format json --output my-tweets.json
-
-# Analyze posting frequency
-xactions tweets myusername --limit 200 --format json | jq '.[].timestamp'
-
-# Find most liked tweets
-xactions tweets myusername --limit 100 --format json | jq 'sort_by(-.likes) | .[:5]'
-
-# Get tweets as CSV for spreadsheet
-xactions tweets competitor1 --limit 50 --format csv --output comp-tweets.csv
+xactions tweets NASA --limit 40 --json | jq -r '.[] | "https://x.com/i/web/status/\(.id)"'
 ```
 
-### Part 6: Tweet Search
+Related: `xactions thread <url>` unrolls a full thread, and `xactions analyze <username>` produces a whole account report (engagement rate, cadence, content mix, best posting hour) in one command, also with no login.
 
-Powerful tweet search from the command line:
+### Part 5: Follower and following scraping
 
 ```bash
-xactions search "QUERY" [--limit N] [--format json|csv] [--output file]
+xactions followers <username> [-l|--limit N] [-o|--output file] [--json]
+xactions following <username> [-l|--limit N] [-o|--output file] [--json]
 ```
 
-**Search operators:**
+**Session tier.** `--limit` defaults to 100.
+
 ```bash
-# Basic keyword search
-xactions search "machine learning"
+xactions followers myusername --limit 200 --output my-followers.csv
+xactions following myusername --limit 500 --output my-following.json
+xactions followers elonmusk --limit 50 --json | jq -r '.[].username'
+```
 
-# From a specific user
-xactions search "from:elonmusk AI"
+### Part 6: Find non-followers
 
-# Trending topic
-xactions search "#buildinpublic" --limit 50
+The command XActions is best known for:
 
-# Advanced operators
+```bash
+xactions non-followers <username> [-l|--limit N] [-o|--output file] [--json]
+```
+
+**Session tier.** `--limit` defaults to 500, which is not enough for most accounts.
+
+```bash
+xactions non-followers myusername --limit 5000 --output unfollowers.json
+xactions non-followers myusername --limit 5000 --json | jq 'length'
+xactions non-followers myusername --limit 5000 --json | jq -r '.[].username' > handles.txt
+```
+
+It only reads. Acting on the list is `xactions bulk unfollow`, and doing that as a separate, deliberate step is the point.
+
+### Part 7: Search
+
+```bash
+xactions search "<query>" [-l|--limit N] [-f|--filter type] [-o|--output file] [--json]
+```
+
+**Session tier.** `--filter` takes `latest`, `top`, `people`, `photos`, or `videos` and defaults to `latest`.
+
+```bash
+xactions search "machine learning" --limit 50
+xactions search "from:elonmusk AI" --limit 100 --json
+xactions search "#buildinpublic" --filter top --limit 50
 xactions search "\"startup funding\" min_faves:100 -filter:replies lang:en"
-
-# Mentions
-xactions search "@myusername" --limit 200
-
-# Date range (if supported upstream)
-xactions search "AI startups since:2026-01-01"
+xactions search "@myusername" --limit 200 --output mentions.json
+xactions search "AI startups since:2026-01-01" --limit 100
 ```
 
-### Part 7: Hashtag Analysis
+X's own search operators all work, because the query string is passed through unchanged.
+
+### Part 8: Hashtags
 
 ```bash
-xactions hashtag "HASHTAG" [--limit N] [--format json|csv] [--output file]
+xactions hashtag "<tag>" [-l|--limit N] [-o|--output file] [--json]
 ```
 
-**Examples:**
-```bash
-# Scrape tweets with hashtag
-xactions hashtag "web3" --limit 100 --format json
+**Session tier**, since it is search underneath.
 
-# Multiple hashtags (run separately)
+```bash
+xactions hashtag "web3" --limit 100 --json
 xactions hashtag "AI" --limit 50 --output ai-tweets.json
 xactions hashtag "machinelearning" --limit 50 --output ml-tweets.json
-
-# Combine and analyze  
-cat ai-tweets.json ml-tweets.json | jq -s 'flatten | sort_by(-.likes)'
+jq -s 'flatten | sort_by(-.likes)' ai-tweets.json ml-tweets.json
 ```
 
-### Part 8: Thread Scraping
+`xactions hashtags "<tweet text>"` is a different command: it suggests hashtags for a draft.
+
+### Part 9: Threads
 
 ```bash
-xactions thread "TWEET_URL" [--format json|markdown|text] [--output file]
+xactions thread "<tweet-url>" [-o|--output file] [--json]
 ```
 
-**Examples:**
 ```bash
-# Unroll a thread to terminal
 xactions thread "https://x.com/user/status/123456"
-
-# Save as markdown (great for note-taking)
-xactions thread "https://x.com/user/status/123456" --format markdown --output thread.md
-
-# Save as JSON with metadata
-xactions thread "https://x.com/user/status/123456" --format json --output thread.json
+xactions thread "https://x.com/user/status/123456" --output thread.json
 ```
 
-### Part 9: Media Scraping
+The extension on `--output` picks the format.
+
+### Part 10: Media
 
 ```bash
-xactions media USERNAME [--limit N] [--format json] [--output file]
+xactions media <username> [-l|--limit N] [-o|--output file] [--json]
 ```
 
-**Examples:**
-```bash
-# Get all media URLs from a profile
-xactions media photographer1 --limit 100 --format json --output media.json
+**Session tier, and browser-driven.** This is one of the Puppeteer commands: it launches Chromium and reads the profile's media tab. Logged out it returns an empty array rather than an error, so if you get `[]` from a prolific account, that is the symptom of a missing session, not an empty profile.
 
-# Extract just the URLs
-xactions media photographer1 --format json | jq '.[].urls[]'
+### Part 11: Reading your own X data export
+
+Completely offline, no login, nothing leaves the machine. Request the zip from x.com (**Settings and privacy → Your account → Download an archive of your data**) and point XActions at it:
+
+```bash
+xactions archive summary twitter-2026-08-28.zip              # counts, date range, top hashtags
+xactions archive summary twitter-2026-08-28.zip --json       # the same as data
+xactions archive export twitter-2026-08-28.zip --out mine    # JSON + CSV + Markdown + a browsable index.html
+xactions archive migrate twitter-2026-08-28.zip --to bluesky --out staged   # dry run by default
 ```
 
-### Part 10: Account Info
+`--sections tweets,likes` limits what is read, which matters on a large archive. `--formats json,md` limits what is written. Full walkthrough: [tutorial 07](../07-your-x-archive.md).
+
+### Part 12: Bulk actions from a file
 
 ```bash
-xactions info
+xactions bulk <action> <file> [--delay ms] [--dry-run] [--resume]
 ```
 
-Shows your logged-in account info and XActions version.
-
-### Part 11: MCP Server Launch
+**Session tier.** Actions: `follow`, `unfollow`, `block`, `mute`, `scrape`. The file can be JSON, CSV, or a plain text list of handles, so you can hand-edit it first, which is usually worth doing.
 
 ```bash
-xactions mcp
+xactions bulk unfollow cut-list.json --dry-run          # preview, nothing happens
+xactions bulk unfollow cut-list.json --delay 3000       # for real, 3s apart
+xactions bulk unfollow cut-list.json --delay 3000 --resume   # pick up after an interruption
 ```
 
-Starts the MCP server for Claude Desktop integration. Usually run via Claude Desktop config, not directly.
+Start at 50 actions in your first session and stay under a few hundred a day. Follows, unfollows, likes, and deletes all draw on the same budget, and X does not publish where the line is.
 
-### Part 12: Advanced CLI Workflows
+### Part 13: Reviewing what an AI agent wants to do
 
-Now let's combine commands for powerful workflows:
+If an assistant drives XActions through MCP, run the server with `XACTIONS_MCP_REQUIRE_APPROVAL=1` and every write is held as a draft instead of executed. Reads are untouched. You release them from the terminal:
 
-#### Workflow 1: Find and Export Non-Followers for Cleanup
 ```bash
-# Step 1: Find non-followers
-xactions non-followers myusername --format json --output nonfollowers.json
-
-# Step 2: Count them
-cat nonfollowers.json | jq '. | length'
-
-# Step 3: Extract just usernames for bulk operations
-cat nonfollowers.json | jq -r '.[].username' > usernames-to-unfollow.txt
-
-# Step 4: Review the list
-head -20 usernames-to-unfollow.txt
+xactions drafts list                  # everything waiting, newest first
+xactions drafts list --status pending
+xactions drafts show <id>             # one draft with its full arguments
+xactions drafts approve <id>          # run it exactly as the agent submitted it
+xactions drafts discard <id>          # delete it without running it
+xactions drafts clear                 # drop executed and failed ones, keep pending
 ```
 
-#### Workflow 2: Competitor Analysis Report
+```
+  ID        STATUS    AGE       TOOL                      ARGS
+  88aae55b  pending   just now  x_post_tweet              text="A post an agent proposed. Never sent."
+
+  1 draft, 1 pending. Approve one with `xactions drafts approve <id>`, everything with `--all`.
+```
+
+Drafts live in `~/.xactions/mcp-drafts.json`.
+
+### Part 14: Agent skills
+
 ```bash
-# Scrape profiles
-for user in competitor1 competitor2 competitor3; do
-  xactions profile $user --format json --output "profiles/$user.json"
+xactions skills list                              # all 49, and where each is installed
+xactions skills show follower-monitoring          # print one without installing it
+xactions skills install --all --global            # every skill, under your home directory
+xactions skills install follower-monitoring       # one skill, into ./.claude/skills
+xactions skills install --all --target cursor     # or codex, windsurf, project
+xactions skills uninstall --all
+```
+
+Skills are plain markdown procedures ("which tools, in what order, with what rate limits"), so they work with any assistant, MCP or not.
+
+### Part 15: Setting up an MCP client
+
+```bash
+xactions mcp-config
+```
+
+Prints the JSON block for Claude Desktop, Cursor, Windsurf, and the rest, with the right paths for your machine, so you are not hand-writing it.
+
+### Part 16: Tab completion
+
+```bash
+# bash
+echo 'source <(xactions completion bash)' >> ~/.bashrc && exec bash
+
+# zsh
+echo 'source <(xactions completion zsh)' >> ~/.zshrc && exec zsh
+
+# fish
+xactions completion fish > ~/.config/fish/completions/xactions.fish
+```
+
+The script is generated from the live command tree, so regenerate it after upgrading and it picks up whatever is new. `xactions <tab>` then lists all 56 top-level commands, `xactions drafts <tab>` lists that command's sub-commands, and `xactions tweets --<tab>` lists its flags.
+
+### Part 17: Advanced CLI workflows
+
+#### Workflow 1: Find and export non-followers for review
+```bash
+xactions non-followers myusername --limit 5000 --output nonfollowers.json
+jq 'length' nonfollowers.json
+jq -r '.[] | select((.followersCount // 0) < 10000) | .username' nonfollowers.json > cut-list.txt
+head -20 cut-list.txt
+xactions bulk unfollow cut-list.txt --dry-run
+```
+
+#### Workflow 2: Competitor report, no login required
+```bash
+mkdir -p reports
+for user in NASA SpaceX; do
+  xactions analyze "$user" --limit 200 --output "reports/$user.json"
 done
 
-# Scrape their tweets
-for user in competitor1 competitor2 competitor3; do
-  xactions tweets $user --limit 50 --format csv --output "tweets/$user.csv"
-done
-
-# Combine data for analysis
-cat profiles/*.json | jq -s '.'
+jq -s -r '.[] | "\(.identity.username)\t\(.audience.followers)\t\(.output.postsPerDay)\t\(.engagement.medianPerOriginal)"' \
+  reports/*.json | column -t
 ```
 
-#### Workflow 3: Niche Research
+#### Workflow 3: Niche research
 ```bash
-# Search multiple keywords
+mkdir -p research
 for kw in "ai startup" "machine learning" "deep learning"; do
-  xactions search "$kw" --limit 30 --format json --output "research/$(echo $kw | tr ' ' '-').json"
+  xactions search "$kw" --limit 30 --output "research/$(echo "$kw" | tr ' ' '-').json"
 done
 
-# Find top voices across all searches
-cat research/*.json | jq -s 'flatten | group_by(.author) | map({author: .[0].author, count: length, totalLikes: (map(.likes) | add)}) | sort_by(-.totalLikes) | .[:20]'
+jq -s 'flatten
+       | group_by(.username)
+       | map({user: .[0].username, posts: length, likes: (map(.likes // 0) | add)})
+       | sort_by(-.likes)
+       | .[:20]' research/*.json
 ```
 
-#### Workflow 4: Daily Metrics Tracking
+#### Workflow 4: Daily metrics tracking
 ```bash
-# Create a script: daily-metrics.sh
-#!/bin/bash
-DATE=$(date +%Y-%m-%d)
+#!/usr/bin/env bash
+# daily-metrics.sh
+set -euo pipefail
+DATE=$(date -u +%F)
+mkdir -p snapshots
 
-# Snapshot followers
-xactions followers myusername --limit 1000 --format json --output "snapshots/$DATE-followers.json"
+xactions doctor > /dev/null || { echo "xactions unhealthy, skipping"; exit 1; }
 
-# Snapshot following  
-xactions following myusername --limit 1000 --format json --output "snapshots/$DATE-following.json"
+xactions followers myusername --limit 1000 --output "snapshots/$DATE-followers.json"
+xactions following myusername --limit 1000 --output "snapshots/$DATE-following.json"
 
-# Count
-echo "$DATE: $(cat snapshots/$DATE-followers.json | jq '. | length') followers, $(cat snapshots/$DATE-following.json | jq '. | length') following"
+today=$(jq 'length' "snapshots/$DATE-followers.json")
+echo "$DATE: $today followers"
 
-# Compare with yesterday
-YESTERDAY=$(date -d "yesterday" +%Y-%m-%d 2>/dev/null || date -v-1d +%Y-%m-%d)
+YESTERDAY=$(date -u -d "yesterday" +%F 2>/dev/null || date -u -v-1d +%F)
 if [ -f "snapshots/$YESTERDAY-followers.json" ]; then
-  TODAY_COUNT=$(cat snapshots/$DATE-followers.json | jq '. | length')
-  YESTERDAY_COUNT=$(cat snapshots/$YESTERDAY-followers.json | jq '. | length')
-  echo "Change: $(($TODAY_COUNT - $YESTERDAY_COUNT)) followers"
+  yday=$(jq 'length' "snapshots/$YESTERDAY-followers.json")
+  echo "Change: $((today - yday)) followers"
+
+  # X does not tell you who unfollowed. Diffing yesterday's snapshot is the only way.
+  jq -r --slurpfile old "snapshots/$YESTERDAY-followers.json" \
+    '[.[].username] as $now | $old[0] | map(.username) | map(select(. as $u | $now | index($u) | not)) | .[]' \
+    "snapshots/$DATE-followers.json"
 fi
 ```
 
-#### Workflow 5: Content Performance Report
+XActions has a built-in version of this too: `xactions snapshot <username>` starts auto-snapshotting and `xactions history <username>` reads the series back.
+
+#### Workflow 5: Content performance report
 ```bash
-# Get tweets and sort by engagement
-xactions tweets myusername --limit 100 --format json | \
-  jq 'sort_by(-((.likes // 0) + (.retweets // 0) + (.replies // 0))) | 
-  .[:10] | 
-  .[] | 
-  {text: .text[:80], likes, retweets, replies, url}'
+xactions tweets myusername --limit 100 --json \
+  | jq -r 'sort_by(-((.likes // 0) + (.retweets // 0) + (.replies // 0)))
+           | .[:10][]
+           | "\(.likes + .retweets + .replies)\t\(.text[0:70])\thttps://x.com/i/web/status/\(.id)"' \
+  | column -t -s $'\t'
 ```
 
-### Part 13: Environment Variables
-
-Configure XActions via environment variables:
+### Part 18: Environment variables
 
 ```bash
-# Session cookie (alternative to login command)
+# Session cookie, as an alternative to the login command
 export XACTIONS_SESSION_COOKIE="your_auth_token_here"
+export XACTIONS_CSRF_TOKEN="your_ct0_here"
 
-# MCP mode
-export XACTIONS_MODE="local"           # local (Puppeteer) or remote (API)
-export XACTIONS_API_URL="https://api.xactions.app"
+# Where XActions keeps its state (cookies, drafts, query-ID cache, snapshots).
+# Default: ~/.xactions
+export XACTIONS_HOME="$HOME/.xactions"
 
-# Puppeteer settings  
-export PUPPETEER_HEADLESS="true"       # Run headless (default) or visible
+# MCP server: hold every write tool as a draft instead of running it
+export XACTIONS_MCP_REQUIRE_APPROVAL=1
 ```
 
-### Part 14: Piping & Integration
+### Part 19: Troubleshooting
 
-XActions CLI plays well with Unix tools:
+Run `xactions doctor` first, every time. It names the fix for most of what follows.
 
-```bash
-# Count followers
-xactions followers me --format json | jq '. | length'
+1. **"Command not found"** — `npm install -g xactions`, or use `npx xactions`.
 
-# Get only usernames  
-xactions following me --format json | jq -r '.[].username'
+2. **A `404` from `search`, `followers`, `following`, or `non-followers`** — that is X refusing a session-tier endpoint to a logged-out request. Not a bug, not a bad handle. Run `xactions connect`.
 
-# Filter by criteria
-xactions followers me --format json | jq '[.[] | select(.bio | test("developer|engineer"; "i"))]'
+3. **Search works but followers do not, or the reverse** — you probably have `auth_token` without `ct0`. Both cookies, always.
 
-# Export to CSV for Excel
-xactions tweets me --limit 200 --format csv > my-tweets.csv
+4. **Results come back empty rather than erroring** — `media` returns `[]` without a session. For everything else, the account may be protected or suspended.
 
-# Combine with grep
-xactions search "my brand" --format json | jq -r '.[].text' | grep -i "complaint"
-```
+5. **"Rate limited"** — guest tokens are throttled hard, so logging in raises the ceiling substantially quite apart from unlocking the session tier. Back off and retry; the error carries `rateLimitReset`.
 
-### Part 15: Troubleshooting CLI
+6. **Puppeteer or Chromium errors** — only the browser-driven commands need it. `npx puppeteer browsers install chrome`, or stay on the HTTP commands (`profile`, `tweets`, `analyze`, `thread`).
 
-Common issues and fixes:
-
-1. **"Command not found"**
-   ```bash
-   npm install -g xactions
-   # or use: npx xactions
-   ```
-
-2. **"Not logged in"**
-   ```bash
-   xactions login
-   # Enter your auth_token
-   ```
-
-3. **"Scraping returns empty"**
-   - Cookie may have expired: `xactions login` with new token
-   - Account might be private
-   - Rate limited: wait and try again
-
-4. **"Puppeteer errors"**
-   ```bash
-   # Install Chromium dependencies
-   npx puppeteer install
-   ```
-
-5. **Slow performance**
-   - Reduce `--limit` for faster results
-   - Puppeteer needs to render pages, so large scrapes take time
-   - Consider running overnight for big exports
+7. **Slow runs** — lower `--limit`. The HTTP commands page as they go, so a smaller limit really is proportionally faster.
 
 ## My CLI Goals
 (Replace before pasting)
 - Am I comfortable with the command line? Beginner/Intermediate/Advanced
 - What do I mainly want to do? Scraping / Analysis / Automation
 - Do I want to build automated scripts? Yes/No
-- Preferred output format: JSON / CSV / Pretty print
+- Preferred output: `--json` for jq / `--output` files / `--compact` for an agent / the formatted report
 
-Start with Part 1 — help me install and log in, then walk me through my first commands.
+Start with Part 1 — help me install, run `xactions doctor`, and read the result, then walk me through my first commands.

@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * Tests — src/a2a/server.js (HTTP integration)
  * @author nich (@nichxbt)
@@ -6,6 +6,7 @@
 
 import { createA2AServer } from '../../src/a2a/server.js';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { VERSION } from '../../src/version.js';
 
 let agent, server;
 const PORT = 31999; // high port to avoid conflicts
@@ -33,7 +34,7 @@ describe('GET /.well-known/agent.json', () => {
     const card = await res.json();
     expect(card.name).toContain('XActions');
     expect(card.url).toBeDefined();
-    expect(card.version).toBe('3.1.0');
+    expect(card.version).toBe(VERSION);
     expect(Array.isArray(card.skills)).toBe(true);
   });
 });

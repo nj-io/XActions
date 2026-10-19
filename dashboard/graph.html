@@ -109,9 +109,9 @@
       padding: 8px 16px; border: none; border-radius: 9999px; font-size: 13px;
       font-weight: 700; font-family: var(--font); cursor: pointer; transition: all 0.15s;
     }
-    .btn--primary { background: var(--accent); color: #fff; }
-    .btn--primary:hover { background: #1a8cd8; }
-    .btn--primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn--primary { background: linear-gradient(135deg,#1d9bf0,#22d3ee); color: #fff; box-shadow: 0 8px 24px -8px rgba(29,155,240,.6); }
+    .btn--primary:hover { transform: translateY(-2px); }
+    .btn--primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
     .btn--secondary { background: var(--bg-tertiary); color: var(--text-primary); }
     .btn--secondary:hover { background: #2c2f33; }
     .btn--danger { background: var(--error); color: #fff; }
@@ -124,7 +124,8 @@
       background: var(--bg-primary); border: 1px solid var(--border); border-radius: 12px;
       padding: 12px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.15s;
     }
-    .card:hover { border-color: var(--accent); }
+    .card { transition: transform 0.26s cubic-bezier(.22,1,.36,1), border-color 0.26s cubic-bezier(.22,1,.36,1), box-shadow 0.26s cubic-bezier(.22,1,.36,1); }
+    .card:hover { transform: translateY(-3px); border-color: rgba(29,155,240,.4); box-shadow: 0 10px 34px -12px rgba(0,0,0,.6); }
     .card--active { border-color: var(--accent); background: rgba(29,155,240,0.08); }
     .card__title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
     .card__meta { font-size: 12px; color: var(--text-secondary); display: flex; gap: 10px; }
@@ -235,6 +236,14 @@
       border-right: 1px solid var(--border);
       flex-shrink: 0;
     }
+
+    /* ── Offline note ──────────────────────────────── */
+    .offline-note{display:flex;gap:12px;align-items:flex-start;background:rgba(29,155,240,0.06);border:1px solid rgba(29,155,240,0.3);border-radius:14px;padding:16px 18px;color:#aab4c0;font-size:.92rem;margin:16px 0}
+    .offline-note strong{color:#e7e9ea}.offline-note a{color:#1d9bf0}.offline-note .offline-ic{font-size:1.2rem;line-height:1.3}
+
+    /* ── Ambient glow + focus ring ─────────────────── */
+    body::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;background:radial-gradient(1000px 560px at 82% -6%,rgba(29,155,240,.1),transparent 60%)}
+    .btn:focus-visible, .input:focus-visible, .search-box:focus-visible, .toolbar-btn:focus-visible { box-shadow: 0 0 0 3px rgba(29,155,240,.28); outline: none; }
 
     /* ── Responsive ────────────────────────────────── */
     @media (max-width: 768px) {
@@ -359,11 +368,13 @@
 
   <!-- ── JavaScript ───────────────────────────────── -->
   <script>
-    // Use Railway API for graph routes (not available in Vercel serverless)
-    const RAILWAY_BASE = 'https://xactions-api.up.railway.app';
+    // Same-origin API path (proxied by the host to the backend when one is
+    // deployed). Using a relative path avoids cross-origin CORS console
+    // errors when the backend is offline; failures are caught below and
+    // surface the offline notice instead.
     const API = window.location.hostname === 'localhost'
       ? 'http://localhost:3001/api/graph'
-      : `${RAILWAY_BASE}/api/graph`;
+      : '/api/graph';
     const tooltip = document.getElementById('tooltip');
     const graphSvg = document.getElementById('graphSvg');
     const emptyState = document.getElementById('emptyState');
@@ -372,6 +383,13 @@
     let simulation = null;
     let svgGroup = null;
     let zoom = null;
+    let offlineWarned = false;
+
+    // Designed offline notice (backend migrating). Reused across sections.
+    const OFFLINE_HTML = '<div class="offline-note" role="status"><span class="offline-ic">📡</span><div><strong>Backend offline.</strong> The hosted API is being migrated. Browser scripts, the CLI, and docs work without it. <a href="/docs">Read the docs →</a></div></div>';
+    function warnOffline(context) {
+      if (!offlineWarned) { console.warn(`Graph API offline (${context}). Backend is being migrated.`); offlineWarned = true; }
+    }
 
     // Cluster color palette
     const COLORS = ['#1d9bf0','#00ba7c','#f4212e','#ffad1f','#7856ff','#f91880','#ff6f00','#00bcd4','#8bc34a','#e91e63'];
@@ -473,7 +491,8 @@
           await refreshGraphList();
         }
       } catch (err) {
-        buildStatus.textContent = '❌ ' + err.message;
+        warnOffline('build');
+        buildStatus.innerHTML = OFFLINE_HTML;
       } finally {
         buildBtn.disabled = false;
         buildBtn.textContent = '🚀 Build Graph';
@@ -500,7 +519,9 @@
         const activeCard = document.querySelector(`[data-graph-id="${id}"]`);
         if (activeCard) activeCard.classList.add('card--active');
       } catch (err) {
-        console.error('Failed to load graph:', err);
+        warnOffline('load');
+        document.getElementById('analysisContent').innerHTML = OFFLINE_HTML;
+        document.getElementById('recsContent').innerHTML = OFFLINE_HTML;
       }
     }
 
@@ -638,7 +659,7 @@
         a.download = `graph-${currentGraph.id}.html`;
         document.body.appendChild(a); a.click(); a.remove();
       } catch (err) {
-        console.error('Export failed:', err);
+        warnOffline('export');
       }
     });
 
@@ -764,13 +785,19 @@
           card.addEventListener('click', () => loadGraph(card.dataset.graphId));
         });
       } catch (err) {
-        console.error('Failed to list graphs:', err);
+        warnOffline('list');
+        document.getElementById('graphList').innerHTML = OFFLINE_HTML;
       }
     }
 
     async function deleteGraph(id) {
       if (!confirm('Delete this graph?')) return;
-      await api.del(id);
+      try {
+        await api.del(id);
+      } catch (err) {
+        warnOffline('delete');
+        return;
+      }
       if (currentGraph?.id === id) {
         currentGraph = null;
         emptyState.style.display = '';

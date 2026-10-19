@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). MIT License.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 // src/articlePublisher.js
 // Long-form article publishing for X/Twitter (Premium+)
 // by nichxbt

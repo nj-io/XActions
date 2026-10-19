@@ -20,11 +20,12 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
-      DATABASE_URL: postgresql://xactions:${POSTGRES_PASSWORD:-changeme}@postgres:5432/xactions?schema=public
+      DATABASE_URL: postgresql://xactions:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/xactions?schema=public
       REDIS_HOST: redis
       REDIS_PORT: 6379
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
-      SESSION_SECRET: ${SESSION_SECRET:-changeme}
+      SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET (openssl rand -hex 32)}
+      COOKIE_ENCRYPTION_KEY: ${COOKIE_ENCRYPTION_KEY:-}
       PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
       PUPPETEER_HEADLESS: "true"
       PUPPETEER_NO_SANDBOX: "true"
@@ -49,10 +50,13 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://xactions:${POSTGRES_PASSWORD:-changeme}@postgres:5432/xactions?schema=public
+      DATABASE_URL: postgresql://xactions:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/xactions?schema=public
       REDIS_HOST: redis
       REDIS_PORT: 6379
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+      # The worker decrypts the sessions the API saved, so it needs the same keys.
+      SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET (openssl rand -hex 32)}
+      COOKIE_ENCRYPTION_KEY: ${COOKIE_ENCRYPTION_KEY:-}
       PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
       PUPPETEER_HEADLESS: "true"
       PUPPETEER_NO_SANDBOX: "true"
@@ -68,7 +72,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: xactions
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
       POSTGRES_DB: xactions
     volumes:
       - postgres_data:/var/lib/postgresql/data

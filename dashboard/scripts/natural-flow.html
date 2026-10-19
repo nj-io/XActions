@@ -125,7 +125,7 @@
         <div class="meta-row">
           
           
-          <span>900 lines</span>
+          <span>902 lines</span>
           <span>by <a href="https://x.com/nichxbt" rel="noopener">@nichxbt</a></span>
         </div>
 
@@ -151,8 +151,13 @@
           <p>Copy and paste this entire script into your browser DevTools console on <a href="https://x.com" rel="noopener">x.com</a>.</p>
           <div class="code-block">
             <button class="copy-btn" onclick="navigator.clipboard.writeText(this.nextElementSibling.querySelector('code').textContent).then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Script',2000)})">Copy Script</button>
-            <pre><code>// scripts/naturalFlow.js
-// Simulates a natural X/Twitter browsing session:
+            <pre><code>// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+// scripts/naturalFlow.js
+// Simulate a natural browsing session: scroll, like, reply, retweet, follow, and check notifications on a human rhythm
+// Paste in DevTools console on x.com/home
+// by nichxbt
+//
+// The session it walks:
 //   → scroll home timeline, like keyword-matched posts
 //   → occasionally reply, retweet, or bookmark
 //   → follow interesting authors (checks bio + followers first)
@@ -162,9 +167,6 @@
 //
 // Features: interactive setup, live floating HUD, context-aware replies,
 //           engagement scoring, cooldown escalation, session history
-//
-// Paste in DevTools console on x.com/home
-// by nichxbt
 
 (() =&gt; {
   'use strict';
@@ -1067,6 +1069,7 @@
         <h3>🌊 Growth</h3>
         <a href="/scripts/follow-list">📋 Follow &amp; Manage Lists</a>
 <a href="/scripts/follow-account">➕ Follow Account</a>
+<a href="/scripts/follow-back">🔗 Follow Back - XActions</a>
 <a href="/scripts/follow-engagers">🎯 Follow Engagers</a>
 <a href="/scripts/follow-target-users">🎯 Follow Target Users</a>
 <a href="/scripts/growth-suite">🚀 Growth Suite</a>
@@ -1074,7 +1077,6 @@
 <a href="/scripts/algorithm-trainer">🧠 Phase 1</a>
 <a href="/scripts/thought-leader-cultivator">🧠 Thought Leader Cultivator</a>
 <a href="/scripts/algorithm-builder">🧠 XActions Algorithm Builder</a>
-<a href="/scripts/persona-engine">🎭 XActions Persona Engine</a>
       </div>
       <div class="sidebar-card">
         <h3>🔗 Quick Links</h3>

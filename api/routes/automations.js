@@ -1,10 +1,13 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import express from 'express';
-import { authMiddleware } from '../middleware/auth.js';
+import { authMiddleware, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.use(authMiddleware);
+// These routes drive the server's single, operator-wide instance (not
+// per-user state), so they are for the operator: any signed-in user could
+// once read or change them.
+router.use(authMiddleware, requireAdmin);
 
 /**
  * In-memory automation state

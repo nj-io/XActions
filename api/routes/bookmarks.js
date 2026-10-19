@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth.js';
@@ -28,7 +28,7 @@ router.get('/', async (req, res) => {
       operationId: operation.id,
       userId: req.user.id,
       authMethod: req.user.authMethod || 'oauth',
-      config: { limit: parseInt(limit), format, sessionCookie: req.user.sessionCookie },
+      config: { limit: parseInt(limit), format },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Bookmark export queued' });
@@ -58,7 +58,7 @@ router.post('/folders', async (req, res) => {
       operationId: operation.id,
       userId: req.user.id,
       authMethod: req.user.authMethod || 'oauth',
-      config: { name, sessionCookie: req.user.sessionCookie },
+      config: { name },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Folder creation queued' });
@@ -89,7 +89,7 @@ router.delete('/clear', async (req, res) => {
       operationId: operation.id,
       userId: req.user.id,
       authMethod: req.user.authMethod || 'oauth',
-      config: { sessionCookie: req.user.sessionCookie },
+      config: {},
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Bookmark clear queued' });

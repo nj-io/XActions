@@ -1,26 +1,34 @@
-const express = require('express');
-const path = require('path');
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+/**
+ * Standalone static server for the dashboard (no database, no API).
+ *
+ * Usage: node dashboard-server.js   (PORT overrides the default 3000)
+ * For the full app with the REST API behind it, run `node api/server.js` instead.
+ */
+import express from 'express';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DASHBOARD_DIR = path.join(__dirname, 'dashboard');
 
 const app = express();
 
-// Serve static files from dashboard directory
-app.use(express.static(path.join(__dirname, '../dashboard')));
+app.use(express.static(DASHBOARD_DIR));
 
-// Serve index.html for root
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/login.html'));
+  res.sendFile(path.join(DASHBOARD_DIR, 'login.html'));
 });
 
 app.get('/dashboard', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/index.html'));
+  res.sendFile(path.join(DASHBOARD_DIR, 'index.html'));
 });
 
 app.get('/pricing', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/pricing.html'));
+  res.sendFile(path.join(DASHBOARD_DIR, 'pricing.html'));
 });
 
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 app.listen(PORT, () => {
   console.log(`🎨 Dashboard running at http://localhost:${PORT}`);
 });
-

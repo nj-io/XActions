@@ -75,9 +75,10 @@
       padding: 10px 20px; border-radius: 9999px; border: none; cursor: pointer;
       font-family: var(--font); font-size: 14px; font-weight: 700; transition: all 0.15s;
     }
-    .btn--primary { background: var(--accent); color: #fff; }
-    .btn--primary:hover { background: #1a8cd8; }
-    .btn--primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn--primary { background: linear-gradient(135deg,#1d9bf0,#22d3ee); color: #fff; box-shadow: 0 8px 24px -8px rgba(29,155,240,.6); }
+    .btn--primary:hover { transform: translateY(-2px); }
+    .btn--primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn:focus-visible { box-shadow: 0 0 0 3px rgba(29,155,240,.28); outline: none; }
     .btn--sm { padding: 6px 14px; font-size: 12px; font-weight: 600; }
     .btn--outline { background: transparent; border: 1px solid var(--border); color: var(--text-primary); }
     .btn--outline:hover { border-color: var(--text-secondary); }
@@ -94,7 +95,9 @@
     .stat-card {
       background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 16px;
       padding: 16px; text-align: center;
+      transition: transform 0.26s cubic-bezier(.22,1,.36,1), border-color 0.26s cubic-bezier(.22,1,.36,1), box-shadow 0.26s cubic-bezier(.22,1,.36,1);
     }
+    .stat-card:hover { transform: translateY(-3px); border-color: rgba(29,155,240,.4); box-shadow: 0 10px 34px -12px rgba(0,0,0,.6); }
     .stat-card__value { font-size: 28px; font-weight: 800; line-height: 1.2; }
     .stat-card__value--positive { color: var(--success); }
     .stat-card__value--negative { color: var(--error); }
@@ -203,6 +206,11 @@
     .toast.show { transform: translateY(0); opacity: 1; }
     .toast__title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
     .toast__message { font-size: 13px; color: var(--text-secondary); }
+
+    /* ── Offline note + ambient glow ───────────────── */
+    .offline-note{display:flex;gap:12px;align-items:flex-start;background:rgba(29,155,240,0.06);border:1px solid rgba(29,155,240,0.3);border-radius:14px;padding:16px 18px;color:#aab4c0;font-size:.92rem;margin:16px 0}
+    .offline-note strong{color:#e7e9ea}.offline-note a{color:#1d9bf0}.offline-note .offline-ic{font-size:1.2rem;line-height:1.3}
+    body::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;background:radial-gradient(1000px 560px at 82% -6%,rgba(29,155,240,.1),transparent 60%)}
 
     /* ── Responsive ────────────────────────────────── */
     @media (max-width: 900px) {
@@ -362,6 +370,22 @@
     let socket = null;
     let followerChart = null;
     let isScanning = false;
+    let offlineWarned = false;
+
+    // Designed offline notice (backend migrating).
+    const OFFLINE_HTML = '<div class="offline-note" role="status"><span class="offline-ic">📡</span><div><strong>Backend offline.</strong> The hosted API is being migrated. Browser scripts, the CLI, and docs work without it. <a href="/docs">Read the docs →</a></div></div>';
+    function markOffline() {
+      if (offlineWarned) return;
+      offlineWarned = true;
+      console.warn('Unfollowers API offline. Backend is being migrated.');
+      const main = document.querySelector('.main');
+      if (main && !document.getElementById('unfollowersOffline')) {
+        const note = document.createElement('div');
+        note.id = 'unfollowersOffline';
+        note.innerHTML = OFFLINE_HTML;
+        main.insertBefore(note, main.querySelector('.stats-bar'));
+      }
+    }
 
     // ── Auth ───────────────────────────────────────
     function getToken() {
@@ -414,7 +438,7 @@
           document.getElementById('last-scan-time').textContent = `Last scan: ${formatRelative(stats.lastScanAt)}`;
         }
       } catch (e) {
-        console.warn('📊 Stats unavailable:', e.message);
+        markOffline();
       }
     }
 
@@ -430,7 +454,7 @@
         document.getElementById('lost-count').textContent = lostData.changes.length;
         document.getElementById('gained-count').textContent = gainedData.changes.length;
       } catch (e) {
-        console.warn('📋 Changes unavailable:', e.message);
+        markOffline();
       }
     }
 
@@ -439,7 +463,7 @@
         const { data } = await apiGet('/unfollowers/chart?days=30');
         renderChart(data);
       } catch (e) {
-        console.warn('📈 Chart data unavailable:', e.message);
+        markOffline();
       }
     }
 
@@ -454,7 +478,7 @@
             `✅ Auto-scan active (${schedule.interval}) — Next: ${schedule.nextRunAt ? formatRelative(schedule.nextRunAt) : 'soon'}`;
         }
       } catch (e) {
-        console.warn('📅 Schedule unavailable:', e.message);
+        markOffline();
       }
     }
 
@@ -646,17 +670,22 @@
         socket = io(WS_URL, {
           auth: { token },
           transports: ['websocket', 'polling'],
+          reconnectionAttempts: 4,
+          timeout: 8000,
         });
 
         socket.on('connect', () => {
-          document.getElementById('conn-status').className = 'conn-badge conn-badge--on';
-          document.getElementById('conn-status').textContent = 'Connected';
+          const el = document.getElementById('conn-status');
+          if (el) { el.className = 'conn-badge conn-badge--on'; el.textContent = 'Connected'; }
         });
 
         socket.on('disconnect', () => {
-          document.getElementById('conn-status').className = 'conn-badge conn-badge--off';
-          document.getElementById('conn-status').textContent = 'Disconnected';
+          const el = document.getElementById('conn-status');
+          if (el) { el.className = 'conn-badge conn-badge--off'; el.textContent = 'Disconnected'; }
         });
+
+        // Stop retrying a dead backend after the capped attempts.
+        socket.io.on('reconnect_failed', () => markOffline());
 
         // Listen for scan completion (from scheduled scans)
         socket.on('unfollower:scan-complete', (data) => {

@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * Integration Tests — HTTP Scraper Stack (End-to-End with Mocked Fetch)
  *
@@ -6,10 +6,10 @@
  * functions → parsed output. Fixtures provide realistic Twitter API
  * response shapes.
  *
- * NOTE: client.graphql() wraps raw JSON as { data: json, cursor }.
- * Consumers access response.data.xxx, so the fetch mock must return
- * the INNER part of the Twitter API response (without the outer `data`
- * wrapper). Use `graphqlBody(FIXTURE)` helper to strip it.
+ * NOTE: the fetch mock serves the FULL x.com response body, envelope and all.
+ * client.graphql() strips the `data` envelope and returns
+ * { data: <payload>, errors, cursor }, so consumers read response.data.xxx.
+ * Use the `graphqlBody(FIXTURE)` helper so that stays explicit at each mock.
  *
  * @see fixtures/responses.js
  * @author nich (@nichxbt)
@@ -74,14 +74,14 @@ import {
 // ---------------------------------------------------------------------------
 
 /**
- * Strip the outer `data` wrapper from a fixture for fetch-level mocking.
- * client.graphql() adds its own { data: json, cursor } wrapper, so
- * consumers access response.data.xxx = json.xxx.
+ * The body x.com puts on the wire for a GraphQL query: the fixture exactly as
+ * captured, `data` envelope included. client.graphql() strips that envelope,
+ * so consumers read response.data.xxx.
  *
  * @param {object} fixture — Full realistic Twitter API response
- * @returns {object} Inner content suitable for mock fetch json()
+ * @returns {object} The same body, for the mock fetch to serve verbatim
  */
-const graphqlBody = (fixture) => fixture.data ?? fixture;
+const graphqlBody = (fixture) => fixture;
 
 /**
  * Create an authenticated TwitterHttpClient with a mock fetch.
@@ -326,11 +326,12 @@ describe('Integration: Non-Follower Detection Flow', () => {
   });
 
   it('verifies set comparison is correct with overlapping lists', async () => {
-    // Minimal inline test — parse user lists directly
-    const followersInstructions = graphqlBody(FOLLOWERS_RESPONSE)
-      .user.result.timeline.timeline.instructions;
-    const followingInstructions = graphqlBody(FOLLOWING_RESPONSE)
-      .user.result.timeline.timeline.instructions;
+    // Minimal inline test: parse user lists straight from the fixture payload,
+    // the same object client.graphql() hands a scraper after stripping the envelope
+    const followersInstructions =
+      FOLLOWERS_RESPONSE.data.user.result.timeline.timeline.instructions;
+    const followingInstructions =
+      FOLLOWING_RESPONSE.data.user.result.timeline.timeline.instructions;
 
     const followers = parseUserList(followersInstructions);
     const following = parseUserList(followingInstructions);
@@ -365,15 +366,15 @@ describe('Integration: Search via GraphQL', () => {
       product: 'Latest',
     });
 
-    // Verify fetch was called with correct query params
+    // SearchTimeline is one of the reads X requires over POST.
     expect(fetchMock).toHaveBeenCalledOnce();
-    const [url] = fetchMock.mock.calls[0];
+    const [url, request] = fetchMock.mock.calls[0];
     expect(url).toContain(GRAPHQL.SearchTimeline.queryId);
     expect(url).toContain('SearchTimeline');
+    expect(request.method).toBe('POST');
 
     // Verify search variables were sent
-    const parsed = new URL(url);
-    const variables = JSON.parse(parsed.searchParams.get('variables'));
+    const { variables } = JSON.parse(request.body);
     expect(variables.rawQuery).toBe('javascript lang:en');
     expect(variables.product).toBe('Latest');
 
@@ -400,11 +401,8 @@ describe('Integration: Search via GraphQL', () => {
       count: 20,
     });
 
-    const [url] = fetchMock.mock.calls[0];
-    // Verify the complex query is URL-encoded correctly — URLSearchParams uses + for spaces,
-    // so check via decoded variables rather than raw encodeURIComponent
-    const parsedUrl = new URL(url);
-    const variables = JSON.parse(parsedUrl.searchParams.get('variables'));
+    const [, request] = fetchMock.mock.calls[0];
+    const { variables } = JSON.parse(request.body);
     expect(variables.rawQuery).toContain('"hello world"');
   });
 });
@@ -415,8 +413,8 @@ describe('Integration: Search via GraphQL', () => {
 
 describe('Integration: Post Tweet → Like → Delete Flow', () => {
   it('chains create, like, and delete mutations end-to-end', async () => {
-    // Mutations: client.graphql({ mutation: true }) returns client.request() directly (no data-wrap).
-    // parseTweetResult looks for json.data.create_tweet, so pass the full fixture (with data wrapper).
+    // Mutations: client.graphql({ mutation: true }) returns client.request() directly,
+    // with no envelope stripping, and parseTweetResult reads json.data.create_tweet.
     const fetchMock = vi.fn(async (url) => {
       if (url.includes(GRAPHQL.CreateTweet.operationName)) {
         return mockResponse(TWEET_CREATE_RESPONSE);

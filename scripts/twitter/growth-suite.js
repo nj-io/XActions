@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
  * 🚀 Growth Automation Suite
@@ -35,7 +35,9 @@
  * ============================================================
  */
 
-const CONFIG = {
+// `var` (not `const`): a repeated top-level `const` paste in the same
+// DevTools tab throws "already been declared" instead of re-running.
+var CONFIG = {
   // ============================================
   // TARGETING
   // ============================================
@@ -200,7 +202,10 @@ const CONFIG = {
     const likeBtn = tweet.querySelector(SELECTORS.likeButton);
     if (!likeBtn) return false;
     
-    const tweetLink = tweet.querySelector('a[href*="/status/"]');
+    // The first /status/ link can belong to a quoted tweet; the anchor around
+    // the timestamp is the tweet's own permalink
+    const timeEl = tweet.querySelector('time');
+    const tweetLink = (timeEl && timeEl.closest('a[href*="/status/"]')) || tweet.querySelector('a[href*="/status/"]');
     const tweetId = tweetLink?.href?.match(/status\/(\d+)/)?.[1];
     if (!tweetId || liked.has(tweetId)) return false;
     
@@ -258,7 +263,8 @@ const CONFIG = {
     // Run auto-like on current feed
     autoLike: async () => {
       log('Starting auto-like on current feed...');
-      
+      state.isRunning = true; // re-arm: stop() latches this false for every action
+
       while (checkLimits().canLike && !isSessionExpired() && state.isRunning) {
         const tweets = document.querySelectorAll(SELECTORS.tweet);
         
@@ -286,7 +292,8 @@ const CONFIG = {
     autoFollow: async () => {
       log('Starting auto-follow...');
       log('📍 Navigate to a search results or followers list first');
-      
+      state.isRunning = true; // re-arm: stop() latches this false for every action
+
       while (checkLimits().canFollow && !isSessionExpired() && state.isRunning) {
         const userCells = document.querySelectorAll(SELECTORS.userCell);
         
@@ -307,7 +314,8 @@ const CONFIG = {
     smartUnfollow: async () => {
       log('Starting smart unfollow...');
       log('📍 Navigate to your Following list first');
-      
+      state.isRunning = true; // re-arm: stop() latches this false for every action
+
       while (checkLimits().canUnfollow && !isSessionExpired() && state.isRunning) {
         const userCells = document.querySelectorAll(SELECTORS.userCell);
         

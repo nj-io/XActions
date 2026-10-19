@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Follower CRM & Segmentation
  * Tag, score, segment, and search followers with rich filtering.
@@ -6,7 +6,7 @@
  * Kills: Circleboom (smart search), Followerwonk (follower segmentation)
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 import Database from 'better-sqlite3';

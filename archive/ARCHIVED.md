@@ -1,6 +1,26 @@
 # Archived Code
 
-The following files have been archived as XActions transitioned to a 100% free, open-source model on January 25, 2026.
+> **This page describes January 2026, and the "no payments" claim below is no longer
+> true.** It is kept as a record of what was removed then, not as a description of the
+> project today. What changed since:
+>
+> - The **credit system** archived here (buy credits, spend them per operation, claim a
+>   follow bonus) is genuinely gone and is not coming back.
+> - A **hosted API** was added later, with Stripe subscription tiers
+>   (`api/routes/billing.js`, `api/config/subscription-tiers.js`: Free, Pro at $19,
+>   Business at $49, Enterprise) and x402 pay-per-request for agents. `webhooks.js` and
+>   `subscription-tiers.js` are live files again, and the copies in this directory are
+>   older forks of them, not the current code.
+> - **Everything you run yourself is still free and unmetered**: the CLI, the Node
+>   library, the MCP server, the browser scripts and the extension need no account, no
+>   key and no payment. Nothing in this repository phones home. The paid surface only
+>   exists for people who would rather call a hosted endpoint than run it themselves.
+>
+> Current pricing lives on [the pricing page](../dashboard/pricing.html); the live tier
+> definitions are in `api/config/subscription-tiers.js`.
+
+The following files were archived when XActions dropped its credit system on
+January 25, 2026.
 
 ## Backend Payment Code (`archive/backend/`)
 
@@ -19,12 +39,16 @@ The following files have been archived as XActions transitioned to a 100% free, 
 
 ## Why Archived?
 
-XActions is now completely **free and open source** with:
-- ✅ No accounts required for browser scripts
-- ✅ No credit system or payments
-- ✅ No subscription tiers
-- ✅ Unlimited access to all features
-- ✅ Full source code available on GitHub
+The credit system was the wrong shape for this project: it metered things that cost
+XActions nothing, because the work happens on the user's own machine with the user's
+own session. What replaced it:
+
+- No accounts required for browser scripts, the CLI, the library or the MCP server
+- No credit system anywhere
+- Unlimited local use, with the full source available
+
+A hosted API with subscription tiers was added later for people who want someone else
+to run it. That is a separate surface, and it does not gate anything you run yourself.
 
 All features are accessible via:
 1. **Browser Console Scripts** - Copy-paste automation (no setup needed)

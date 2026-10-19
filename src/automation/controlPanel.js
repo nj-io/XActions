@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 // XActions Control Panel — Floating UI for Browser Automations
 // https://github.com/nirholas/XActions
 //
@@ -26,7 +26,7 @@
     return;
   }
 
-  const { log, sleep, randomDelay, scrollBy, clickElement, SELECTORS, storage, rateLimit } = window.XActions.Core;
+  const { log, sleep, randomDelay, scrollBy, clickElement, waitForElement, SELECTORS, storage, rateLimit } = window.XActions.Core;
 
   // ========================================================================
   // PANEL STATE

@@ -1,7 +1,7 @@
 ---
 name: twitter-scraping
 description: Scrapes X/Twitter data without API access using Puppeteer stealth and browser console scripts. Extracts profiles, followers, following lists, tweets, search results, hashtags, threads, media, bookmarks, notifications, DMs, likes, and viral tweets. Exports to JSON/CSV. Use when collecting, exporting, or analyzing Twitter data.
-license: MIT
+license: Apache-2.0
 metadata:
   author: nichxbt
   version: "4.0"
@@ -66,6 +66,15 @@ Standalone IIFEs -- paste into DevTools console on x.com. No dependencies.
 | Export to CSV | `scripts/exportToCSV.js` | After any scrape |
 | Link scraper | `scripts/linkScraper.js` | Any timeline |
 | Quote retweets | `scripts/scrapeQuoteRetweets.js` | Any tweet |
+
+## Interactive browser toolbox (recommended for console scraping)
+
+For paste-in-console scraping, prefer `scripts/twitter/scraper-toolbox.js`: an on-page
+control panel (start/pause/stop, live filters, user exclusions, keyword rules) that
+captures X's own GraphQL responses, so counts are exact integers and long posts are
+untruncated. Exports JSON/CSV/Markdown/TXT/HTML and copies to clipboard. Works on any
+timeline: profile, search, list, likes, bookmarks, home. Docs:
+`scripts/twitter/README-scraper-toolbox.md`.
 
 ## MCP Scraping Tools
 

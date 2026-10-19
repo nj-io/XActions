@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Stream Manager
  * Manages active streams, polling intervals, deduplication via Redis,
@@ -15,7 +15,7 @@
  * - stopAll for clean shutdown
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 import { randomUUID } from 'crypto';
@@ -24,6 +24,8 @@ import { pollTweets } from './tweetStream.js';
 import { pollFollowers } from './followerStream.js';
 import { pollMentions } from './mentionStream.js';
 import { getPoolStatus, closeAll as closeBrowserPool, isHealthy as isBrowserPoolHealthy } from './browserPool.js';
+import { createLivePipeline } from './livePipeline.js';
+import { TwitterHttpClient } from '../scrapers/twitter/http/client.js';
 
 // ============================================================================
 // Constants
@@ -36,6 +38,17 @@ const MAX_INTERVAL_MS = 3_600_000; // 1 hour
 const MAX_HISTORY = 200; // events kept per stream
 const MAX_CONSECUTIVE_ERRORS = 10; // auto-stop after this many
 const REDIS_KEY_TTL = 7 * 24 * 3600; // 7 days — auto-expire stale keys
+
+/**
+ * How a stream receives its data. `poll` is the default and unchanged
+ * behaviour: scheduled scrapes on an interval. `live` holds x.com's own event
+ * pipeline open and receives pushes, falling back to `poll` when that
+ * connection cannot be established or is lost for good.
+ */
+const TRANSPORTS = ['poll', 'live'];
+
+/** Live-pipeline event types that are forwarded to clients as stream events. */
+const FORWARDED_LIVE_TYPES = ['engagement', 'dm', 'typing', 'unknown'];
 
 // ============================================================================
 // Redis helpers
@@ -165,11 +178,32 @@ export function setIO(io) {
  * @param {number} [params.interval] - Poll interval in ms (default 60 000)
  * @param {string} [params.authToken] - X/Twitter auth_token cookie
  * @param {string} [params.userId] - Owner user ID
+ * @param {'poll'|'live'} [params.transport='poll'] - `poll` scrapes on the interval
+ *   (unchanged default). `live` holds x.com's live_pipeline open instead and
+ *   pushes events as they happen; it needs `topics` and a logged-in session,
+ *   and falls back to polling when the pipeline cannot be reached.
+ * @param {string[]} [params.topics] - live_pipeline topics, built with the `Topic`
+ *   helpers in `./livePipeline.js`. Required when `transport` is `live`.
+ * @param {string} [params.cookies] - Full cookie string (`auth_token=...; ct0=...`).
+ *   The live transport needs the ct0 cookie for the CSRF header, which
+ *   `authToken` alone does not carry.
  * @returns {Promise<Object>} Stream descriptor
  */
-export async function createStream({ type, username, interval, authToken, userId }) {
+export async function createStream({
+  type,
+  username,
+  interval,
+  authToken,
+  userId,
+  transport = 'poll',
+  topics = [],
+  cookies,
+}) {
   if (!STREAM_TYPES.includes(type)) {
     throw new Error(`Invalid stream type "${type}". Must be one of: ${STREAM_TYPES.join(', ')}`);
+  }
+  if (!TRANSPORTS.includes(transport)) {
+    throw new Error(`Invalid transport "${transport}". Must be one of: ${TRANSPORTS.join(', ')}`);
   }
   if (!username) throw new Error('username is required');
 
@@ -191,7 +225,13 @@ export async function createStream({ type, username, interval, authToken, userId
     username: cleanUsername,
     interval: intervalMs,
     authToken: authToken || null,
+    cookies: cookies || null,
     userId: userId || null,
+    transport: 'poll',
+    requestedTransport: transport,
+    topics: [...new Set((topics || []).map((t) => String(t).trim()).filter(Boolean))],
+    liveSessionId: null,
+    transportFallbackReason: null,
     status: 'running',
     createdAt: new Date().toISOString(),
     lastPollAt: null,
@@ -215,19 +255,21 @@ export async function createStream({ type, username, interval, authToken, userId
   // Register in memory
   activeStreams.set(id, meta);
 
-  // Schedule repeatable Bull job
-  const queue = getQueue();
-  await queue.add('poll', { streamId: id }, {
-    repeat: { every: intervalMs },
-    jobId: id,
-  });
+  // Live transport first when it was asked for; polling is the fallback, so a
+  // pipeline that cannot open never leaves the stream without data.
+  let live = { attached: false };
+  if (transport === 'live') {
+    live = await attachLiveTransport(meta);
+  }
 
-  // Immediate first poll (fire-and-forget)
-  executePoll(id).catch((err) => {
-    console.error(`⚠️ Stream ${id} initial poll failed:`, err.message);
-  });
+  if (live.attached) {
+    console.log(`📡 Stream created: ${id} (${type} @${cleanUsername} over the live pipeline, ${meta.topics.length} topic(s))`);
+  } else {
+    await schedulePollJob(meta);
+    console.log(`📡 Stream created: ${id} (${type} @${cleanUsername} every ${intervalMs / 1000}s)`);
+  }
 
-  console.log(`📡 Stream created: ${id} (${type} @${cleanUsername} every ${intervalMs / 1000}s)`);
+  await saveMeta(id, meta);
   return sanitizeMeta(meta);
 }
 
@@ -235,6 +277,7 @@ export async function createStream({ type, username, interval, authToken, userId
  * Stop and remove a stream.
  */
 export async function stopStream(streamId) {
+  await detachLiveTransport(streamId);
   await removeRepeatableJob(streamId);
 
   // Clean Redis
@@ -272,6 +315,7 @@ export async function pauseStream(streamId) {
   if (!meta) throw new Error(`Stream ${streamId} not found`);
   if (meta.status === 'paused') return sanitizeMeta(meta);
 
+  await detachLiveTransport(streamId);
   await removeRepeatableJob(streamId);
 
   meta.status = 'paused';
@@ -292,17 +336,19 @@ export async function resumeStream(streamId) {
   meta.status = 'running';
   meta.backoffUntil = null;
   meta.consecutiveErrors = 0;
+  meta.transportFallbackReason = null;
   await saveMeta(streamId, meta);
 
-  // Re-schedule Bull job
-  const queue = getQueue();
-  await queue.add('poll', { streamId }, {
-    repeat: { every: meta.interval },
-    jobId: streamId,
-  });
-
-  // Immediate poll
-  executePoll(streamId).catch(() => {});
+  // A stream created with the live transport tries the pipeline again on
+  // resume; polling still covers it if the pipeline stays unreachable.
+  let live = { attached: false };
+  if (meta.requestedTransport === 'live') {
+    live = await attachLiveTransport(meta);
+  }
+  if (!live.attached) {
+    await schedulePollJob(meta);
+  }
+  await saveMeta(streamId, meta);
 
   console.log(`▶️ Stream resumed: ${streamId}`);
   return sanitizeMeta(meta);
@@ -317,6 +363,10 @@ export async function updateStream(streamId, updates = {}) {
 
   let rescheduled = false;
 
+  if (updates.topics !== undefined) {
+    await applyTopicUpdate(meta, updates.topics);
+  }
+
   if (updates.interval !== undefined) {
     const newInterval = clampInterval(updates.interval);
     if (newInterval !== meta.interval) {
@@ -327,8 +377,9 @@ export async function updateStream(streamId, updates = {}) {
 
   await saveMeta(streamId, meta);
 
-  // Reschedule the Bull job with the new interval
-  if (rescheduled && meta.status === 'running') {
+  // Reschedule the Bull job with the new interval. A live stream has no poll
+  // job to reschedule; its interval only matters if it falls back later.
+  if (rescheduled && meta.status === 'running' && meta.transport === 'poll') {
     await removeRepeatableJob(streamId);
     const queue = getQueue();
     await queue.add('poll', { streamId }, {
@@ -404,6 +455,7 @@ export function getStreamStats() {
     totalPolls,
     totalEvents,
     totalErrors,
+    liveTransports: liveTransports.size,
     pool: getPoolStatus(),
   };
 }
@@ -605,11 +657,244 @@ async function _executePollInner(streamId) {
 }
 
 // ============================================================================
+// Live transport (x.com live_pipeline)
+// ============================================================================
+
+/**
+ * Open live pipelines, keyed by stream id.
+ * @type {Map<string, import('./livePipeline.js').LivePipeline>}
+ */
+const liveTransports = new Map();
+
+/**
+ * Schedule the repeatable poll job for a stream and run one poll straight
+ * away. This is the transport every stream ends up on unless a live pipeline
+ * is holding it.
+ *
+ * @param {Object} meta - Stream metadata (mutated: `transport` becomes `poll`)
+ * @param {Object} [options]
+ * @param {boolean} [options.immediate=true] - Also run one poll now
+ */
+async function schedulePollJob(meta, { immediate = true } = {}) {
+  meta.transport = 'poll';
+  const queue = getQueue();
+  await queue.add('poll', { streamId: meta.id }, {
+    repeat: { every: meta.interval },
+    jobId: meta.id,
+  });
+
+  if (immediate) {
+    executePoll(meta.id).catch((err) => {
+      console.error(`⚠️ Stream ${meta.id} initial poll failed:`, err.message);
+    });
+  }
+}
+
+/**
+ * Build the HTTP client the live pipeline authenticates with. The pipeline
+ * needs the ct0 cookie for the CSRF header, so a stream carrying only
+ * `authToken` will be told to log in properly rather than silently degrade.
+ */
+function buildLiveClient(meta) {
+  const cookies = meta.cookies || (meta.authToken ? `auth_token=${meta.authToken}` : '');
+  return new TwitterHttpClient({ cookies });
+}
+
+/**
+ * Try to run a stream over x.com's live pipeline.
+ *
+ * Never throws: a pipeline that cannot open is reported as `attached: false`
+ * with the reason, and the caller starts polling instead.
+ *
+ * @param {Object} meta - Stream metadata (mutated with transport state)
+ * @param {Object} [options]
+ * @param {function} [options.createPipeline] - Pipeline factory (injectable for tests)
+ * @param {function} [options.onStreamEvent] - Sink for normalised stream events
+ * @param {function} [options.schedulePoll] - How to start polling on a later fallback
+ * @returns {Promise<{ attached: boolean, reason?: string, error?: Error, pipeline?: Object }>}
+ */
+export async function attachLiveTransport(meta, options = {}) {
+  const {
+    createPipeline = createLivePipeline,
+    onStreamEvent = emitStreamEvent,
+    schedulePoll = schedulePollJob,
+  } = options;
+
+  const topics = meta.topics || [];
+  if (topics.length === 0) {
+    const reason =
+      'no live_pipeline topics were given; build them with the Topic helpers in src/streaming/livePipeline.js';
+    noteFallback(meta, reason);
+    return { attached: false, reason };
+  }
+
+  let pipeline = null;
+  try {
+    pipeline = createPipeline({
+      client: buildLiveClient(meta),
+      topics,
+      onEvent: (event) => handleLiveEvent(meta, event, onStreamEvent),
+      onError: (err, info) => {
+        meta.lastError = err.message;
+        if (!info || !info.fatal) return;
+        fallbackToPolling(meta, err.message, schedulePoll).catch((fallbackErr) => {
+          console.error(`❌ Stream ${meta.id} could not fall back to polling:`, fallbackErr.message);
+        });
+      },
+    });
+    await pipeline.open();
+  } catch (err) {
+    if (pipeline && typeof pipeline.close === 'function') {
+      await pipeline.close().catch(() => {});
+    }
+    noteFallback(meta, err.message);
+    return { attached: false, reason: err.message, error: err };
+  }
+
+  liveTransports.set(meta.id, pipeline);
+  meta.transport = 'live';
+  meta.liveSessionId = pipeline.sessionId || null;
+  meta.transportFallbackReason = null;
+  return { attached: true, pipeline };
+}
+
+/**
+ * Close a stream's live pipeline, if it has one.
+ * @param {string} streamId
+ * @returns {Promise<boolean>} true when a pipeline was closed
+ */
+export async function detachLiveTransport(streamId) {
+  const pipeline = liveTransports.get(streamId);
+  if (!pipeline) return false;
+  liveTransports.delete(streamId);
+  try {
+    await pipeline.close();
+  } catch (err) {
+    console.error(`⚠️ Stream ${streamId}: live pipeline did not close cleanly:`, err.message);
+  }
+  return true;
+}
+
+/**
+ * Give up on the live pipeline for this stream and start polling instead.
+ * Called when the pipeline reports a fatal error (auth rejected, or reconnect
+ * attempts exhausted).
+ */
+async function fallbackToPolling(meta, reason, schedulePoll = schedulePollJob) {
+  await detachLiveTransport(meta.id);
+  noteFallback(meta, reason);
+  if (meta.status === 'paused' || meta.status === 'stopped') return;
+  meta.errorCount = (meta.errorCount || 0) + 1;
+  await schedulePoll(meta);
+}
+
+/**
+ * Record why a stream is polling rather than streaming, and say so in the log
+ * once per distinct reason instead of on every retry.
+ * @returns {boolean} true when this call produced the log line
+ */
+function noteFallback(meta, reason) {
+  if (meta.transportFallbackReason === reason) return false;
+  meta.transportFallbackReason = reason;
+  console.warn(`⚠️ Stream ${meta.id}: live transport unavailable, using polling. Reason: ${reason}`);
+  return true;
+}
+
+/**
+ * Turn one live-pipeline event into a stream event and hand it to the sink.
+ * Session config frames are bookkeeping, not user-facing events: they update
+ * the stream's session id and go no further.
+ *
+ * @returns {Object|null} The forwarded stream event, or null when nothing was forwarded
+ */
+function handleLiveEvent(meta, event, onStreamEvent) {
+  if (event.type === 'config') {
+    if (event.payload.kind === 'session' && event.payload.sessionId) {
+      meta.liveSessionId = event.payload.sessionId;
+    }
+    if (event.payload.kind === 'subscriptions' && event.payload.errors.length > 0) {
+      console.warn(
+        `⚠️ Stream ${meta.id}: live pipeline rejected ${event.payload.errors.length} subscription(s)`
+      );
+    }
+    return null;
+  }
+
+  if (!FORWARDED_LIVE_TYPES.includes(event.type)) return null;
+
+  const streamEvent = {
+    type: `stream:${event.type}`,
+    streamId: meta.id,
+    username: meta.username,
+    transport: 'live',
+    topic: event.topic,
+    data: event.payload,
+    timestamp: event.receivedAt,
+  };
+
+  meta.eventCount = (meta.eventCount || 0) + 1;
+  meta.lastPollAt = event.receivedAt;
+  meta.consecutiveErrors = 0;
+  meta.status = meta.status === 'backoff' ? 'running' : meta.status;
+
+  onStreamEvent(streamEvent);
+  return streamEvent;
+}
+
+/** Default sink: emit over Socket.IO and append to the stream's history. */
+function emitStreamEvent(event) {
+  if (_io) {
+    _io.to(`stream:${event.streamId}`).emit(event.type, event);
+    _io.to('streams').emit(event.type, event);
+  }
+  persistEvent(event).catch(() => {});
+}
+
+/** Append one event to a stream's Redis history. Best effort: Redis may be down. */
+async function persistEvent(event) {
+  try {
+    const redis = await getRedis();
+    const pipeline = redis.pipeline();
+    pipeline.lpush(historyKey(event.streamId), JSON.stringify(event));
+    pipeline.ltrim(historyKey(event.streamId), 0, MAX_HISTORY - 1);
+    pipeline.expire(historyKey(event.streamId), REDIS_KEY_TTL);
+    await pipeline.exec();
+  } catch {
+    // History is a convenience; a live event is already delivered by now.
+  }
+}
+
+/**
+ * Apply a topic change to a live stream. Topics are added and removed on the
+ * running session, so subscribers keep receiving events across the change.
+ */
+async function applyTopicUpdate(meta, topics) {
+  const next = [...new Set((topics || []).map((t) => String(t).trim()).filter(Boolean))];
+  const current = meta.topics || [];
+  const added = next.filter((t) => !current.includes(t));
+  const removed = current.filter((t) => !next.includes(t));
+
+  const pipeline = liveTransports.get(meta.id);
+  if (!pipeline || (added.length === 0 && removed.length === 0)) {
+    meta.topics = next;
+    return { added, removed };
+  }
+
+  // The session is changed first, so a rejected change leaves the recorded
+  // topics matching what the pipeline is actually subscribed to.
+  if (added.length > 0) await pipeline.subscribe(added);
+  if (removed.length > 0) await pipeline.unsubscribe(removed);
+  meta.topics = next;
+  console.log(`🔄 Stream ${meta.id}: live topics updated (+${added.length} / -${removed.length})`);
+  return { added, removed };
+}
+
+// ============================================================================
 // Helpers
 // ============================================================================
 
 function sanitizeMeta(meta) {
-  const { authToken, ...rest } = meta;
+  const { authToken, cookies, ...rest } = meta;
   return rest;
 }
 
@@ -661,7 +946,8 @@ async function removeRepeatableJob(streamId) {
 
 /**
  * Refresh in-memory registry from Redis (for process restarts).
- * Also re-registers Bull jobs for any running streams.
+ * Re-opens the live pipeline for streams that were created on it, and
+ * re-registers Bull jobs for every stream that polls.
  */
 async function refreshFromRedis() {
   try {
@@ -674,8 +960,20 @@ async function refreshFromRedis() {
       if (!activeStreams.has(meta.id)) {
         activeStreams.set(meta.id, meta);
 
+        // Re-open the live pipeline for a stream that was created with it:
+        // a restart must not silently downgrade a live stream to polling.
+        let live = { attached: false };
+        if (
+          meta.requestedTransport === 'live' &&
+          !liveTransports.has(meta.id) &&
+          (meta.status === 'running' || meta.status === 'backoff')
+        ) {
+          live = await attachLiveTransport(meta);
+          if (live.attached) await saveMeta(meta.id, meta);
+        }
+
         // Re-register Bull job if stream should be running
-        if (meta.status === 'running' || meta.status === 'backoff') {
+        if (!live.attached && (meta.status === 'running' || meta.status === 'backoff')) {
           try {
             const queue = getQueue();
             const repeatableJobs = await queue.getRepeatableJobs();
@@ -697,6 +995,9 @@ async function refreshFromRedis() {
  * Clean shutdown — close pool and queue.
  */
 export async function shutdown() {
+  await Promise.allSettled(
+    Array.from(liveTransports.keys()).map((streamId) => detachLiveTransport(streamId))
+  );
   if (streamQueue) {
     await streamQueue.close();
     streamQueue = null;
@@ -708,4 +1009,4 @@ export async function shutdown() {
   }
 }
 
-export { STREAM_TYPES, getPoolStatus };
+export { STREAM_TYPES, TRANSPORTS, getPoolStatus };

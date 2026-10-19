@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Client — GuestToken
  *
@@ -7,10 +7,11 @@
  * They expire after ~3 hours and must be rotated.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 import { BEARER_TOKEN } from '../api/graphqlQueries.js';
+import { randomUserAgent } from './userAgent.js';
 
 const ACTIVATE_URL = 'https://api.x.com/1.1/guest/activate.json';
 
@@ -37,6 +38,8 @@ export class GuestToken {
     this._token = null;
     /** @private @type {number|null} */
     this._activatedAt = null;
+    /** @type {string} Browser User-Agent sent with every request */
+    this.userAgent = options.userAgent || randomUserAgent();
     /** @private */
     this._fetchFn = options.fetch || globalThis.fetch;
   }
@@ -53,6 +56,9 @@ export class GuestToken {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${BEARER_TOKEN}`,
+        // Required: X answers a UA-less activation request with a misleading
+        // HTTP 404 rather than a token.
+        'User-Agent': this.userAgent,
       },
     });
 
@@ -65,6 +71,7 @@ export class GuestToken {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${BEARER_TOKEN}`,
+          'User-Agent': this.userAgent,
         },
       });
 
@@ -133,6 +140,7 @@ export class GuestToken {
     return {
       'x-guest-token': this._token || '',
       'Authorization': `Bearer ${BEARER_TOKEN}`,
+      'User-Agent': this.userAgent,
     };
   }
 

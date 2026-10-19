@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Agent API Routes
  * 
@@ -16,14 +16,21 @@
  * GET  /api/agent/content          — content created by agent
  * 
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { authMiddleware, optionalAuthMiddleware } from '../middleware/auth.js';
+import { authMiddleware, requireAdmin } from '../middleware/auth.js';
+
+/**
+ * The agent is one server-wide instance run for the operator, so starting,
+ * stopping, configuring and reading it are admin actions. Any registered user
+ * could once do all of it.
+ */
+const operatorOnly = [authMiddleware, requireAdmin];
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -44,7 +51,7 @@ let agentStartedAt = null;
  * GET /api/agent/status
  * Returns running status, uptime, and basic stats
  */
-router.get('/status', optionalAuthMiddleware, (req, res) => {
+router.get('/status', ...operatorOnly, (req, res) => {
   try {
     const running = agentInstance !== null;
     const uptime = running && agentStartedAt ? Date.now() - agentStartedAt : 0;
@@ -82,7 +89,7 @@ router.get('/status', optionalAuthMiddleware, (req, res) => {
  * GET /api/agent/metrics?days=7
  * Returns daily metrics over a time period
  */
-router.get('/metrics', optionalAuthMiddleware, (req, res) => {
+router.get('/metrics', ...operatorOnly, (req, res) => {
   try {
     const days = Math.min(parseInt(/** @type {string} */ (req.query.days)) || 7, 90);
 
@@ -107,7 +114,7 @@ router.get('/metrics', optionalAuthMiddleware, (req, res) => {
  * GET /api/agent/actions?limit=50&offset=0&type=like
  * Returns paginated action log
  */
-router.get('/actions', optionalAuthMiddleware, (req, res) => {
+router.get('/actions', ...operatorOnly, (req, res) => {
   try {
     const limit = Math.min(parseInt(/** @type {string} */ (req.query.limit)) || 50, 200);
     const offset = parseInt(/** @type {string} */ (req.query.offset)) || 0;
@@ -136,7 +143,7 @@ router.get('/actions', optionalAuthMiddleware, (req, res) => {
  * GET /api/agent/llm-usage?days=7
  * Returns LLM token usage and estimated cost
  */
-router.get('/llm-usage', optionalAuthMiddleware, (req, res) => {
+router.get('/llm-usage', ...operatorOnly, (req, res) => {
   try {
     const days = Math.min(parseInt(/** @type {string} */ (req.query.days)) || 7, 90);
 
@@ -163,7 +170,7 @@ router.get('/llm-usage', optionalAuthMiddleware, (req, res) => {
  * GET /api/agent/config
  * Returns current agent config (redacts API keys)
  */
-router.get('/config', authMiddleware, (req, res) => {
+router.get('/config', ...operatorOnly, (req, res) => {
   try {
     const configPath = path.resolve('data', 'agent-config.json');
     if (!fs.existsSync(configPath)) {
@@ -193,7 +200,7 @@ router.get('/config', authMiddleware, (req, res) => {
  * POST /api/agent/config
  * Update agent config (partial update)
  */
-router.post('/config', authMiddleware, (req, res) => {
+router.post('/config', ...operatorOnly, (req, res) => {
   try {
     const configPath = path.resolve('data', 'agent-config.json');
     /** @type {Record<string, unknown>} */
@@ -231,13 +238,15 @@ router.post('/config', authMiddleware, (req, res) => {
  * POST /api/agent/start
  * Start the thought leader agent
  */
-router.post('/start', authMiddleware, async (req, res) => {
+router.post('/start', ...operatorOnly, async (req, res) => {
   try {
     if (agentInstance) {
       return res.status(400).json({ error: 'Agent is already running' });
     }
 
-    const configPath = req.body.configPath || path.resolve('data', 'agent-config.json');
+    // The config path is fixed: a caller-chosen path let any user make the
+    // server parse (and echo errors from) arbitrary files.
+    const configPath = path.resolve('data', 'agent-config.json');
 
     if (!fs.existsSync(configPath)) {
       return res.status(400).json({
@@ -273,7 +282,7 @@ router.post('/start', authMiddleware, async (req, res) => {
  * POST /api/agent/stop
  * Stop the running agent
  */
-router.post('/stop', authMiddleware, async (req, res) => {
+router.post('/stop', ...operatorOnly, async (req, res) => {
   try {
     if (!agentInstance) {
       return res.status(400).json({ error: 'Agent is not running' });
@@ -306,7 +315,7 @@ router.post('/stop', authMiddleware, async (req, res) => {
  *
  * Body: { text: string }
  */
-router.post('/feed-score', authMiddleware, async (req, res) => {
+router.post('/feed-score', ...operatorOnly, async (req, res) => {
   try {
     const { text } = req.body;
     if (!text) return res.status(400).json({ error: 'text is required' });
@@ -334,7 +343,7 @@ router.post('/feed-score', authMiddleware, async (req, res) => {
  * GET /api/agent/report?days=30
  * Comprehensive growth report
  */
-router.get('/report', optionalAuthMiddleware, (req, res) => {
+router.get('/report', ...operatorOnly, (req, res) => {
   try {
     const days = Math.min(parseInt(/** @type {string} */ (req.query.days)) || 30, 90);
 
@@ -359,7 +368,7 @@ router.get('/report', optionalAuthMiddleware, (req, res) => {
  * GET /api/agent/schedule
  * Today's scheduled activities
  */
-router.get('/schedule', optionalAuthMiddleware, (req, res) => {
+router.get('/schedule', ...operatorOnly, (req, res) => {
   try {
     if (!agentInstance?.scheduler) {
       return res.json({ schedule: [], message: 'Agent not running' });
@@ -391,7 +400,7 @@ router.get('/schedule', optionalAuthMiddleware, (req, res) => {
  * GET /api/agent/content?limit=20
  * Content created by the agent
  */
-router.get('/content', optionalAuthMiddleware, (req, res) => {
+router.get('/content', ...operatorOnly, (req, res) => {
   try {
     const limit = Math.min(parseInt(/** @type {string} */ (req.query.limit)) || 20, 100);
 

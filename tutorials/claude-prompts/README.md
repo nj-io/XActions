@@ -2,6 +2,10 @@
 
 > **23 ready-to-paste prompt files** that turn Claude into your personal X/Twitter automation expert. Each file is a complete, self-contained tutorial covering one feature area of [XActions](https://github.com/nirholas/XActions).
 
+Looking for step-by-step walkthroughs you run yourself instead? Those are one
+level up, in [`tutorials/`](../). This folder is prompts you hand to an
+assistant.
+
 ## How to Use
 
 1. **Pick a tutorial** from the list below
@@ -23,8 +27,8 @@ Each prompt is designed to:
 ### Getting Started
 | # | Tutorial | Description |
 |---|----------|-------------|
-| 01 | [MCP Setup & First Commands](01-mcp-setup-first-commands.md) | Install XActions MCP server, connect to Claude Desktop, run your first commands |
-| 15 | [CLI Mastery Guide](15-cli-mastery-guide.md) | Master the `xactions` command-line tool — all 12 commands with examples |
+| 01 | [MCP Setup & First Commands](01-mcp-setup-and-first-commands.md) | Install XActions MCP server, connect to Claude Desktop, run your first commands |
+| 15 | [CLI Mastery Guide](15-cli-mastery-guide.md) | Master the `xactions` command-line tool: setup, the read commands, output flags, and shell workflows |
 | 16 | [Browser Automation Framework](16-browser-automation-framework.md) | Learn the core.js + actions.js browser automation system |
 
 ### Follower Management
@@ -69,6 +73,9 @@ Each prompt is designed to:
 | 20 | [Session Logging & Safety](20-session-logging-safety.md) | Track automation activity, manage rate limits, stay safe |
 | 21 | [Workflows & Account Portability](21-workflows-account-portability.md) | Build automated workflows, export account, migrate to Bluesky/Mastodon |
 
+Reading your own X data export (`xactions archive summary|export|migrate`) has
+its own walkthrough: [tutorial 07](../07-your-x-archive.md).
+
 ### Spaces & Voice AI
 | # | Tutorial | Description |
 |---|----------|-------------|
@@ -90,7 +97,7 @@ Each prompt is designed to:
 → Start with [Tutorial 03](03-growth-automation-suite.md) (Growth Suite), then [Tutorial 22](22-advanced-power-user-playbook.md) (Power User Playbook)
 
 **"I want to use XActions with Claude Desktop (MCP)"**
-→ Start with [Tutorial 01](01-mcp-setup-first-commands.md) (MCP Setup)
+→ Start with [Tutorial 01](01-mcp-setup-and-first-commands.md) (MCP Setup)
 
 **"I want to analyze my competitors"**
 → Start with [Tutorial 06](06-analytics-competitor-intelligence.md) (Analytics & Intelligence)
@@ -111,20 +118,25 @@ Each prompt is designed to:
 
 ## Coverage Map
 
-These 23 tutorials cover **every XActions feature**:
+What these 23 prompts cover, and where the authoritative list of each thing
+lives:
 
-- ✅ **49+ MCP tools** — Covered across tutorials 01-23
-- ✅ **15 browser automation scripts** — Tutorials 03, 07, 16, 19, 20
-- ✅ **12 CLI commands** — Tutorial 15
-- ✅ **5 scraper modules** — Tutorials 04, 17
-- ✅ **40+ standalone scripts** — Tutorials 04, 12, 13, 17
-- ✅ **Autonomous Space Agent** — Tutorial 23
-- ✅ **Workflow engine** — Tutorial 21
-- ✅ **Real-time streaming** — Tutorials 14, 21
-- ✅ **Sentiment analysis** — Tutorial 18
-- ✅ **Account portability** — Tutorial 21
-- ✅ **Customer service** — Tutorial 19
-- ✅ **Session logging** — Tutorial 20
+| Surface | Size | Prompts | Full list |
+|---------|------|---------|-----------|
+| MCP tools | 152 | 01-23 | [docs/mcp-setup.md](../../docs/mcp-setup.md) |
+| CLI commands | 56 top-level | 15 | [docs/cli-reference.md](../../docs/cli-reference.md) |
+| Browser console scripts | 95 | 03, 07, 16, 19, 20 | [docs/browser-scripts.md](../../docs/browser-scripts.md) |
+| Agent skills | 49 | 01 | [docs/skills.md](../../docs/skills.md) |
+| Platform scrapers | 4 (X, Bluesky, Mastodon, Threads) | 04, 17 | [docs/api-reference.md](../../docs/api-reference.md) |
+
+Feature areas with a prompt of their own: autonomous Space agent (23), workflow
+engine (21), real-time streaming (14, 21), sentiment analysis (18), account
+portability (21), customer service (19), session logging and rate-limit safety
+(20).
+
+These prompts are context for an assistant, not a reference manual. They do not
+enumerate all 153 tools or all 56 commands; `xactions --help`, `xactions help
+<command>`, and the docs linked above do.
 
 ---
 

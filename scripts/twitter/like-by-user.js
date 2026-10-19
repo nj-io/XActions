@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
  * 👤 Like By User - XActions
@@ -68,8 +68,7 @@
     unlikeButton: '[data-testid="unlike"]',
     tweetText: '[data-testid="tweetText"]',
     retweetIndicator: '[data-testid="socialContext"]',
-    tweetMedia: '[data-testid="tweetPhoto"], [data-testid="videoPlayer"]',
-    quoteTweet: '[data-testid="tweet"] [data-testid="tweet"]',
+    tweetMedia: '[data-testid="tweetPhoto"], [data-testid="videoPlayer"], [data-testid="videoComponent"]',
     userAvatar: '[data-testid="Tweet-User-Avatar"]',
     likeCount: '[data-testid="like"] span, [data-testid="unlike"] span',
     retweetCount: '[data-testid="retweet"] span'
@@ -106,6 +105,9 @@
     if (cleaned.endsWith('M')) {
       return parseFloat(cleaned) * 1000000;
     }
+    if (cleaned.endsWith('B')) {
+      return parseFloat(cleaned) * 1000000000;
+    }
     return parseInt(cleaned) || 0;
   };
 
@@ -125,6 +127,14 @@
   };
 
   const processedTweets = new Set();
+
+  // Stop switch: run window.stopLikeByUser() from the console to abort
+  // the loop after the tweet currently being processed.
+  let stopped = false;
+  window.stopLikeByUser = () => {
+    stopped = true;
+    log.warning('Stop requested. Finishing the current tweet, then exiting.');
+  };
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
@@ -150,23 +160,29 @@
   log.info(`Max likes: ${CONFIG.maxLikes}`);
   log.info(`Skip replies: ${CONFIG.skipReplies}`);
   log.info(`Skip retweets: ${CONFIG.skipRetweets}`);
+  log.info(`To stop early: window.stopLikeByUser()`);
 
   const isReply = (tweet) => {
-    const tweetContent = tweet.textContent || '';
-    return tweetContent.includes('Replying to');
+    // Structural marker first (locale-independent), then the English UI text
+    if (tweet.querySelector('[data-testid="in-reply-to"]') !== null) return true;
+    return Array.from(tweet.querySelectorAll('div[dir]')).some(el =>
+      el.innerText.startsWith('Replying to'));
   };
 
   const isRetweet = (tweet) => {
+    // Reposts render socialContext inside an <a> linking to the reposter;
+    // pinned posts render it as a plain element. The structural check works
+    // on every UI language, unlike matching "reposted"/"Retweeted" text.
     const socialContext = tweet.querySelector(SELECTORS.retweetIndicator);
-    if (socialContext) {
-      const text = socialContext.textContent || '';
-      return text.includes('reposted') || text.includes('Retweeted');
-    }
-    return false;
+    return !!socialContext && socialContext.closest('a') !== null;
   };
 
   const isQuoteTweet = (tweet) => {
-    return tweet.querySelector(SELECTORS.quoteTweet) !== null;
+    // A quote tweet embeds the quoted post as a card inside a
+    // div[role="link"] that itself contains a <time> element. The card does
+    // NOT carry a nested data-testid="tweet", so matching on that (as this
+    // used to) never found anything and skipQuoteTweets silently did nothing.
+    return tweet.querySelector('div[role="link"] time') !== null;
   };
 
   const hasMedia = (tweet) => {
@@ -183,28 +199,37 @@
   };
 
   const getTweetIdentifier = (tweet) => {
+    // Prefer the permalink around the timestamp: the first /status/ link in
+    // the article can belong to a quoted tweet and give the wrong ID
+    const timeAnchor = tweet.querySelector('time')?.closest('a[href*="/status/"]');
+    if (timeAnchor) {
+      const match = timeAnchor.href.match(/\/status\/(\d+)/);
+      if (match) return match[1];
+    }
     const links = tweet.querySelectorAll('a[href*="/status/"]');
     for (const link of links) {
       const match = link.href.match(/\/status\/(\d+)/);
       if (match) return match[1];
     }
+    // Text fallback. Do NOT append Date.now(): a changing ID makes the same
+    // tweet look new on every pass, defeating deduplication entirely.
     const text = tweet.querySelector(SELECTORS.tweetText)?.textContent || '';
-    return text.substring(0, 100) + Date.now();
+    return text.substring(0, 100);
   };
 
   let scrollAttempts = 0;
   let noNewTweetsCount = 0;
   let consecutiveAlreadyLiked = 0;
 
-  while (stats.liked < CONFIG.maxLikes && 
+  while (!stopped && stats.liked < CONFIG.maxLikes &&
          scrollAttempts < CONFIG.maxScrollAttempts &&
          consecutiveAlreadyLiked < CONFIG.stopAfterAlreadyLiked) {
-    
+
     const tweets = document.querySelectorAll(SELECTORS.tweet);
     let foundNewTweet = false;
 
     for (const tweet of tweets) {
-      if (stats.liked >= CONFIG.maxLikes) break;
+      if (stopped || stats.liked >= CONFIG.maxLikes) break;
       if (consecutiveAlreadyLiked >= CONFIG.stopAfterAlreadyLiked) break;
 
       const tweetId = getTweetIdentifier(tweet);

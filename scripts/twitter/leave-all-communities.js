@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
  * 🚪 Leave All Communities
@@ -22,13 +22,17 @@
  * 
  * ⚠️ NOTE: This script navigates between pages. If it stops,
  * just run it again - it remembers which communities were already left.
- * 
+ *
+ * To stop early: window.stopLeaveCommunities()
+ *
  * ============================================================
  * ⚙️ CONFIGURATION
  * ============================================================
  */
 
-const CONFIG = {
+// `var` (not `const`): a repeated top-level `const` paste in the same
+// DevTools tab throws "already been declared" instead of re-running.
+var CONFIG = {
   // Delay before clicking leave button
   leaveDelay: 1500,
   
@@ -48,15 +52,23 @@ const CONFIG = {
  * ============================================================
  */
 
+// Stop flag lives on window (not inside the recursive function) so it
+// survives every re-invocation of leaveAllCommunities() below.
+window.__xaStopLeaveCommunities = false;
+window.stopLeaveCommunities = () => {
+  window.__xaStopLeaveCommunities = true;
+  console.log('🛑 [Leave Communities] Stop requested. Finishing the current step, then exiting.');
+};
+
 (async function leaveAllCommunities() {
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-  
+
   // DOM Selectors
   const $communityLink = 'a[href^="/i/communities/"]';
   const $joinedButton = 'button[aria-label^="Joined"]';
   const $confirmButton = '[data-testid="confirmationSheetConfirm"]';
   const $backButton = '[data-testid="app-bar-back"]';
-  
+
   // State management using sessionStorage (survives navigation)
   const STORAGE_KEY = 'xactions_left_communities';
   
@@ -75,13 +87,19 @@ const CONFIG = {
   };
   
   const isAlreadyLeft = (id) => getLeftCommunities().includes(id);
-  
+
+  if (window.__xaStopLeaveCommunities) {
+    console.log('🛑 Stopped by user. Run the script again to resume where it left off.');
+    return;
+  }
+
   console.log('╔════════════════════════════════════════════════════════════╗');
   console.log('║  🚪 LEAVE ALL COMMUNITIES                                  ║');
   console.log('║  by nichxbt - https://github.com/nirholas/XActions         ║');
   console.log('╚════════════════════════════════════════════════════════════╝');
+  console.log('💡 To stop early: window.stopLeaveCommunities()');
   console.log('');
-  
+
   const leftCount = getLeftCommunities().length;
   if (leftCount > 0) {
     console.log(`📊 Previously left: ${leftCount} communities`);
@@ -106,7 +124,7 @@ const CONFIG = {
       console.log('🔍 Found "Joined" button, clicking...');
       joinedBtn.click();
       await sleep(CONFIG.leaveDelay);
-      
+
       // Click confirm
       const confirmBtn = document.querySelector($confirmButton);
       if (confirmBtn) {
@@ -114,21 +132,30 @@ const CONFIG = {
         console.log('✅ Left community!');
         if (communityId) markAsLeft(communityId);
         await sleep(CONFIG.confirmDelay);
+      } else {
+        // Mark as processed anyway so we don't re-enter this community forever
+        console.log('⚠️ Confirmation dialog not found. Skipping this community.');
+        if (communityId) markAsLeft(communityId);
       }
+    } else {
+      // No Joined button (admins cannot leave, or the page failed to load).
+      // Mark as processed so the script does not loop back here forever.
+      console.log('⚠️ "Joined" button not found (admin or load issue). Skipping this community.');
+      if (communityId) markAsLeft(communityId);
     }
     
     // Navigate back to communities list
     const backBtn = document.querySelector($backButton);
-    if (backBtn) {
+    if (backBtn && !window.__xaStopLeaveCommunities) {
       console.log('🔙 Navigating back...');
       backBtn.click();
       await sleep(CONFIG.navDelay);
-      
+
       // Re-run the script to continue
       console.log('🔄 Continuing to next community...');
       leaveAllCommunities();
     }
-    
+
     return;
   }
   
@@ -154,20 +181,25 @@ const CONFIG = {
   
   // Find next community to leave
   for (const link of communityLinks) {
+    if (window.__xaStopLeaveCommunities) {
+      console.log('🛑 Stopped by user. Run the script again to resume where it left off.');
+      return;
+    }
+
     const href = link.getAttribute('href');
     const match = href?.match(/\/i\/communities\/(\d+)/);
     const communityId = match ? match[1] : null;
-    
+
     if (!communityId) continue;
     if (isAlreadyLeft(communityId)) continue;
-    
+
     // Check limit
     if (CONFIG.maxToLeave > 0 && getLeftCommunities().length >= CONFIG.maxToLeave) {
       console.log(`✅ Reached limit of ${CONFIG.maxToLeave} communities.`);
       sessionStorage.removeItem(STORAGE_KEY);
       return;
     }
-    
+
     console.log(`➡️ Entering community: ${communityId}`);
     link.click();
     await sleep(CONFIG.navDelay);

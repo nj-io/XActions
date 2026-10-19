@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================================
  * 📅 Unlike Old Tweets - XActions
@@ -130,6 +130,7 @@
   console.log('');
 
   console.log('🚀 Starting unlike process for old tweets...');
+  console.log('💡 To stop early: window.stopUnlike()');
   console.log('');
 
   // Stats tracking
@@ -143,9 +144,14 @@
 
   let scrollAttempts = 0;
   let consecutiveNoOldTweets = 0;
+  let stopped = false;
+  window.stopUnlike = () => {
+    stopped = true;
+    console.log('🛑 Stopping after the current unlike...');
+  };
 
   // Main loop
-  while (stats.unliked < CONFIG.maxUnlikes) {
+  while (stats.unliked < CONFIG.maxUnlikes && !stopped) {
     // Find old tweets with unlike buttons
     const oldTweets = findOldTweetsWithUnlike();
     
@@ -158,21 +164,34 @@
 
     if (newOldTweets.length === 0) {
       consecutiveNoOldTweets++;
-      
-      // Scroll to load more tweets
-      if (scrollAttempts >= CONFIG.maxScrollAttempts) {
-        console.log('📭 No more old tweets found after scrolling.');
-        break;
-      }
-      
+
+      // Scroll to load more tweets. The Likes feed is sorted by like-recency,
+      // not tweet age, so a long run of not-yet-old tweets is expected and
+      // must not be treated as "reached the end" - only a feed that has
+      // truly stopped growing (no new tweet articles after scrolling) means
+      // there's nothing left to find.
+      const tweetCountBefore = document.querySelectorAll(SELECTORS.tweet).length;
+
       // Check if we've been scrolling with no results
       if (consecutiveNoOldTweets >= 3) {
         console.log(`📜 Scrolling to find older tweets... (attempt ${scrollAttempts + 1}/${CONFIG.maxScrollAttempts})`);
       }
-      
+
       scrollToBottom();
       await sleep(CONFIG.scrollDelay);
-      scrollAttempts++;
+
+      const tweetCountAfter = document.querySelectorAll(SELECTORS.tweet).length;
+      if (tweetCountAfter > tweetCountBefore) {
+        // Feed is still growing - real progress, even though none of the
+        // newly-loaded tweets qualified as "old" yet.
+        scrollAttempts = 0;
+      } else {
+        scrollAttempts++;
+        if (scrollAttempts >= CONFIG.maxScrollAttempts) {
+          console.log('📭 Reached the end of the Likes feed. No more old tweets found.');
+          break;
+        }
+      }
       continue;
     }
 
@@ -219,6 +238,8 @@
       break;
     }
   }
+
+  delete window.stopUnlike;
 
   // ═══════════════════════════════════════════════════════════════════════════
   // 📊 COMPLETION SUMMARY

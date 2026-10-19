@@ -1,80 +1,275 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sentiment Analysis &amp; Reputation Monitoring | XActions</title>
-  <meta name="description" content="Real-time sentiment analysis, reputation monitoring, alerting, and reporting for X/Twitter — no API fees.">
-  <meta name="keywords" content="xactions, twitter automation, x automation, free, open source, analytics, sentiment, analysis, reputation, monitoring, guides &amp; reference">
-  <meta name="author" content="nich (@nichxbt)">
-  <meta name="robots" content="index, follow">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sentiment Analysis &amp; Reputation Monitoring — XActions Docs</title>
+<meta name="description" content="Real-time sentiment analysis, reputation monitoring, alerting, and reporting for X/Twitter — no API fees.">
+<meta name="keywords" content="xactions, twitter automation, x automation, free, open source, analytics, sentiment, analysis, reputation, monitoring, guides &amp; reference">
+<meta name="author" content="nich (@nichxbt)">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="color-scheme" content="light dark">
 
-  <meta property="og:type" content="article">
-  <meta property="og:title" content="Sentiment Analysis &amp; Reputation Monitoring — XActions">
-  <meta property="og:description" content="Real-time sentiment analysis, reputation monitoring, alerting, and reporting for X/Twitter — no API fees.">
-  <meta property="og:url" content="https://xactions.app/docs/guides/analytics">
-  <meta property="og:site_name" content="XActions">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Sentiment Analysis &amp; Reputation Monitoring — XActions">
+<meta property="og:description" content="Real-time sentiment analysis, reputation monitoring, alerting, and reporting for X/Twitter — no API fees.">
+<meta property="og:url" content="https://xactions.app/docs/guides/analytics">
+<meta property="og:image" content="https://xactions.app/og-docs.png">
+<meta property="og:site_name" content="XActions">
 
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Sentiment Analysis &amp; Reputation Monitoring — XActions">
-  <meta name="twitter:description" content="Real-time sentiment analysis, reputation monitoring, alerting, and reporting for X/Twitter — no API fees.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@nichxbt">
+<meta name="twitter:title" content="Sentiment Analysis &amp; Reputation Monitoring — XActions">
+<meta name="twitter:description" content="Real-time sentiment analysis, reputation monitoring, alerting, and reporting for X/Twitter — no API fees.">
+<meta name="twitter:image" content="https://xactions.app/og-docs.png">
 
-  <link rel="canonical" href="https://xactions.app/docs/guides/analytics">
-  <link rel="manifest" href="/manifest.json">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link rel="canonical" href="https://xactions.app/docs/guides/analytics">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link rel="stylesheet" href="/docs/assets/docs.css">
 
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "TechArticle",
-    "headline": "Sentiment Analysis & Reputation Monitoring | XActions",
-    "description": "Real-time sentiment analysis, reputation monitoring, alerting, and reporting for X/Twitter — no API fees.",
-    "url": "https://xactions.app/docs/guides/analytics",
-    "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
-    "datePublished": "2026-02-25",
-    "dateModified": "2026-02-25",
-    "mainEntityOfPage": "https://xactions.app/docs/guides/analytics",
-    "articleSection": "Guides & Reference",
-    "keywords": "xactions, twitter automation, x automation, free, open source, analytics, sentiment, analysis, reputation, monitoring, guides & reference"
-  }
-  </script>
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Docs", "item": "https://xactions.app/docs" },
-      { "@type": "ListItem", "position": 3, "name": "Guides & Reference", "item": "https://xactions.app/docs/guides" },
-      { "@type": "ListItem", "position": 4, "name": "Sentiment Analysis & Reputation Monitoring", "item": "https://xactions.app/docs/guides/analytics" }
-    ]
-  }
-  </script>
+<script>
+/* Applied before first paint so a dark-theme reader never sees a white flash. */
+(function(){try{var t=localStorage.getItem('xactions-theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();
+</script>
 
-  <link rel="stylesheet" href="/css/common.css">
-  <link rel="stylesheet" href="/css/docs.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "Sentiment Analysis & Reputation Monitoring — XActions Docs",
+  "description": "Real-time sentiment analysis, reputation monitoring, alerting, and reporting for X/Twitter — no API fees.",
+  "url": "https://xactions.app/docs/guides/analytics",
+  "image": "https://xactions.app/og-docs.png",
+  "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
+  "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+  "isAccessibleForFree": true,
+  "license": "https://www.apache.org/licenses/LICENSE-2.0",
+  "mainEntityOfPage": "https://xactions.app/docs/guides/analytics",
+  "articleSection": "Guides & Reference",
+  "keywords": "xactions, twitter automation, x automation, free, open source, analytics, sentiment, analysis, reputation, monitoring, guides & reference"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
+    { "@type": "ListItem", "position": 2, "name": "Docs", "item": "https://xactions.app/docs" },
+    { "@type": "ListItem", "position": 3, "name": "Guides & Reference", "item": "https://xactions.app/docs" },
+    { "@type": "ListItem", "position": 4, "name": "Sentiment Analysis & Reputation Monitoring", "item": "https://xactions.app/docs/guides/analytics" }
+  ]
+}
+</script>
 </head>
 <body>
-  <div class="layout">
-    <aside class="sidebar-left" aria-label="Main navigation"></aside>
+<a class="skip-link" href="#main">Skip to content</a>
 
-    <main class="main-content">
-      <header class="main-header">
-        <h1>📖 Sentiment Analysis &amp; Reputation Monitoring</h1>
-        <div class="breadcrumb">
-          <a href="https://xactions.app">Home</a> › <a href="https://xactions.app/docs">Docs</a> › <a href="https://xactions.app/docs/guides">Guides &amp; Reference</a> › Sentiment Analysis &amp; Reputation Monitoring
-        </div>
-      </header>
+<header class="topbar">
+  <button class="icon-btn menu-toggle" data-menu-toggle aria-expanded="false" aria-label="Open navigation">☰</button>
+  <a class="topbar__brand" href="/">⚡ XActions</a>
+  <div class="topbar__spacer"></div>
+  <button class="search-trigger" data-search-trigger aria-label="Search documentation">
+    <span aria-hidden="true">🔍</span><span class="search-trigger__label">Search docs</span><kbd>⌘K</kbd>
+  </button>
+  <nav class="topbar__nav" aria-label="Main">
+    <a class="topbar__link" href="/docs" aria-current="page">Docs</a>
+    <a class="topbar__link" href="/tutorials">Tutorials</a>
+    <a class="topbar__link" href="/examples">Examples</a>
+    <a class="topbar__link" href="https://github.com/nirholas/XActions" target="_blank" rel="noopener">GitHub</a>
+  </nav>
+  <button class="icon-btn" data-theme-toggle aria-label="Switch theme">☾</button>
+</header>
 
-      <article class="article">
-        <span class="cat-badge">Guides &amp; Reference</span>
-        <h1>Sentiment Analysis &amp; Reputation Monitoring</h1>
+<div class="scrim" data-scrim></div>
+
+<div class="layout">
+  <aside class="sidebar" aria-label="Documentation sections">
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Guides &amp; Reference</div>
+      <a class="sidebar__link" href="/docs/guides/scheduler">⏰ Scheduler &amp; Webhook Triggers</a>
+      <a class="sidebar__link" href="/docs/guides/a2a-api-reference">A2A API Reference — XActions</a>
+      <a class="sidebar__link" href="/docs/guides/a2a-protocol">A2A Protocol — XActions</a>
+      <a class="sidebar__link" href="/docs/guides/portability">Account Portability — Export, Migrate &amp; Diff</a>
+      <a class="sidebar__link" href="/docs/guides/algorithm-builder">Algorithm Builder — 24/7 Niche Growth Automation</a>
+      <a class="sidebar__link" href="/docs/guides/analytics-advanced">Analytics &amp; Sentiment Analysis</a>
+      <a class="sidebar__link" href="/docs/guides/architecture">Architecture</a>
+      <a class="sidebar__link" href="/docs/guides/ask">Ask XActions</a>
+      <a class="sidebar__link" href="/docs/guides/audience-overlap">Audience Overlap Analysis</a>
+      <a class="sidebar__link" href="/docs/guides/spaces-agent">Autonomous Space Agent</a>
+      <a class="sidebar__link" href="/docs/guides/browser-extension">Browser Extension</a>
+      <a class="sidebar__link" href="/docs/guides/browser-scripts">Browser Scripts</a>
+      <a class="sidebar__link" href="/docs/guides/bulk-operations">Bulk Operations</a>
+      <a class="sidebar__link" href="/docs/guides/configuration">Configuration</a>
+      <a class="sidebar__link" href="/docs/guides/content-calendar">Content Calendar</a>
+      <a class="sidebar__link" href="/docs/guides/control-panel">Control Panel — Browser Automation UI</a>
+      <a class="sidebar__link" href="/docs/guides/dashboard">Dashboard</a>
+      <a class="sidebar__link" href="/docs/guides/database">Database Schema</a>
+      <a class="sidebar__link" href="/docs/guides/deployment">Deployment Guide</a>
+      <a class="sidebar__link" href="/docs/guides/engagement-booster">Engagement Booster — Smart Tweet Engagement</a>
+      <a class="sidebar__link" href="/docs/guides/engage">Engagement sweeps: like, repost, and reply across a whole feed</a>
+      <a class="sidebar__link" href="/docs/guides/evergreen-recycler">Evergreen Content Recycler</a>
+      <a class="sidebar__link" href="/docs/guides/examples">Examples</a>
+      <a class="sidebar__link" href="/docs/guides/follower-crm">Follower CRM</a>
+      <a class="sidebar__link" href="/docs/guides/getting-started">Getting Started with XActions</a>
+      <a class="sidebar__link" href="/docs/guides/history-store">History Store &amp; Auto-Snapshots</a>
+      <a class="sidebar__link" href="/docs/guides/media-archive">Media archive</a>
+      <a class="sidebar__link" href="/docs/guides/monitoring">Monitoring Guide</a>
+      <a class="sidebar__link" href="/docs/guides/notifications">Notifications</a>
+      <a class="sidebar__link" href="/docs/guides/x402">Paying for XActions: x402 and MCP</a>
+      <a class="sidebar__link" href="/docs/guides/plugins">Plugin System</a>
+      <a class="sidebar__link" href="/docs/guides/streaming">Real-Time Streaming</a>
+      <a class="sidebar__link" href="/docs/guides/streams">Real-time Streams — Live Twitter Monitoring</a>
+      <a class="sidebar__link" href="/docs/guides/reputation-audit">Reputation audit: AI-score your own timeline, get a shareable card</a>
+      <a class="sidebar__link" href="/docs/guides/rss-monitor">Rss Monitor</a>
+      <a class="sidebar__link" href="/docs/guides/scrapers">Scrapers</a>
+      <a class="sidebar__link" href="/docs/guides/scraping-infrastructure">Scraping Infrastructure</a>
+      <a class="sidebar__link" href="/docs/guides/scraping">Scraping Infrastructure</a>
+      <a class="sidebar__link" href="/docs/guides/analytics" aria-current="page">Sentiment Analysis &amp; Reputation Monitoring</a>
+      <a class="sidebar__link" href="/docs/guides/skills">Skills Reference</a>
+      <a class="sidebar__link" href="/docs/guides/social-graph">Social Graph</a>
+      <a class="sidebar__link" href="/docs/guides/graph">Social Graph — Network Analysis &amp; Visualization</a>
+      <a class="sidebar__link" href="/docs/guides/graph-system">Social Graph System</a>
+      <a class="sidebar__link" href="/docs/guides/stealth-scraping">Stealth Scraping &amp; Proxy Rotation</a>
+      <a class="sidebar__link" href="/docs/guides/search-sweep">Sweep an X search: delete, like, repost, or reply to every result</a>
+      <a class="sidebar__link" href="/docs/guides/scheduling">Task Scheduling</a>
+      <a class="sidebar__link" href="/docs/guides/teams">Team Management</a>
+      <a class="sidebar__link" href="/docs/guides/cryptocurrency-api-guide">The Complete Guide to Cryptocurrency APIs in 2026</a>
+      <a class="sidebar__link" href="/docs/guides/mcp-remote">The hosted MCP server</a>
+      <a class="sidebar__link" href="/docs/guides/agents">Thought Leader Agent</a>
+      <a class="sidebar__link" href="/docs/guides/agent-advanced">Thought Leader Agent — Advanced Features</a>
+      <a class="sidebar__link" href="/docs/guides/agent-api-reference">Thought Leader Agent — API Reference</a>
+      <a class="sidebar__link" href="/docs/guides/agent-architecture">Thought Leader Agent — Architecture</a>
+      <a class="sidebar__link" href="/docs/guides/agent-config-reference">Thought Leader Agent — Configuration Reference</a>
+      <a class="sidebar__link" href="/docs/guides/agent-getting-started">Thought Leader Agent — Getting Started</a>
+      <a class="sidebar__link" href="/docs/guides/agent-system">Thought Leader Agent System</a>
+      <a class="sidebar__link" href="/docs/guides/troubleshooting">Troubleshooting</a>
+      <a class="sidebar__link" href="/docs/guides/price-correlation">Tweet-Price Correlation</a>
+      <a class="sidebar__link" href="/docs/guides/usage">Usage</a>
+      <a class="sidebar__link" href="/docs/guides/video-downloader">Video Downloader</a>
+      <a class="sidebar__link" href="/docs/guides/video">Video Engine — Programmatic Video Generation</a>
+      <a class="sidebar__link" href="/docs/guides/video-generation">Video Generation</a>
+      <a class="sidebar__link" href="/docs/guides/workflows">Workflow Engine</a>
+      <a class="sidebar__link" href="/docs/guides/x-developer-api-crypto-guide-2026">X Developer API in 2026: The Complete Guide for Crypto Builders</a>
+      <a class="sidebar__link" href="/docs/guides/dom-selectors">X/Twitter DOM Selector Reference</a>
+      <a class="sidebar__link" href="/docs/guides/ai-api">XActions AI API Documentation</a>
+      <a class="sidebar__link" href="/docs/guides/api-reference">XActions API Reference</a>
+      <a class="sidebar__link" href="/docs/guides/automation">XActions Automation Framework Guide</a>
+      <a class="sidebar__link" href="/docs/guides/cli-reference">XActions CLI Reference</a>
+      <a class="sidebar__link" href="/docs/guides/xactions-reference">XActions Complete Function Reference</a>
+      <a class="sidebar__link" href="/docs/guides/readme">XActions Documentation</a>
+      <a class="sidebar__link" href="/docs/guides/extension-api">XActions Extension — Internal API Reference</a>
+      <a class="sidebar__link" href="/docs/guides/extension">XActions Extension — User Guide</a>
+      <a class="sidebar__link" href="/docs/guides/growth_strategy">XActions Growth Strategy: 76 → 100,000 Stars</a>
+      <a class="sidebar__link" href="/docs/guides/mcp-setup">XActions MCP Server Setup Guide</a>
+      <a class="sidebar__link" href="/docs/guides/rest-api">XActions REST API Reference</a>
+      <a class="sidebar__link" href="/docs/guides/feature_inventory">XActions v3.5.0: Complete Feature Inventory</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Tutorials</div>
+      <a class="sidebar__link" href="/docs/learn/your-first-scrape">Tutorial 01 — Your first scrape</a>
+      <a class="sidebar__link" href="/docs/learn/mcp-with-claude">Tutorial 02 — Claude that can use X</a>
+      <a class="sidebar__link" href="/docs/learn/clean-up-your-following">Tutorial 03 — Clean up your following list</a>
+      <a class="sidebar__link" href="/docs/learn/build-a-brand-monitor">Tutorial 04 — Build a brand monitor</a>
+      <a class="sidebar__link" href="/docs/learn/competitive-intelligence">05: Read any account like an analyst</a>
+      <a class="sidebar__link" href="/docs/learn/everything-is-json">06: Everything is JSON</a>
+      <a class="sidebar__link" href="/docs/learn/your-x-archive">07: Read your own X archive</a>
+      <a class="sidebar__link" href="/docs/learn/readme">Tutorials</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Developer Guides</div>
+      <a class="sidebar__link" href="/docs/guides/developer/contributing-features">Adding New Features</a>
+      <a class="sidebar__link" href="/docs/guides/developer/agent-troubleshooting">Agent Troubleshooting Guide</a>
+      <a class="sidebar__link" href="/docs/guides/developer/browser-script-patterns">Browser Script Patterns</a>
+      <a class="sidebar__link" href="/docs/guides/developer/selectors">X/Twitter DOM Selectors Reference</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Architecture</div>
+      <a class="sidebar__link" href="/docs/architecture/http-scraper">HTTP-Based Scraper — Architecture &amp; Implementation Plan</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Browser Automation</div>
+      <a class="sidebar__link" href="/docs/automation/advanced-techniques">Advanced Automation Techniques</a>
+      <a class="sidebar__link" href="/docs/automation/getting-started-browser">Getting Started with Browser Automation</a>
+      <a class="sidebar__link" href="/docs/automation/actions-reference">XActions Actions Library Reference (`actions.js`)</a>
+      <a class="sidebar__link" href="/docs/automation/scripts-reference">XActions Automation Scripts — Complete Reference</a>
+      <a class="sidebar__link" href="/docs/automation/core-reference">XActions Core Module Reference (`core.js`)</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Research &amp; Architecture</div>
+      <a class="sidebar__link" href="/docs/research/llm-powered-thought-leader">24/7 LLM-Powered Thought Leadership Agent — Architecture &amp; Implementation Guide</a>
+      <a class="sidebar__link" href="/docs/research/algorithm-cultivation">Algorithmic Feed Cultivation: A Technical Research Paper on Automated Thought Leadership via Platform Signal Training</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Case Studies</div>
+      <a class="sidebar__link" href="/docs/case-studies/robust-dom-extraction">Robust DOM Extraction: A Case Study in Browser Automation Resilience</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Agent Skills</div>
+      <a class="sidebar__link" href="/docs/skills/account-backup">Account Backup &amp; Data Export</a>
+      <a class="sidebar__link" href="/docs/skills/account-tools">Account Tools (Miscellaneous)</a>
+      <a class="sidebar__link" href="/docs/skills/algorithm-cultivation">Algorithm Cultivation &amp; Thought Leadership</a>
+      <a class="sidebar__link" href="/docs/skills/analytics-insights">Analytics &amp; Insights</a>
+      <a class="sidebar__link" href="/docs/skills/articles-longform">Articles &amp; Longform</a>
+      <a class="sidebar__link" href="/docs">+ 45 more…</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Skill References</div>
+      <a class="sidebar__link" href="/docs/skills/algorithm-cultivation-algorithm-internals">Algorithm Internals &amp; Architecture</a>
+      <a class="sidebar__link" href="/docs/skills/analytics-insights-script-configs">Analytics Script Configs</a>
+      <a class="sidebar__link" href="/docs/skills/blocking-muting-management-script-details">Blocking &amp; Muting Script Details</a>
+      <a class="sidebar__link" href="/docs/skills/algorithm-cultivation-browser-scripts">Browser Scripts Reference</a>
+      <a class="sidebar__link" href="/docs/skills/content-posting-script-configs">Content Posting Script Configs</a>
+      <a class="sidebar__link" href="/docs">+ 4 more…</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Claude Prompt Library</div>
+      <a class="sidebar__link" href="/docs/prompts/mcp-setup-and-first-commands">Tutorial: Setting Up XActions MCP Server with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/unfollow-non-followers-cleanup">Tutorial: Unfollow Non-Followers &amp; Follower Cleanup with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/growth-automation-suite">Tutorial: Growth Automation Suite — Grow Your X Account on Autopilot</a>
+      <a class="sidebar__link" href="/docs/prompts/scraping-research-analysis">Tutorial: Tweet Scraping, Profile Analysis &amp; Research with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/content-posting-threads-scheduling">Tutorial: Content Posting, Threads, Polls &amp; Scheduling with Claude</a>
+      <a class="sidebar__link" href="/docs">+ 19 more…</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Project Info</div>
+      <a class="sidebar__link" href="/docs/project/contributing">Contributing to XActions</a>
+      <a class="sidebar__link" href="/docs/project/changelog">Changelog</a>
+      <a class="sidebar__link" href="/docs/project/roadmap">Roadmap</a>
+      <a class="sidebar__link" href="/docs/project/security">Security Policy</a>
+      <a class="sidebar__link" href="/docs/project/code_of_conduct">Contributor Covenant Code of Conduct</a>
+      <a class="sidebar__link" href="/docs/project/readme">Quick start</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Extensions &amp; Plugins</div>
+      <a class="sidebar__link" href="/docs/extras/scripts">Chrome DevTools Console Scripts</a>
+      <a class="sidebar__link" href="/docs/extras/examples">Examples</a>
+      <a class="sidebar__link" href="/docs/extras/integrations-n8n">n8n-nodes-xactions</a>
+      <a class="sidebar__link" href="/docs/extras/extension">XActions Browser Extension</a>
+      <a class="sidebar__link" href="/docs/extras/src-plugins-excel">XActions Excel Plugin</a>
+      <a class="sidebar__link" href="/docs/extras/src-plugins-google-sheets">XActions Google Sheets Plugin</a>
+      <a class="sidebar__link" href="/docs/extras/src-plugins-template">xactions-plugin-example</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Launch &amp; Releases</div>
+      <a class="sidebar__link" href="/docs/launch/v310-launch-content">XActions v3.1.0 — Launch Content</a>
+    </div>
+  </aside>
+
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="https://xactions.app">Home</a> <span aria-hidden="true">›</span> <a href="https://xactions.app/docs">Docs</a> <span aria-hidden="true">›</span> <a href="https://xactions.app/docs">Guides &amp; Reference</a> <span aria-hidden="true">›</span> <span>Sentiment Analysis &amp; Reputation Monitoring</span>
+    </nav>
+
+    <span class="eyebrow">📖 Guides &amp; Reference</span>
+
+    <article class="prose">
+<h1 id="sentiment-analysis-amp-reputation-monitoring">Sentiment Analysis &amp; Reputation Monitoring</h1>
 <blockquote>
 <p>Real-time sentiment analysis, reputation monitoring, alerting, and reporting for X/Twitter — no API fees.</p>
 </blockquote>
-<h2>Overview</h2>
+<h2 id="overview">Overview</h2>
 <p>XActions Analytics provides a complete sentiment intelligence layer:</p>
 <ul>
 <li><strong>Sentiment Analysis</strong> — Rule-based (offline, instant) or LLM-powered (OpenRouter) analysis of any text</li>
@@ -83,7 +278,30 @@
 <li><strong>Reports</strong> — Comprehensive Markdown/JSON reports with timelines, keyword frequency, and distribution</li>
 </ul>
 <p>Available via: <strong>API</strong>, <strong>CLI</strong>, <strong>MCP tools</strong> (for AI agents), and <strong>Dashboard</strong>.</p>
-<h2>Architecture</h2>
+<hr>
+<h2 id="quick-start">Quick Start</h2>
+<h3 id="analyze-sentiment-cli">Analyze sentiment (CLI)</h3>
+<pre><code class="language-bash"># Rule-based (instant, offline)
+unfollowx sentiment &quot;I love this product! Amazing work 🔥&quot;
+
+# LLM-powered (requires OPENROUTER_API_KEY)
+unfollowx sentiment &quot;This is surprisingly mediocre&quot; --mode llm
+</code></pre>
+<h3 id="start-monitoring-cli">Start monitoring (CLI)</h3>
+<pre><code class="language-bash"># Monitor mentions of @username
+unfollowx monitor @elonmusk --type mentions --interval 300
+
+# Monitor a keyword
+unfollowx monitor &quot;bitcoin crash&quot; --type keyword --threshold -0.5
+
+# With webhook alerts
+unfollowx monitor @yourproject --webhook https://hooks.slack.com/...
+</code></pre>
+<h3 id="generate-report-cli">Generate report (CLI)</h3>
+<pre><code class="language-bash">unfollowx report @username --period 7d --format markdown --output report.md
+</code></pre>
+<hr>
+<h2 id="architecture">Architecture</h2>
 <pre><code>src/analytics/
 ├── sentiment.js   → Sentiment analysis engine (rule-based + LLM)
 ├── reputation.js  → Monitor management, polling, stats
@@ -95,7 +313,7 @@ api/routes/analytics.js  → REST API endpoints
 dashboard/analytics.html → Dashboard UI
 dashboard/js/analytics.js → Client-side JS
 </code></pre>
-<h3>Data Flow</h3>
+<h3 id="data-flow">Data Flow</h3>
 <pre><code>Text → analyzeSentiment() → { score, label, confidence, keywords }
                                      ↓
 Monitor (polling) → analyzeBatch() → history[] → checkAlerts()
@@ -105,9 +323,9 @@ Monitor (polling) → analyzeBatch() → history[] → checkAlerts()
                           generateReport() → Markdown/JSON
 </code></pre>
 <hr>
-<h2>API Reference</h2>
+<h2 id="api-reference">API Reference</h2>
 <p>Base URL: <code>/api/analytics</code></p>
-<h3>POST /sentiment</h3>
+<h3 id="post-sentiment">POST /sentiment</h3>
 <p>Analyze sentiment of text or batch of texts.</p>
 <p><strong>Single text:</strong></p>
 <pre><code class="language-json">// Request
@@ -164,9 +382,10 @@ Monitor (polling) → analyzeBatch() → history[] → checkAlerts()
 <td><code>&quot;rules&quot;</code> (offline) or <code>&quot;llm&quot;</code> (OpenRouter)</td>
 </tr>
 </tbody></table>
-<p><strong>Score range:</strong> -1.0 (very negative) to 1.0 (very positive)<br><strong>Labels:</strong> <code>positive</code> (&gt;0.05), <code>neutral</code> (-0.05 to 0.05), <code>negative</code> (&lt;-0.05)</p>
+<p><strong>Score range:</strong> -1.0 (very negative) to 1.0 (very positive)
+<strong>Labels:</strong> <code>positive</code> (&gt;0.05), <code>neutral</code> (-0.05 to 0.05), <code>negative</code> (&lt;-0.05)</p>
 <hr>
-<h3>POST /monitor</h3>
+<h3 id="post-monitor">POST /monitor</h3>
 <p>Start a reputation monitor for a username or keyword.</p>
 <pre><code class="language-json">// Request
 {
@@ -243,7 +462,7 @@ Monitor (polling) → analyzeBatch() → history[] → checkAlerts()
 </tr>
 </tbody></table>
 <hr>
-<h3>GET /monitor</h3>
+<h3 id="get-monitor">GET /monitor</h3>
 <p>List all active monitors.</p>
 <pre><code class="language-json">// Response
 {
@@ -254,7 +473,7 @@ Monitor (polling) → analyzeBatch() → history[] → checkAlerts()
 }
 </code></pre>
 <hr>
-<h3>GET /monitor/:id</h3>
+<h3 id="get-monitorid">GET /monitor/:id</h3>
 <p>Get monitor details and history.</p>
 <p><strong>Query params:</strong> <code>?limit=100&amp;since=2025-01-01T00:00:00Z</code></p>
 <pre><code class="language-json">// Response
@@ -269,10 +488,10 @@ Monitor (polling) → analyzeBatch() → history[] → checkAlerts()
 }
 </code></pre>
 <hr>
-<h3>DELETE /monitor/:id</h3>
+<h3 id="delete-monitorid">DELETE /monitor/:id</h3>
 <p>Stop and remove a monitor. Returns <code>{ success: true }</code>.</p>
 <hr>
-<h3>GET /reports/:username</h3>
+<h3 id="get-reportsusername">GET /reports/:username</h3>
 <p>Generate a reputation report.</p>
 <p><strong>Query params:</strong> <code>?period=7d&amp;format=json</code> or <code>?format=markdown</code></p>
 <table>
@@ -318,7 +537,7 @@ Monitor (polling) → analyzeBatch() → history[] → checkAlerts()
 </code></pre>
 <p><strong>Markdown response:</strong> Returns a formatted Markdown report with tables, emoji bars, and linked tweets.</p>
 <hr>
-<h3>GET /alerts</h3>
+<h3 id="get-alerts">GET /alerts</h3>
 <p>Get recent alerts.</p>
 <p><strong>Query params:</strong> <code>?monitorId=xxx&amp;severity=warning&amp;limit=50</code></p>
 <pre><code class="language-json">{
@@ -338,7 +557,7 @@ Monitor (polling) → analyzeBatch() → history[] → checkAlerts()
 }
 </code></pre>
 <hr>
-<h2>Alert Types</h2>
+<h2 id="alert-types">Alert Types</h2>
 <table>
 <thead>
 <tr>
@@ -370,9 +589,9 @@ Monitor (polling) → analyzeBatch() → history[] → checkAlerts()
 <li><strong>Socket.IO</strong> — Emitted as <code>analytics:alert</code> event to monitor room</li>
 </ol>
 <hr>
-<h2>MCP Tools (AI Agents)</h2>
+<h2 id="mcp-tools-ai-agents">MCP Tools (AI Agents)</h2>
 <p>Three tools for Claude, GPT, or any MCP-compatible agent:</p>
-<h3>x_analyze_sentiment</h3>
+<h3 id="x_analyze_sentiment">x_analyze_sentiment</h3>
 <pre><code class="language-json">{
   &quot;text&quot;: &quot;This project is incredible!&quot;,
   &quot;mode&quot;: &quot;rules&quot;
@@ -380,7 +599,7 @@ Monitor (polling) → analyzeBatch() → history[] → checkAlerts()
 // Or batch:
 { &quot;texts&quot;: [&quot;text1&quot;, &quot;text2&quot;], &quot;mode&quot;: &quot;rules&quot; }
 </code></pre>
-<h3>x_monitor_reputation</h3>
+<h3 id="x_monitor_reputation">x_monitor_reputation</h3>
 <pre><code class="language-json">// Start
 { &quot;action&quot;: &quot;start&quot;, &quot;target&quot;: &quot;@username&quot;, &quot;type&quot;: &quot;mentions&quot;, &quot;interval&quot;: 300 }
 
@@ -393,12 +612,12 @@ Monitor (polling) → analyzeBatch() → history[] → checkAlerts()
 // List all
 { &quot;action&quot;: &quot;list&quot; }
 </code></pre>
-<h3>x_reputation_report</h3>
+<h3 id="x_reputation_report">x_reputation_report</h3>
 <pre><code class="language-json">{ &quot;username&quot;: &quot;elonmusk&quot;, &quot;period&quot;: &quot;7d&quot;, &quot;format&quot;: &quot;markdown&quot; }
 </code></pre>
 <hr>
-<h2>Sentiment Engine Details</h2>
-<h3>Rule-Based Mode (<code>rules</code>)</h3>
+<h2 id="sentiment-engine-details">Sentiment Engine Details</h2>
+<h3 id="rule-based-mode-rules">Rule-Based Mode (<code>rules</code>)</h3>
 <p>Fast, offline analysis using an AFINN-style lexicon:</p>
 <ul>
 <li><strong>~150 scored words</strong> with scores from -5 (worst) to +5 (best)</li>
@@ -408,7 +627,7 @@ Monitor (polling) → analyzeBatch() → history[] → checkAlerts()
 <li><strong>Normalization</strong> — Scores normalized to -1.0 to 1.0 range</li>
 </ul>
 <p><strong>Best for:</strong> High-volume analysis, offline use, cost-sensitive workloads.</p>
-<h3>LLM Mode (<code>llm</code>)</h3>
+<h3 id="llm-mode-llm">LLM Mode (<code>llm</code>)</h3>
 <p>Uses OpenRouter to call an LLM for nuanced analysis:</p>
 <ul>
 <li><strong>Default model:</strong> <code>meta-llama/llama-3.1-8b-instruct:free</code></li>
@@ -418,8 +637,8 @@ Monitor (polling) → analyzeBatch() → history[] → checkAlerts()
 </ul>
 <p><strong>Best for:</strong> Complex/nuanced text, sarcasm detection, specialized domains.</p>
 <hr>
-<h2>Configuration</h2>
-<h3>Environment Variables</h3>
+<h2 id="configuration">Configuration</h2>
+<h3 id="environment-variables">Environment Variables</h3>
 <table>
 <thead>
 <tr>
@@ -439,7 +658,7 @@ Monitor (polling) → analyzeBatch() → history[] → checkAlerts()
 <td>Server port</td>
 </tr>
 </tbody></table>
-<h3>Monitor Defaults</h3>
+<h3 id="monitor-defaults">Monitor Defaults</h3>
 <table>
 <thead>
 <tr>
@@ -475,7 +694,7 @@ Monitor (polling) → analyzeBatch() → history[] → checkAlerts()
 </tr>
 </tbody></table>
 <hr>
-<h2>Dashboard</h2>
+<h2 id="dashboard">Dashboard</h2>
 <p>Access at <code>/analytics</code> — a dark-themed dashboard with four tabs:</p>
 <ol>
 <li><strong>Analyze</strong> — Quick text analysis with batch support, sentiment badges, and keyword tags</li>
@@ -491,96 +710,97 @@ Monitor (polling) → analyzeBatch() → history[] → checkAlerts()
 <li>Accessible (ARIA roles, skip navigation, focus indicators)</li>
 </ul>
 <hr>
-<h2>Examples</h2>
-<h3>Analyze a tweet&#39;s sentiment</h3>
+<h2 id="examples">Examples</h2>
+<h3 id="analyze-a-tweet39s-sentiment">Analyze a tweet&#39;s sentiment</h3>
 <pre><code class="language-bash">curl -X POST http://localhost:3000/api/analytics/sentiment \
   -H &quot;Content-Type: application/json&quot; \
   -d &#39;{&quot;text&quot;: &quot;Just shipped v2.0! The team crushed it 🚀🔥&quot;}&#39;
 </code></pre>
-<h3>Monitor your brand mentions</h3>
+<h3 id="monitor-your-brand-mentions">Monitor your brand mentions</h3>
 <pre><code class="language-bash">curl -X POST http://localhost:3000/api/analytics/monitor \
   -H &quot;Content-Type: application/json&quot; \
   -d &#39;{&quot;target&quot;: &quot;@yourproject&quot;, &quot;type&quot;: &quot;mentions&quot;, &quot;interval&quot;: 300}&#39;
 </code></pre>
-<h3>Get a weekly report in Markdown</h3>
+<h3 id="get-a-weekly-report-in-markdown">Get a weekly report in Markdown</h3>
 <pre><code class="language-bash">curl &quot;http://localhost:3000/api/analytics/reports/yourproject?period=7d&amp;format=markdown&quot; &gt; report.md
 </code></pre>
-<h3>Batch analyze multiple texts</h3>
+<h3 id="batch-analyze-multiple-texts">Batch analyze multiple texts</h3>
 <pre><code class="language-bash">curl -X POST http://localhost:3000/api/analytics/sentiment \
   -H &quot;Content-Type: application/json&quot; \
   -d &#39;{&quot;texts&quot;: [&quot;Love this!&quot;, &quot;Worst update ever&quot;, &quot;It works I guess&quot;]}&#39;
 </code></pre>
 <hr>
-<p><em>Built by <a href="https://x.com/nichxbt">@nichxbt</a> — <a href="https://github.com/nirholas/XActions">XActions</a></em></p>
+<p><em>Built by <a target="_blank" rel="noopener noreferrer" href="https://x.com/nichxbt">@nichxbt</a> — <a target="_blank" rel="noopener noreferrer" href="https://github.com/nirholas/XActions">XActions</a></em></p>
 
+    </article>
 
-        <div class="cta-box">
-          <h3>⚡ Explore XActions</h3>
-          <p>100% free and open-source. No API keys, no fees, no signup.</p>
-          <a href="/docs">Browse All Documentation</a>
-        </div>
-      </article>
-    </main>
+    <div class="page-meta">
+      <span>4 min read</span>
+      <a href="https://github.com/nirholas/XActions/edit/main/docs/analytics.md" target="_blank" rel="noopener">Edit this page</a>
+      <a href="https://github.com/nirholas/XActions/issues/new?title=Docs%3A%20Sentiment%20Analysis%20%26%20Reputation%20Monitoring" target="_blank" rel="noopener">Report a problem</a>
+    </div>
 
-    <aside class="sidebar-right">
-      <div class="sidebar-card">
-        <h3>📖 In This Section</h3>
-                <a href="/docs/guides/getting-started">📖 Getting Started with XActions</a>
-        <a href="/docs/guides/usage">📖 Usage</a>
-        <a href="/docs/guides/automation">📖 XActions Automation Framework Guide</a>
-        <a href="/docs/guides/monitoring">📖 Monitoring Guide</a>
-        <a href="/docs/guides/cli-reference">📖 XActions CLI Reference</a>
-        <a href="/docs/guides/ai-api">📖 XActions AI API Documentation</a>
-        <a href="/docs/guides/api-reference">📖 XActions — API Reference</a>
-        <a href="/docs/guides/deployment">📖 Deployment Guide</a>
-      </div>
-      <div class="sidebar-card">
-        <h3>🔗 Quick Links</h3>
-        <a href="/docs">All Documentation</a>
-        <a href="/features">All 43+ Features</a>
-        <a href="/tutorials">Tutorials</a>
-        <a href="/ai">AI Integration</a>
-        <a href="/mcp">MCP Server</a>
-        <a href="https://github.com/nirholas/XActions" rel="noopener">GitHub</a>
-      </div>
-    </aside>
+    <nav class="page-nav" aria-label="Previous and next">
+      <a class="page-nav__link" href="/docs/guides/scraping"><span class="page-nav__dir">← Previous</span><span class="page-nav__title">Scraping Infrastructure</span></a>
+      <a class="page-nav__link page-nav__link--next" href="/docs/guides/skills"><span class="page-nav__dir">Next →</span><span class="page-nav__title">Skills Reference</span></a>
+    </nav>
+
+    <div class="callout">
+      <h3>⚡ Free and open source</h3>
+      <p>No API keys, no monthly fees, no signup. Star the repo if it saved you a subscription.</p>
+      <a class="btn" href="https://github.com/nirholas/XActions" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+  </main>
+
+  <aside class="toc" data-toc aria-label="On this page">
+    <div class="toc__heading">On this page</div>
+  </aside>
+</div>
+
+<dialog class="search-dialog" data-search-dialog aria-label="Search documentation">
+  <input class="search-dialog__input" data-search-input type="search" placeholder="Search the documentation…" aria-label="Search query" autocomplete="off" spellcheck="false">
+  <div class="search-dialog__results" data-search-results role="listbox" aria-label="Search results"></div>
+  <div class="search-dialog__footer">
+    <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+    <span><kbd>↵</kbd> open</span>
+    <span><kbd>esc</kbd> close</span>
   </div>
+</dialog>
 
-  <footer class="site-footer">
-    <div class="footer-content">
-      <div class="footer-section">
-        <h4>XActions</h4>
-        <p>100% Free & Open Source X/Twitter Automation</p>
-        <p>Created by <a href="https://x.com/nichxbt" rel="noopener">@nichxbt</a></p>
-      </div>
-      <div class="footer-section">
-        <h4>Product</h4>
-        <a href="/features">Features</a>
-        <a href="/pricing">Pricing</a>
-        <a href="/run">Run Scripts</a>
-        <a href="/dashboard">Dashboard</a>
-        <a href="/analytics">Analytics</a>
-      </div>
-      <div class="footer-section">
-        <h4>AI & Developers</h4>
-        <a href="/ai">AI Integration</a>
-        <a href="/ai-api">AI API (x402)</a>
-        <a href="/mcp">MCP Server</a>
-        <a href="/docs">Documentation</a>
-        <a href="/tutorials">Tutorials</a>
-      </div>
-      <div class="footer-section">
-        <h4>Community</h4>
-        <a href="https://github.com/nirholas/XActions" rel="noopener">GitHub</a>
-        <a href="/about">About</a>
-        <a href="/terms">Terms</a>
-        <a href="/privacy">Privacy</a>
-      </div>
+<footer class="site-footer">
+  <div class="site-footer__inner">
+    <div>
+      <h4>XActions</h4>
+      <p>Free, open-source X/Twitter automation.</p>
+      <p>Built by <a href="https://x.com/nichxbt" target="_blank" rel="noopener">@nichxbt</a></p>
     </div>
-    <div class="footer-bottom">
-      <p>© 2024-2026 XActions. MIT License. No API fees. No limits.</p>
+    <div>
+      <h4>Learn</h4>
+      <a href="/docs/learn/your-first-scrape">Your first scrape</a>
+      <a href="/docs/learn/mcp-with-claude">MCP with Claude</a>
+      <a href="/examples">Examples</a>
+      <a href="/docs/guides/troubleshooting">Troubleshooting</a>
     </div>
-  </footer>
-<script src="/js/sidebar.js"></script>
+    <div>
+      <h4>Reference</h4>
+      <a href="/docs/guides/cli-reference">CLI</a>
+      <a href="/docs/guides/api-reference">API</a>
+      <a href="/docs/guides/mcp-setup">MCP server</a>
+      <a href="/docs/guides/browser-scripts">Browser scripts</a>
+    </div>
+    <div>
+      <h4>Project</h4>
+      <a href="https://github.com/nirholas/XActions" target="_blank" rel="noopener">GitHub</a>
+      <a href="/docs/project/contributing">Contributing</a>
+      <a href="/docs/project/changelog">Changelog</a>
+      <a href="/docs/project/security">Security</a>
+    </div>
+  </div>
+  <div class="site-footer__bottom">
+    <p>© 2024–2026 XActions. Apache-2.0 licensed. No API fees.</p>
+  </div>
+</footer>
+
+<script src="/docs/assets/docs.js" defer></script>
 </body>
 </html>

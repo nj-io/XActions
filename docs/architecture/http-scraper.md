@@ -897,7 +897,7 @@ flowchart LR
 This can be run:
 - On startup (optional, adds ~2s)
 - As a scheduled job
-- Manually via CLI command: `xactions update-endpoints`
+- Manually, by following [Query not found](../troubleshooting.md#query-not-found)
 
 ### 14.3 Cloudflare/TLS Mitigation
 

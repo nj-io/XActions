@@ -246,9 +246,12 @@
 
   <script>
     // ── Config ──────────────────────────────────────────────────────────────
-    const API = window.location.hostname === 'localhost'
-      ? 'http://localhost:3100'
-      : window.location.origin;
+    // A standalone A2A server serves the routes at its root; the deployed site
+    // mounts them under /api, the way api/server.js does. Every call went to
+    // the bare /a2a/* path, which 404s on xactions.app.
+    const LOCAL_A2A = window.location.hostname === 'localhost';
+    const API = LOCAL_A2A ? 'http://localhost:3100' : window.location.origin;
+    const A2A_BASE = LOCAL_A2A ? '' : '/api';
 
     // ── State ───────────────────────────────────────────────────────────────
     let allSkills = [];
@@ -259,7 +262,7 @@
     // ── Fetch helpers ───────────────────────────────────────────────────────
     async function api(path, opts) {
       try {
-        const res = await fetch(`${API}${path}`, opts);
+        const res = await fetch(`${API}${A2A_BASE}${path}`, opts);
         return await res.json();
       } catch { return null; }
     }
@@ -445,7 +448,7 @@
       if (sseSource) sseSource.close();
       const dot = document.getElementById('sse-dot');
       try {
-        sseSource = new EventSource(`${API}/a2a/tasks/${taskId}/stream`);
+        sseSource = new EventSource(`${API}${A2A_BASE}/a2a/tasks/${taskId}/stream`);
         dot.className = 'conn-dot connected';
         sseSource.addEventListener('status', (e) => {
           try {

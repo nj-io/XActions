@@ -1,26 +1,38 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 // XActions — Database Tests
 // by nichxbt
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { AgentDatabase } from '../../src/agents/database.js';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 
-const TEST_DB_PATH = path.resolve('data', 'test-agent.db');
+// Each worker gets its own database file, outside the repo. A shared path under
+// data/ made parallel runs fight over the same file, and deleting the .db while
+// leaving the WAL sidecars behind failed the next open with a disk I/O error.
+const TEST_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'xactions-db-'));
+const TEST_DB_PATH = path.join(TEST_DIR, 'test-agent.db');
+
+/** Remove the database and the WAL sidecars journal_mode = WAL leaves behind. */
+function removeDatabase() {
+  for (const suffix of ['', '-wal', '-shm']) {
+    const file = `${TEST_DB_PATH}${suffix}`;
+    if (fs.existsSync(file)) fs.unlinkSync(file);
+  }
+}
 
 describe('AgentDatabase', () => {
   let db;
 
   beforeEach(() => {
-    // Remove test DB if it exists
-    if (fs.existsSync(TEST_DB_PATH)) fs.unlinkSync(TEST_DB_PATH);
+    removeDatabase();
     db = new AgentDatabase(TEST_DB_PATH);
   });
 
   afterEach(() => {
     db.close();
-    if (fs.existsSync(TEST_DB_PATH)) fs.unlinkSync(TEST_DB_PATH);
+    removeDatabase();
   });
 
   describe('logAction', () => {

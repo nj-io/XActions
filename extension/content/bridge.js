@@ -85,6 +85,23 @@
           data: msg.data,
         });
         break;
+
+      case 'LLM_REQUEST':
+        // x.com's CSP blocks the page from reaching LLM providers directly.
+        // The service worker has host permissions for them, so relay the
+        // chat-completion request there and post the answer back to the page.
+        chrome.runtime.sendMessage({ type: 'LLM_REQUEST', id: msg.id, request: msg.request }, (response) => {
+          const err = chrome.runtime.lastError;
+          window.postMessage({
+            source: 'xactions-extension',
+            type: 'LLM_RESPONSE',
+            id: msg.id,
+            text: response?.text || '',
+            model: response?.model || '',
+            error: err ? err.message : (response?.error || null),
+          }, '*');
+        });
+        break;
     }
   });
 

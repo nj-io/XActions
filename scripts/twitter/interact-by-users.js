@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
  * 👤 Interact By Users
@@ -35,7 +35,9 @@
  * ============================================================
  */
 
-const CONFIG = {
+// `var` (not `const`): a repeated top-level `const` paste in the same
+// DevTools tab throws "already been declared" instead of re-running.
+var CONFIG = {
   // Target usernames to interact with
   targetUsers: [
     // 'nichxbt',
@@ -147,22 +149,26 @@ const CONFIG = {
     state,
     history,
     
-    // Interact with a single user's profile
+    // Interact with a single user's profile (must already be open, a console
+    // script does not survive a page navigation)
     interactWith: async (username) => {
       const cleanUsername = username.replace('@', '').toLowerCase();
+
+      const currentPath = window.location.pathname.toLowerCase().replace(/^\//, '').split('/')[0];
+      if (currentPath !== cleanUsername) {
+        console.error(`❌ You are not on @${cleanUsername}'s profile.`);
+        console.log(`📍 Navigate to https://x.com/${cleanUsername} first, then run this again.`);
+        return;
+      }
+
       console.log(`👤 Starting interaction with @${cleanUsername}...`);
-      
+
       state.currentUser = cleanUsername;
       state.isRunning = true;
-      
-      // Navigate to user's profile
-      console.log(`📍 Navigate to: https://x.com/${cleanUsername}`);
-      
-      await sleep(1000);
-      
+
       // Wait for tweets to load
       await sleep(2000);
-      
+
       const tweets = document.querySelectorAll(SELECTORS.tweet);
       console.log(`🔍 Found ${tweets.length} tweets`);
       
@@ -195,11 +201,42 @@ const CONFIG = {
             // Confirm retweet
             const confirmBtn = document.querySelector('[data-testid="retweetConfirm"]');
             if (confirmBtn) confirmBtn.click();
-            
+
             userRetweets++;
             state.stats.retweets++;
             recordInteraction(cleanUsername, 'retweets');
             console.log(`🔄 Retweeted ${userRetweets}/${CONFIG.limits.retweetsPerUser}`);
+            await randomDelay(CONFIG.delayBetweenActions, CONFIG.delayBetweenActions * 1.5);
+          }
+        }
+
+        // Reply (was declared in CONFIG/SELECTORS but never wired up)
+        if (CONFIG.actions.reply && userReplies < CONFIG.limits.repliesPerUser) {
+          const replyBtn = tweet.querySelector(SELECTORS.replyButton);
+          if (replyBtn) {
+            replyBtn.click();
+            await sleep(1000);
+
+            const input = document.querySelector(SELECTORS.tweetInput);
+            const submitBtn = document.querySelector(SELECTORS.tweetSubmit);
+            if (input && submitBtn) {
+              input.focus();
+              document.execCommand('insertText', false, randomItem(CONFIG.replyTemplates));
+              await sleep(300);
+              if (!submitBtn.disabled) {
+                submitBtn.click();
+                userReplies++;
+                state.stats.replies++;
+                recordInteraction(cleanUsername, 'replies');
+                console.log(`💬 Replied ${userReplies}/${CONFIG.limits.repliesPerUser}`);
+                await sleep(800);
+              } else {
+                console.warn('⚠️ Reply button stayed disabled; closing composer.');
+                document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+              }
+            } else {
+              console.warn('⚠️ Reply composer did not open as expected.');
+            }
             await randomDelay(CONFIG.delayBetweenActions, CONFIG.delayBetweenActions * 1.5);
           }
         }
@@ -221,33 +258,24 @@ const CONFIG = {
       state.currentUser = null;
     },
     
-    // Interact with all target users
+    // Interact with all target users: a console script cannot navigate between
+    // profiles without being wiped, so this walks you through the sequence
     interactAll: async () => {
       if (CONFIG.targetUsers.length === 0) {
         console.error('❌ No target users configured!');
         console.log('Add usernames to CONFIG.targetUsers array.');
         return;
       }
-      
-      console.log(`🚀 Starting interaction with ${CONFIG.targetUsers.length} users...`);
-      state.isRunning = true;
-      
-      for (const username of CONFIG.targetUsers) {
-        if (!state.isRunning) break;
-        
-        await window.XActions.InteractUsers.interactWith(username);
-        
-        if (state.isRunning) {
-          console.log(`⏳ Waiting before next user...`);
-          await sleep(CONFIG.delayBetweenUsers);
-        }
-      }
-      
+
+      console.log(`🚀 Processing ${CONFIG.targetUsers.length} users...`);
       console.log('');
-      console.log('╔════════════════════════════════════════════════════════════╗');
-      console.log('║  🎉 ALL INTERACTIONS COMPLETE!                             ║');
-      console.log('╚════════════════════════════════════════════════════════════╝');
-      window.XActions.InteractUsers.stats();
+      console.log('📋 For each user, open their profile and run:');
+      CONFIG.targetUsers.forEach((username, i) => {
+        console.log(`   ${i + 1}. https://x.com/${username}`);
+        console.log(`      Then: XActions.InteractUsers.interactWith("${username}")`);
+      });
+      console.log('');
+      console.log('💡 Re-paste this script after each page navigation.');
     },
     
     // Add user to target list

@@ -213,7 +213,8 @@
       transition: all 0.15s;
     }
     .view-tab:hover { color: var(--text-primary); background: var(--bg-tertiary); }
-    .view-tab.active { color: #fff; background: var(--accent); }
+    .view-tab.active { color: #fff; background: linear-gradient(135deg,#1d9bf0,#22d3ee); box-shadow: 0 8px 24px -8px rgba(29,155,240,.6); }
+    .view-tab:focus-visible, .tf-btn:focus-visible, .search-input:focus-visible, .export-btn:focus-visible { box-shadow: 0 0 0 3px rgba(29,155,240,.28); outline: none; }
 
     /* ===== Chart Sub-header ===== */
     .chart-header {
@@ -402,7 +403,7 @@
       transition: all 0.15s;
     }
     .tf-btn:hover { color: var(--text-primary); }
-    .tf-btn.active { color: #fff; background: var(--accent); }
+    .tf-btn.active { color: #fff; background: linear-gradient(135deg,#1d9bf0,#22d3ee); }
 
     /* ===== Data Table View ===== */
     .data-table-view {
@@ -536,7 +537,14 @@
       border-radius: 12px;
       padding: 20px;
       text-align: center;
+      transition: transform 0.26s cubic-bezier(.22,1,.36,1), border-color 0.26s cubic-bezier(.22,1,.36,1), box-shadow 0.26s cubic-bezier(.22,1,.36,1);
     }
+    .stat-card:hover { transform: translateY(-3px); border-color: rgba(29,155,240,.4); box-shadow: 0 10px 34px -12px rgba(0,0,0,.6); }
+
+    /* Offline note + ambient glow */
+    .offline-note{display:flex;gap:12px;align-items:flex-start;background:rgba(29,155,240,0.06);border:1px solid rgba(29,155,240,0.3);border-radius:14px;padding:16px 18px;color:#aab4c0;font-size:.92rem;margin:16px 0}
+    .offline-note strong{color:#e7e9ea}.offline-note a{color:#1d9bf0}.offline-note .offline-ic{font-size:1.2rem;line-height:1.3}
+    body::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;background:radial-gradient(1000px 560px at 82% -6%,rgba(29,155,240,.1),transparent 60%)}
 
     .stat-value {
       font-size: 28px;
@@ -891,9 +899,21 @@
       hideLoading();
     } catch (err) {
       hideLoading();
-      console.error('Init error:', err);
-      $('#tokenName').textContent = 'Error loading data';
+      console.warn('Tweet-price data offline. Dataset is being migrated.');
+      $('#tokenName').textContent = 'Data offline';
+      showDataOffline();
     }
+  }
+
+  // Designed offline notice (dataset migrating).
+  const OFFLINE_HTML = '<div class="offline-note" role="status"><span class="offline-ic">📡</span><div><strong>Backend offline.</strong> The hosted API is being migrated. Browser scripts, the CLI, and docs work without it. <a href="/docs">Read the docs →</a></div></div>';
+  function showDataOffline() {
+    const chartEl = $('#chart');
+    if (chartEl) chartEl.innerHTML = OFFLINE_HTML;
+    const grid = $('#statsGrid');
+    if (grid) grid.innerHTML = OFFLINE_HTML;
+    const tbody = $('#tableBody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="padding:0">' + OFFLINE_HTML + '</td></tr>';
   }
 
   // ===== Asset Dropdown =====
@@ -923,8 +943,14 @@
       const assetId = item.dataset.asset;
       if (assetId !== state.currentAsset) {
         showLoading(`Loading $${state.assets.find(a => a.id === assetId)?.name || assetId}...`);
-        await loadAsset(assetId);
-        hideLoading();
+        try {
+          await loadAsset(assetId);
+        } catch (err) {
+          console.warn('Tweet-price data offline. Dataset is being migrated.');
+          showDataOffline();
+        } finally {
+          hideLoading();
+        }
       }
     });
 
@@ -993,7 +1019,7 @@
         console.warn(`${priceFile} not available for ${state.currentAsset}`);
       }
     } catch (err) {
-      console.error('Timeframe switch error:', err);
+      console.warn('Tweet-price timeframe data offline. Dataset is being migrated.');
     }
     hideLoading();
   }

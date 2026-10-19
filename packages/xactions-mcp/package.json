@@ -1,6 +1,6 @@
 {
   "name": "xactions-mcp",
-  "version": "3.1.0",
+  "version": "3.4.9",
   "description": "XActions MCP Server — X/Twitter automation for AI agents (Claude, Cursor, Windsurf, GPT). No API fees.",
   "homepage": "https://xactions.app",
   "repository": {
@@ -11,14 +11,14 @@
   "bugs": {
     "url": "https://github.com/nirholas/xactions/issues"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "author": "nichxbt",
   "type": "module",
   "bin": {
     "xactions-mcp": "./bin.js"
   },
   "dependencies": {
-    "xactions": "^3.0.44"
+    "xactions": "^3.4.8"
   },
   "keywords": [
     "xactions",
@@ -37,6 +37,6 @@
     "README.md"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=22.12"
   }
 }
