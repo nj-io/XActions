@@ -1,0 +1,362 @@
+{
+ "data": {
+  "bookmark_timeline_v2": {
+   "timeline": {
+    "instructions": [
+     {
+      "entries": [
+       {
+        "content": {
+         "__typename": "TimelineTimelineItem",
+         "entryType": "TimelineTimelineItem",
+         "itemContent": {
+          "__typename": "TimelineTweet",
+          "itemType": "TimelineTweet",
+          "tweetDisplayType": "Tweet",
+          "tweet_results": {
+           "result": {
+            "__typename": "Tweet",
+            "rest_id": "2111962772594659640",
+            "views": {
+             "count": "645771",
+             "state": "EnabledWithCount"
+            },
+            "core": {
+             "user_results": {
+              "result": {
+               "core": {
+                "screen_name": "stargocn"
+               },
+               "legacy": {
+                "screen_name": null
+               }
+              }
+             }
+            },
+            "legacy": {
+             "full_text": "如果你去韩国了\n\n这个网站必须浏览一下\n\n真的太顶了 https://t.co/H2FwfbPyJa",
+             "created_at": "Sun Oct 18 23:28:58 +0000 2026",
+             "extended_entities": {
+              "media": [
+               {
+                "type": "photo",
+                "media_url_https": "https://pbs.twimg.com/media/HU8y8diasAA0uwu.jpg"
+               }
+              ]
+             },
+             "entities": {
+              "urls": []
+             },
+             "reply_count": 227,
+             "retweet_count": 237,
+             "favorite_count": 7248
+            }
+           }
+          }
+         }
+        },
+        "entryId": "tweet-2111962772594659640",
+        "sortIndex": "1879449802001913314"
+       },
+       {
+        "content": {
+         "__typename": "TimelineTimelineItem",
+         "entryType": "TimelineTimelineItem",
+         "itemContent": {
+          "__typename": "TimelineTweet",
+          "itemType": "TimelineTweet",
+          "tweetDisplayType": "Tweet",
+          "tweet_results": {
+           "result": {
+            "__typename": "Tweet",
+            "rest_id": "2109469972259045840",
+            "views": {
+             "count": "21525",
+             "state": "EnabledWithCount"
+            },
+            "core": {
+             "user_results": {
+              "result": {
+               "core": {
+                "screen_name": "Soaima_Ai"
+               },
+               "legacy": {
+                "screen_name": null
+               }
+              }
+             }
+            },
+            "legacy": {
+             "full_text": "① Open Gemini, Grok or GPT Image 2.0\n② Upload your image\n③ Paste the prompt\n④ Generate your image and video\n\nPrompt given below ⤵️ https://t.co/4yfsNtdRlA",
+             "created_at": "Mon Oct 12 02:23:28 +0000 2026",
+             "extended_entities": {
+              "media": [
+               {
+                "type": "video",
+                "media_url_https": "https://pbs.twimg.com/amplify_video_thumb/2109469931809193984/img/TyN3TqA766wpybYj.jpg",
+                "video_info": {
+                 "variants": [
+                  {
+                   "content_type": "application/x-mpegURL",
+                   "url": "https://video.twimg.com/amplify_video/2109469931809193984/pl/t1sQbrmkp_84lIBG.m3u8?tag=29&v=cfc"
+                  },
+                  {
+                   "bitrate": 256000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2109469931809193984/vid/avc1/480x270/Qvw25LLIe7F3nzh9.mp4?tag=29"
+                  },
+                  {
+                   "bitrate": 832000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2109469931809193984/vid/avc1/640x360/UDJJR8SLVeH7mM9m.mp4?tag=29"
+                  },
+                  {
+                   "bitrate": 2176000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2109469931809193984/vid/avc1/1280x720/Ryk9rCnnsfsJkAd2.mp4?tag=29"
+                  }
+                 ]
+                }
+               }
+              ]
+             },
+             "entities": {
+              "urls": []
+             },
+             "reply_count": 50,
+             "retweet_count": 23,
+             "favorite_count": 227
+            }
+           }
+          }
+         }
+        },
+        "entryId": "tweet-2109469972259045840",
+        "sortIndex": "1878864805366424053"
+       },
+       {
+        "content": {
+         "__typename": "TimelineTimelineItem",
+         "entryType": "TimelineTimelineItem",
+         "itemContent": {
+          "__typename": "TimelineTweet",
+          "itemType": "TimelineTweet",
+          "tweetDisplayType": "Tweet",
+          "tweet_results": {
+           "result": {
+            "__typename": "Tweet",
+            "rest_id": "2109690191111700922",
+            "views": {
+             "count": "40645",
+             "state": "EnabledWithCount"
+            },
+            "core": {
+             "user_results": {
+              "result": {
+               "core": {
+                "screen_name": "financialjuice"
+               },
+               "legacy": {
+                "screen_name": null
+               }
+              }
+             }
+            },
+            "legacy": {
+             "full_text": "Zuckerberg: Muse Wonder rolling into other products soon $META",
+             "created_at": "Mon Oct 12 16:58:32 +0000 2026",
+             "entities": {
+              "urls": []
+             },
+             "reply_count": 4,
+             "retweet_count": 3,
+             "favorite_count": 20
+            }
+           }
+          }
+         }
+        },
+        "entryId": "tweet-2109690191111700922",
+        "sortIndex": "1878864429394384726"
+       },
+       {
+        "content": {
+         "__typename": "TimelineTimelineItem",
+         "entryType": "TimelineTimelineItem",
+         "itemContent": {
+          "__typename": "TimelineTweet",
+          "itemType": "TimelineTweet",
+          "tweetDisplayType": "Tweet",
+          "tweet_results": {
+           "result": {
+            "__typename": "Tweet",
+            "rest_id": "2108876356973125828",
+            "views": {
+             "count": "2305629",
+             "state": "EnabledWithCount"
+            },
+            "core": {
+             "user_results": {
+              "result": {
+               "core": {
+                "screen_name": "rayzhudev"
+               },
+               "legacy": {
+                "screen_name": null
+               }
+              }
+             }
+            },
+            "legacy": {
+             "full_text": "I’m literally addicted to this Chinese photographer’s tiktok\nhe sets strangers up by paying them ¥10,000 to do a wedding photoshoot\nthe enemies to lover pipeline in this is sooo good https://t.co/IPHhnvs5lP",
+             "created_at": "Sat Oct 10 11:04:39 +0000 2026",
+             "extended_entities": {
+              "media": [
+               {
+                "type": "video",
+                "media_url_https": "https://pbs.twimg.com/amplify_video_thumb/2108876249565388800/img/V5U_rhGy6KLzL3Kj.jpg",
+                "video_info": {
+                 "variants": [
+                  {
+                   "content_type": "application/x-mpegURL",
+                   "url": "https://video.twimg.com/amplify_video/2108876249565388800/pl/rUuWmsmEtwy0rEez.m3u8?tag=29"
+                  },
+                  {
+                   "bitrate": 632000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2108876249565388800/vid/avc1/320x568/c-M4DW-R6DEVm5A_.mp4?tag=29"
+                  },
+                  {
+                   "bitrate": 950000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2108876249565388800/vid/avc1/480x852/eIxfliNRXqoTYrAi.mp4?tag=29"
+                  },
+                  {
+                   "bitrate": 2176000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2108876249565388800/vid/avc1/576x1024/yYBR4ctfk5tATG_F.mp4?tag=29"
+                  }
+                 ]
+                }
+               }
+              ]
+             },
+             "entities": {
+              "urls": []
+             },
+             "reply_count": 216,
+             "retweet_count": 2030,
+             "favorite_count": 31576
+            }
+           }
+          }
+         }
+        },
+        "entryId": "tweet-2108876356973125828",
+        "sortIndex": "1878683100644801044"
+       },
+       {
+        "content": {
+         "__typename": "TimelineTimelineItem",
+         "entryType": "TimelineTimelineItem",
+         "itemContent": {
+          "__typename": "TimelineTweet",
+          "itemType": "TimelineTweet",
+          "tweetDisplayType": "Tweet",
+          "tweet_results": {
+           "result": {
+            "__typename": "Tweet",
+            "rest_id": "2108711390148214799",
+            "views": {
+             "count": "1129650",
+             "state": "EnabledWithCount"
+            },
+            "core": {
+             "user_results": {
+              "result": {
+               "core": {
+                "screen_name": "rayzhudev"
+               },
+               "legacy": {
+                "screen_name": null
+               }
+              }
+             }
+            },
+            "legacy": {
+             "full_text": "this tiktok account is like heroine crack cocaine for me\n\nI can see why people love watching kdramas. these real life romances are absolutely oneshotting me https://t.co/59ug54Xxik",
+             "created_at": "Sat Oct 10 00:09:08 +0000 2026",
+             "extended_entities": {
+              "media": [
+               {
+                "type": "video",
+                "media_url_https": "https://pbs.twimg.com/amplify_video_thumb/2108711160237453312/img/YwpK8wTC7UQ_jttd.jpg",
+                "video_info": {
+                 "variants": [
+                  {
+                   "content_type": "application/x-mpegURL",
+                   "url": "https://video.twimg.com/amplify_video/2108711160237453312/pl/q3Oc3xXcRp0klwer.m3u8?tag=29"
+                  },
+                  {
+                   "bitrate": 632000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2108711160237453312/vid/avc1/320x568/cdEP9r6zx6d9r50W.mp4?tag=29"
+                  },
+                  {
+                   "bitrate": 950000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2108711160237453312/vid/avc1/480x852/-3dapB-uc_QFUpuw.mp4?tag=29"
+                  },
+                  {
+                   "bitrate": 2176000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2108711160237453312/vid/avc1/576x1024/O1ylZqqhy61UGQex.mp4?tag=29"
+                  }
+                 ]
+                }
+               }
+              ]
+             },
+             "entities": {
+              "urls": []
+             },
+             "reply_count": 224,
+             "retweet_count": 1210,
+             "favorite_count": 21024
+            }
+           }
+          }
+         }
+        },
+        "entryId": "tweet-2108711390148214799",
+        "sortIndex": "1878683046565954897"
+       },
+       {
+        "content": {
+         "__typename": "TimelineTimelineCursor",
+         "cursorType": "Top",
+         "entryType": "TimelineTimelineCursor",
+         "value": "HCbE14TY4+iSlTQAAA=="
+        },
+        "entryId": "cursor-top-1879449802001913315",
+        "sortIndex": "1879449802001913315"
+       },
+       {
+        "content": {
+         "__typename": "TimelineTimelineCursor",
+         "cursorType": "Bottom",
+         "entryType": "TimelineTimelineCursor",
+         "stopOnEmptyResponse": true,
+         "value": "HBailebB3pG2kjQAAA=="
+        },
+        "entryId": "cursor-bottom-1878683046565954896",
+        "sortIndex": "1878683046565954896"
+       }
+      ],
+      "type": "TimelineAddEntries"
+     }
+    ]
+   }
+  }
+ }
+}

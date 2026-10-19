@@ -1,0 +1,86 @@
+{
+ "data": {
+  "viewer": {
+   "user_results": {
+    "result": {
+     "__typename": "User",
+     "bookmark_collections_slice": {
+      "items": [
+       {
+        "id": "2023272167308476678",
+        "media": {
+         "id": "QXBpTWVkaWE6DAABCgABEx/fchPUYAYKAAIQF4A+eBQgAAAA"
+        },
+        "name": "Prompts "
+       },
+       {
+        "id": "2104408311336776150",
+        "media": {
+         "id": "QXBpTWVkaWE6DAABCgABEx/fohKVoAEKAAIQF4A+eBQgAAAA"
+        },
+        "name": "memes"
+       },
+       {
+        "id": "2033712680784302107",
+        "media": {
+         "id": "QXBpTWVkaWE6DAABCgABEx/eRV6UcAIKAAIQF4A+eBQgAAAA"
+        },
+        "name": "Kids"
+       },
+       {
+        "id": "2073913992381440502",
+        "media": {
+         "id": "QXBpTWVkaWE6DAABCgABEx/fMTbVcAMKAAIQF4A+eBQgAAAA"
+        },
+        "name": "calls"
+       },
+       {
+        "id": "2062214538301485198",
+        "media": {
+         "id": "QXBpTWVkaWE6DAABCgABEx/frYsUYAAKAAIQF4A+eBQgAAAA"
+        },
+        "name": "Food"
+       },
+       {
+        "id": "2062214477408534827",
+        "media": {
+         "id": "QXBpTWVkaWE6DAABCgABEx/fyCUU4AAKAAIQF4A+eBQgAAAA"
+        },
+        "name": "Skydiving "
+       },
+       {
+        "id": "1999680990206394562",
+        "media": {
+         "id": "QXBpTWVkaWE6DAABCgABEx/fyCUU4AAKAAIQF4A+eBQgAAAA"
+        },
+        "name": "Echogram"
+       },
+       {
+        "id": "1965041260210913766",
+        "media": {
+         "id": "QXBpTWVkaWE6DAABCgABEx/fchPUYAYKAAIQF4A+eBQgAAAA"
+        },
+        "name": "filtr case studies"
+       },
+       {
+        "id": "1895607995750629733",
+        "media": {
+         "id": "QXBpTWVkaWE6DAABCgABEx/fchPUYAYKAAIQF4A+eBQgAAAA"
+        },
+        "name": "Health"
+       },
+       {
+        "id": "1734049140290859424",
+        "media": {
+         "id": "QXBpTWVkaWE6DAABCgABEx/fuubVEAAKAAIQF4A+eBQgAAAA"
+        },
+        "name": "airdrops"
+       }
+      ],
+      "slice_info": {}
+     }
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,1555 @@
+{
+ "data": {
+  "bookmark_collection_timeline": {
+   "timeline": {
+    "instructions": [
+     {
+      "entries": [
+       {
+        "content": {
+         "__typename": "TimelineTimelineItem",
+         "entryType": "TimelineTimelineItem",
+         "itemContent": {
+          "__typename": "TimelineTweet",
+          "itemType": "TimelineTweet",
+          "tweetDisplayType": "Tweet",
+          "tweet_results": {
+           "result": {
+            "__typename": "Tweet",
+            "rest_id": "2111962772594659640",
+            "views": {
+             "count": "645771",
+             "state": "EnabledWithCount"
+            },
+            "core": {
+             "user_results": {
+              "result": {
+               "core": {
+                "screen_name": "stargocn"
+               },
+               "legacy": {
+                "screen_name": null
+               }
+              }
+             }
+            },
+            "legacy": {
+             "full_text": "如果你去韩国了\n\n这个网站必须浏览一下\n\n真的太顶了 https://t.co/H2FwfbPyJa",
+             "created_at": "Sun Oct 18 23:28:58 +0000 2026",
+             "extended_entities": {
+              "media": [
+               {
+                "type": "photo",
+                "media_url_https": "https://pbs.twimg.com/media/HU8y8diasAA0uwu.jpg"
+               }
+              ]
+             },
+             "entities": {
+              "urls": []
+             },
+             "reply_count": 227,
+             "retweet_count": 237,
+             "favorite_count": 7248
+            }
+           }
+          }
+         }
+        },
+        "entryId": "tweet-2111962772594659640",
+        "sortIndex": "20"
+       },
+       {
+        "content": {
+         "__typename": "TimelineTimelineItem",
+         "entryType": "TimelineTimelineItem",
+         "itemContent": {
+          "__typename": "TimelineTweet",
+          "itemType": "TimelineTweet",
+          "tweetDisplayType": "Tweet",
+          "tweet_results": {
+           "result": {
+            "__typename": "Tweet",
+            "rest_id": "2109469972259045840",
+            "views": {
+             "count": "21525",
+             "state": "EnabledWithCount"
+            },
+            "core": {
+             "user_results": {
+              "result": {
+               "core": {
+                "screen_name": "Soaima_Ai"
+               },
+               "legacy": {
+                "screen_name": null
+               }
+              }
+             }
+            },
+            "legacy": {
+             "full_text": "① Open Gemini, Grok or GPT Image 2.0\n② Upload your image\n③ Paste the prompt\n④ Generate your image and video\n\nPrompt given below ⤵️ https://t.co/4yfsNtdRlA",
+             "created_at": "Mon Oct 12 02:23:28 +0000 2026",
+             "extended_entities": {
+              "media": [
+               {
+                "type": "video",
+                "media_url_https": "https://pbs.twimg.com/amplify_video_thumb/2109469931809193984/img/TyN3TqA766wpybYj.jpg",
+                "video_info": {
+                 "variants": [
+                  {
+                   "content_type": "application/x-mpegURL",
+                   "url": "https://video.twimg.com/amplify_video/2109469931809193984/pl/t1sQbrmkp_84lIBG.m3u8?tag=29&v=cfc"
+                  },
+                  {
+                   "bitrate": 256000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2109469931809193984/vid/avc1/480x270/Qvw25LLIe7F3nzh9.mp4?tag=29"
+                  },
+                  {
+                   "bitrate": 832000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2109469931809193984/vid/avc1/640x360/UDJJR8SLVeH7mM9m.mp4?tag=29"
+                  },
+                  {
+                   "bitrate": 2176000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2109469931809193984/vid/avc1/1280x720/Ryk9rCnnsfsJkAd2.mp4?tag=29"
+                  }
+                 ]
+                }
+               }
+              ]
+             },
+             "entities": {
+              "urls": []
+             },
+             "reply_count": 50,
+             "retweet_count": 23,
+             "favorite_count": 227
+            }
+           }
+          }
+         }
+        },
+        "entryId": "tweet-2109469972259045840",
+        "sortIndex": "19"
+       },
+       {
+        "content": {
+         "__typename": "TimelineTimelineItem",
+         "entryType": "TimelineTimelineItem",
+         "itemContent": {
+          "__typename": "TimelineTweet",
+          "itemType": "TimelineTweet",
+          "tweetDisplayType": "Tweet",
+          "tweet_results": {
+           "result": {
+            "__typename": "Tweet",
+            "rest_id": "2107530733212590250",
+            "note_tweet": {
+             "note_tweet_results": {
+              "result": {
+               "text": "This AI video is a Masterpiece 👏\n\nSeedance 2.5\n\nPrompt:\n30-second ultra-realistic documentary slice-of-life video, early-2000s consumer DV camcorder aesthetic. A young Italian peasant woman in her early 20s, sun-weathered olive skin with freckles, dark brown wavy hair loosely tied with a faded scarf, worn off-white linen blouse, earth-brown patched wool skirt, faded floral apron and muddy leather boots. Rural Tuscany in the late 1800s. Golden wheat fields, olive trees, stone farmhouse, cypress trees, stone walls, chickens, donkey and old stone well. No modern objects or machinery.\n\n[0–6s]\nHandheld camera follows her naturally along a dirt path through golden wheat fields. She carries a woven basket on her hip and brushes her free hand across the wheat. Wind moves the stalks and her loose hair.\n\n[6–12s]\nShe reaches a wooden fence, sets down the basket and feeds scraps to several chickens gathered around her boots. The camera stays close and imperfect, briefly adjusting focus as she moves.\n\n[12–18s]\nShe continues toward an old stone well. She lowers a wooden bucket on a rope, pulls it up with effort, then drinks fresh water from a small ladle. Water runs down her chin and she wipes it away with her sleeve.\n\n[18–24s]\nA donkey approaches. She smiles softly, pats its muzzle, then picks a small wildflower from the field and tucks it behind her ear. She lifts the basket and walks toward the farmhouse.\n\n[24–30s]\nNear the heavy wooden doorway, she notices the person filming. She gives a tired but warm smile and a small wave, then opens the door. She looks back once before stepping inside. The camera remains outside as the door slowly closes.\n\nSTYLE: photorealistic historical documentary, authentic 1800s Tuscany, early-2000s consumer DV look, handheld shake, imperfect framing, autofocus hunting, slight exposure pumping, faded colors, soft contrast, mild digital compression and sensor noise. No stabilization, no cinematic camera moves, no modern color grading. One continuous fluid shot, no cuts, no captions, no music.\n\nAUDIO: natural ambience only -wind through wheat, birds, chickens, footsteps on dry earth, rope and wooden bucket creaking, water splashing, donkey sounds, distant countryside atmosphere and the wooden door closing.",
+               "entity_set": {
+                "urls": []
+               }
+              }
+             }
+            },
+            "views": {
+             "count": "25236",
+             "state": "EnabledWithCount"
+            },
+            "core": {
+             "user_results": {
+              "result": {
+               "core": {
+                "screen_name": "Goodmanprotocol"
+               },
+               "legacy": {
+                "screen_name": null
+               }
+              }
+             }
+            },
+            "legacy": {
+             "full_text": "This AI video is a Masterpiece 👏\n\nSeedance 2.5\n\nPrompt:\n30-second ultra-realistic documentary slice-of-life video, early-2000s consumer DV camcorder aesthetic. A young Italian peasant woman in her early 20s, sun-weathered olive skin with freckles, dark brown wavy hair loosely https://t.co/Dvljc635Pm",
+             "created_at": "Tue Oct 06 17:57:37 +0000 2026",
+             "extended_entities": {
+              "media": [
+               {
+                "type": "video",
+                "media_url_https": "https://pbs.twimg.com/amplify_video_thumb/2107530636550696960/img/j4NLPPeejkGALu1K.jpg",
+                "video_info": {
+                 "variants": [
+                  {
+                   "content_type": "application/x-mpegURL",
+                   "url": "https://video.twimg.com/amplify_video/2107530636550696960/pl/kzO-IlPuh3gtIBwN.m3u8?tag=29&v=cfc"
+                  },
+                  {
+                   "bitrate": 256000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2107530636550696960/vid/avc1/480x270/LjKv9BXpYwNGlcFZ.mp4?tag=29"
+                  },
+                  {
+                   "bitrate": 832000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2107530636550696960/vid/avc1/640x360/0wGsIybgF7GXTi2R.mp4?tag=29"
+                  },
+                  {
+                   "bitrate": 2176000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2107530636550696960/vid/avc1/1280x720/ktbsxoT5OS5xePI-.mp4?tag=29"
+                  }
+                 ]
+                }
+               }
+              ]
+             },
+             "entities": {
+              "urls": []
+             },
+             "reply_count": 31,
+             "retweet_count": 46,
+             "favorite_count": 442
+            }
+           }
+          }
+         }
+        },
+        "entryId": "tweet-2107530733212590250",
+        "sortIndex": "18"
+       },
+       {
+        "content": {
+         "__typename": "TimelineTimelineItem",
+         "entryType": "TimelineTimelineItem",
+         "itemContent": {
+          "__typename": "TimelineTweet",
+          "itemType": "TimelineTweet",
+          "tweetDisplayType": "Tweet",
+          "tweet_results": {
+           "result": {
+            "__typename": "Tweet",
+            "rest_id": "2105976678014996775",
+            "note_tweet": {
+             "note_tweet_results": {
+              "result": {
+               "text": "EVERY VIDEO THIS JAPANESE GIRL UPLOADS GETS 7,300 PEOPLE ASKING HOW SHE MADE IT AND THAT FORMAT PAID $13,286 LAST MONTH\n\n> 218,000 likes on 7,300 comments.\n\nSunny living room, a giant hand lifts a girl out of plaid pajamas, then dresses her piece by piece, cardigan, cargo shorts, patchwork socks, clogs, a crochet beanie, a bag, and she spins.\n\nThe outfit is the subject and the dress-up is the shape the sheet keeps:\n\n-> A giant hand picking a doll's clothes is a game every kid played, so the setup lands in the first second.\n\n-> 6 pieces go on one at a time in 22 seconds, and every drop resets the eye before the thumb can move.\n\n-> The first frame is the hook the sheet logs: a girl in plaid pajamas lifted off the floor by a hand twice her size.\n\n-> The shape is the \"what if\" from the sheet, a paper-doll game but the doll stands in a real living room, and it needs zero setup.\n\n-> 7,300 people ask how she made it while the clip goes into the sheet as views over channel median, and anything past 35 gets a new outfit before the week ends.\n\nA dress-up game everyone already knows needs no caption. Swap the clothes and the same clip pays again.\n\nIt works on anything you can put together piece by piece, a desk setup, a skincare shelf, a gym bag, a bedroom makeover.\n\nClaude writes 36 outfits off one outlier, CapCut builds the clip, Make posts it to TikTok, Shorts and Reels and the bill stays at $49 a month.\n\nThe outfit got the likes, and **the dress-up shape from the sheet is what got it posted again.**\n\nThe whole factory behind her clips is below 👇",
+               "entity_set": {
+                "urls": []
+               }
+              }
+             }
+            },
+            "views": {
+             "count": "140862",
+             "state": "EnabledWithCount"
+            },
+            "core": {
+             "user_results": {
+              "result": {
+               "core": {
+                "screen_name": "0x_fokki"
+               },
+               "legacy": {
+                "screen_name": null
+               }
+              }
+             }
+            },
+            "quoted_status_result": {
+             "result": {
+              "rest_id": "2105952926317326791"
+             }
+            },
+            "legacy": {
+             "full_text": "EVERY VIDEO THIS JAPANESE GIRL UPLOADS GETS 7,300 PEOPLE ASKING HOW SHE MADE IT AND THAT FORMAT PAID $13,286 LAST MONTH\n\n&gt; 218,000 likes on 7,300 comments.\n\nSunny living room, a giant hand lifts a girl out of plaid pajamas, then dresses her piece by piece, cardigan, cargo shorts, https://t.co/NDAzYsfK8a",
+             "created_at": "Fri Oct 02 11:02:21 +0000 2026",
+             "extended_entities": {
+              "media": [
+               {
+                "type": "video",
+                "media_url_https": "https://pbs.twimg.com/amplify_video_thumb/2105975109894750208/img/wPy9rHnSLL5QCriy.jpg",
+                "video_info": {
+                 "variants": [
+                  {
+                   "content_type": "application/x-mpegURL",
+                   "url": "https://video.twimg.com/amplify_video/2105975109894750208/pl/HOszXI4XdRuaLAey.m3u8?tag=29"
+                  },
+                  {
+                   "bitrate": 632000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2105975109894750208/vid/avc1/320x568/drvurr-xqUCO9ydw.mp4?tag=29"
+                  },
+                  {
+                   "bitrate": 950000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2105975109894750208/vid/avc1/480x852/_KJQJVQm2Vk6laTI.mp4?tag=29"
+                  },
+                  {
+                   "bitrate": 2176000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2105975109894750208/vid/avc1/720x1280/bV3wFQtXaa_s16ll.mp4?tag=29"
+                  },
+                  {
+                   "bitrate": 10368000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2105975109894750208/vid/avc1/1080x1920/_4NRiSVBNIf3etG_.mp4?tag=29"
+                  }
+                 ]
+                }
+               }
+              ]
+             },
+             "entities": {
+              "urls": []
+             },
+             "quoted_status_id_str": "2105952926317326791",
+             "reply_count": 50,
+             "retweet_count": 123,
+             "favorite_count": 855
+            }
+           }
+          }
+         }
+        },
+        "entryId": "tweet-2105976678014996775",
+        "sortIndex": "17"
+       },
+       {
+        "content": {
+         "__typename": "TimelineTimelineItem",
+         "entryType": "TimelineTimelineItem",
+         "itemContent": {
+          "__typename": "TimelineTweet",
+          "itemType": "TimelineTweet",
+          "tweetDisplayType": "Tweet",
+          "tweet_results": {
+           "result": {
+            "__typename": "Tweet",
+            "rest_id": "2105607404809498831",
+            "views": {
+             "count": "1174267",
+             "state": "EnabledWithCount"
+            },
+            "core": {
+             "user_results": {
+              "result": {
+               "core": {
+                "screen_name": "liyue_ai"
+               },
+               "legacy": {
+                "screen_name": null
+               }
+              }
+             }
+            },
+            "quoted_status_result": {
+             "result": {
+              "rest_id": "2105592123810841033"
+             }
+            },
+            "legacy": {
+             "full_text": "🤯这到底是谁想出来的？\n这次GPT是真的被越狱了😅\n\n提示词：\n参考右侧的人物姿势，将左侧人物按右侧各种姿势生成。 https://t.co/s8g4G4s0hB",
+             "created_at": "Thu Oct 01 10:35:00 +0000 2026",
+             "extended_entities": {
+              "media": [
+               {
+                "type": "photo",
+                "media_url_https": "https://pbs.twimg.com/media/HTiXcE4bwAA6zJp.jpg"
+               },
+               {
+                "type": "photo",
+                "media_url_https": "https://pbs.twimg.com/media/HTiXfSNbMAAJm1_.jpg"
+               }
+              ]
+             },
+             "entities": {
+              "urls": []
+             },
+             "quoted_status_id_str": "2105592123810841033",
+             "reply_count": 107,
+             "retweet_count": 259,
+             "favorite_count": 3744
+            }
+           }
+          }
+         }
+        },
+        "entryId": "tweet-2105607404809498831",
+        "sortIndex": "16"
+       },
+       {
+        "content": {
+         "__typename": "TimelineTimelineItem",
+         "entryType": "TimelineTimelineItem",
+         "itemContent": {
+          "__typename": "TimelineTweet",
+          "itemType": "TimelineTweet",
+          "tweetDisplayType": "Tweet",
+          "tweet_results": {
+           "result": {
+            "__typename": "Tweet",
+            "rest_id": "2098681995807322276",
+            "note_tweet": {
+             "note_tweet_results": {
+              "result": {
+               "text": "Bro… I think I found the right McDonald’s 😭😂\n\n✨#Gpt image Prompt 👇\n\nTwo adult East Asian women wearing short skirts, sitting relaxed with their legs naturally apart, chatting casually at a window-side counter inside McDonald’s, candidly photographed from the sidewalk outside, 9:16.",
+               "entity_set": {
+                "urls": []
+               }
+              }
+             }
+            },
+            "views": {
+             "count": "626390",
+             "state": "EnabledWithCount"
+            },
+            "core": {
+             "user_results": {
+              "result": {
+               "core": {
+                "screen_name": "Aimi_kute"
+               },
+               "legacy": {
+                "screen_name": null
+               }
+              }
+             }
+            },
+            "legacy": {
+             "full_text": "Bro… I think I found the right McDonald’s 😭😂\n\n✨#Gpt image Prompt 👇\n\nTwo adult East Asian women wearing short skirts, sitting relaxed with their legs naturally apart, chatting casually at a window-side counter inside McDonald’s, candidly photographed from the sidewalk https://t.co/lePK013SAa",
+             "created_at": "Sat Sep 12 07:55:54 +0000 2026",
+             "extended_entities": {
+              "media": [
+               {
+                "type": "photo",
+                "media_url_https": "https://pbs.twimg.com/media/HSAEJXDbAAA7QVs.jpg"
+               }
+              ]
+             },
+             "entities": {
+              "urls": []
+             },
+             "reply_count": 71,
+             "retweet_count": 135,
+             "favorite_count": 4142
+            }
+           }
+          }
+         }
+        },
+        "entryId": "tweet-2098681995807322276",
+        "sortIndex": "15"
+       },
+       {
+        "content": {
+         "__typename": "TimelineTimelineItem",
+         "entryType": "TimelineTimelineItem",
+         "itemContent": {
+          "__typename": "TimelineTweet",
+          "itemType": "TimelineTweet",
+          "tweetDisplayType": "Tweet",
+          "tweet_results": {
+           "result": {
+            "__typename": "Tweet",
+            "rest_id": "2098539549475340620",
+            "note_tweet": {
+             "note_tweet_results": {
+              "result": {
+               "text": "muitos tem dificuldade em ter consistência na geração de avatar com IA e o jogo mudou pra mim quando entendi o \"character sheets\", isso mudou muito a consistência entre cenas, pra vídeo isso tem sido muito bom\nrecomendo demais adicionar no seu fluxo, vou deixar abaixo um exemplo 🧵",
+               "entity_set": {
+                "urls": []
+               }
+              }
+             }
+            },
+            "views": {
+             "count": "87776",
+             "state": "EnabledWithCount"
+            },
+            "core": {
+             "user_results": {
+              "result": {
+               "core": {
+                "screen_name": "brunopinheiroms"
+               },
+               "legacy": {
+                "screen_name": null
+               }
+              }
+             }
+            },
+            "quoted_status_result": {
+             "result": {
+              "rest_id": "2098093561623277954"
+             }
+            },
+            "legacy": {
+             "full_text": "muitos tem dificuldade em ter consistência na geração de avatar com IA e o jogo mudou pra mim quando entendi o \"character sheets\", isso mudou muito a consistência entre cenas, pra vídeo isso tem sido muito bom\nrecomendo demais adicionar no seu fluxo, vou deixar abaixo um exemplo https://t.co/z9vYhVlIa7",
+             "created_at": "Fri Sep 11 22:29:52 +0000 2026",
+             "extended_entities": {
+              "media": [
+               {
+                "type": "photo",
+                "media_url_https": "https://pbs.twimg.com/media/HR-CmBsX0Acs3EG.jpg"
+               }
+              ]
+             },
+             "entities": {
+              "urls": []
+             },
+             "quoted_status_id_str": "2098093561623277954",
+             "reply_count": 8,
+             "retweet_count": 69,
+             "favorite_count": 735
+            }
+           }
+          }
+         }
+        },
+        "entryId": "tweet-2098539549475340620",
+        "sortIndex": "14"
+       },
+       {
+        "content": {
+         "__typename": "TimelineTimelineItem",
+         "entryType": "TimelineTimelineItem",
+         "itemContent": {
+          "__typename": "TimelineTweet",
+          "itemType": "TimelineTweet",
+          "tweetDisplayType": "Tweet",
+          "tweet_results": {
+           "result": {
+            "__typename": "Tweet",
+            "rest_id": "2098631945198698640",
+            "note_tweet": {
+             "note_tweet_results": {
+              "result": {
+               "text": "受 @maplejohn01 启发，挖掘出了 Grok 的天花板😍这效果真的不比 GPT Image 2.5 差啊！\n\n还有个视频太露骨了不敢放主贴，你们自己调小音量再看🤣\n\n提示词👇\nCcd生活照随拍，轻微失焦，身穿旧黑色薄蕾丝套装的东亚美女，套装因为久穿已经非常松垮，肩带掉了一边，胸口遮住又没遮严，黄金比例身材，蜂腰巨乳，大腿修长紧致，姿势暧昧而诱惑的窝在没叠的床上，衣服凌乱，放松惬意的氛围",
+               "entity_set": {
+                "urls": []
+               }
+              }
+             }
+            },
+            "views": {
+             "count": "220578",
+             "state": "EnabledWithCount"
+            },
+            "core": {
+             "user_results": {
+              "result": {
+               "core": {
+                "screen_name": "msjiaozhu"
+               },
+               "legacy": {
+                "screen_name": null
+               }
+              }
+             }
+            },
+            "legacy": {
+             "full_text": "受 @maplejohn01 启发，挖掘出了 Grok 的天花板😍这效果真的不比 GPT Image 2.5 差啊！\n\n还有个视频太露骨了不敢放主贴，你们自己调小音量再看🤣\n\n提示词👇 https://t.co/pUWalv0IY7",
+             "created_at": "Sat Sep 12 04:37:01 +0000 2026",
+             "extended_entities": {
+              "media": [
+               {
+                "type": "photo",
+                "media_url_https": "https://pbs.twimg.com/media/HR_Wn5CaIAA-eQu.jpg"
+               },
+               {
+                "type": "photo",
+                "media_url_https": "https://pbs.twimg.com/media/HR_Wn7kaEAAWBZw.jpg"
+               },
+               {
+                "type": "photo",
+                "media_url_https": "https://pbs.twimg.com/media/HR_Wn7la0AAKsQJ.jpg"
+               },
+               {
+                "type": "photo",
+                "media_url_https": "https://pbs.twimg.com/media/HR_Wn7macAAroT6.jpg"
+               }
+              ]
+             },
+             "entities": {
+              "urls": []
+             },
+             "reply_count": 208,
+             "retweet_count": 122,
+             "favorite_count": 1740
+            }
+           }
+          }
+         }
+        },
+        "entryId": "tweet-2098631945198698640",
+        "sortIndex": "13"
+       },
+       {
+        "content": {
+         "__typename": "TimelineTimelineItem",
+         "entryType": "TimelineTimelineItem",
+         "itemContent": {
+          "__typename": "TimelineTweet",
+          "itemType": "TimelineTweet",
+          "tweetDisplayType": "Tweet",
+          "tweet_results": {
+           "result": {
+            "__typename": "Tweet",
+            "rest_id": "2097698694296686623",
+            "views": {
+             "count": "381762",
+             "state": "EnabledWithCount"
+            },
+            "core": {
+             "user_results": {
+              "result": {
+               "core": {
+                "screen_name": "abxxai"
+               },
+               "legacy": {
+                "screen_name": null
+               }
+              }
+             }
+            },
+            "legacy": {
+             "full_text": "crazy...that i made this with GPT Image 2.5 and Seedance 2.5\n\nnobody is teaching you the actual workflow behind these AI realistic videos.. so here it is,\n\nfull breakdown, every prompt included👇 https://t.co/tvXQioBb9i",
+             "created_at": "Wed Sep 09 14:48:36 +0000 2026",
+             "extended_entities": {
+              "media": [
+               {
+                "type": "video",
+                "media_url_https": "https://pbs.twimg.com/amplify_video_thumb/2097698636524351488/img/jZbg1XW-v08GqwIa.jpg",
+                "video_info": {
+                 "variants": [
+                  {
+                   "content_type": "application/x-mpegURL",
+                   "url": "https://video.twimg.com/amplify_video/2097698636524351488/pl/dugxlim-V7zA3EWa.m3u8?tag=16"
+                  },
+                  {
+                   "bitrate": 288000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2097698636524351488/vid/avc1/480x270/d7rP1Ajh_aryQHEo.mp4?tag=16"
+                  },
+                  {
+                   "bitrate": 832000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2097698636524351488/vid/avc1/640x360/gX_5uFS0vJHFFWYE.mp4?tag=16"
+                  },
+                  {
+                   "bitrate": 2176000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2097698636524351488/vid/avc1/1280x720/r21CKj5NwOQ2f1b_.mp4?tag=16"
+                  },
+                  {
+                   "bitrate": 10368000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2097698636524351488/vid/avc1/1920x1080/X92cln0Zf_Lc0nD_.mp4?tag=16"
+                  }
+                 ]
+                }
+               }
+              ]
+             },
+             "entities": {
+              "urls": []
+             },
+             "reply_count": 127,
+             "retweet_count": 237,
+             "favorite_count": 2622
+            }
+           }
+          }
+         }
+        },
+        "entryId": "tweet-2097698694296686623",
+        "sortIndex": "12"
+       },
+       {
+        "content": {
+         "__typename": "TimelineTimelineItem",
+         "entryType": "TimelineTimelineItem",
+         "itemContent": {
+          "__typename": "TimelineTweet",
+          "itemType": "TimelineTweet",
+          "tweetDisplayType": "Tweet",
+          "tweet_results": {
+           "result": {
+            "__typename": "Tweet",
+            "rest_id": "2097099370529181906",
+            "views": {
+             "count": "72898",
+             "state": "EnabledWithCount"
+            },
+            "core": {
+             "user_results": {
+              "result": {
+               "core": {
+                "screen_name": "Michaelzsguo"
+               },
+               "legacy": {
+                "screen_name": null
+               }
+              }
+             }
+            },
+            "quoted_status_result": {
+             "result": {
+              "rest_id": "2096802390271807930"
+             }
+            },
+            "legacy": {
+             "full_text": "So many of you asked how to use the Sydney Sweeney LoRA model. Here’s a video made with it, and I’ll share later how it works.\n\nNo reference image was used. Just the Minimax_H3-Sydney_Sweeney LoRA running on MiniMax H3.\n\nEnjoy. https://t.co/qLoTOi7yI4",
+             "created_at": "Mon Sep 07 23:07:06 +0000 2026",
+             "extended_entities": {
+              "media": [
+               {
+                "type": "video",
+                "media_url_https": "https://pbs.twimg.com/amplify_video_thumb/2097099330675232768/img/u7YqySLmf90URRbL.jpg",
+                "video_info": {
+                 "variants": [
+                  {
+                   "content_type": "application/x-mpegURL",
+                   "url": "https://video.twimg.com/amplify_video/2097099330675232768/pl/5y-DlzaWRHCMT5oy.m3u8?tag=29"
+                  },
+                  {
+                   "bitrate": 256000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2097099330675232768/vid/avc1/476x270/b2gu8sNoTcaXtUGe.mp4?tag=29"
+                  },
+                  {
+                   "bitrate": 832000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2097099330675232768/vid/avc1/634x360/GxQadzK0lSKT5Wkv.mp4?tag=29"
+                  },
+                  {
+                   "bitrate": 2176000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2097099330675232768/vid/avc1/960x544/fTex4_hygs3LgE7k.mp4?tag=29"
+                  }
+                 ]
+                }
+               }
+              ]
+             },
+             "entities": {
+              "urls": []
+             },
+             "quoted_status_id_str": "2096802390271807930",
+             "reply_count": 6,
+             "retweet_count": 4,
+             "favorite_count": 210
+            }
+           }
+          }
+         }
+        },
+        "entryId": "tweet-2097099370529181906",
+        "sortIndex": "11"
+       },
+       {
+        "content": {
+         "__typename": "TimelineTimelineItem",
+         "entryType": "TimelineTimelineItem",
+         "itemContent": {
+          "__typename": "TimelineTweet",
+          "itemType": "TimelineTweet",
+          "tweetDisplayType": "Tweet",
+          "tweet_results": {
+           "result": {
+            "__typename": "Tweet",
+            "rest_id": "2096962476596175329",
+            "note_tweet": {
+             "note_tweet_results": {
+              "result": {
+               "text": "AI slop looks generated. Realism feels remembered.\n\nMade with Seedance 2.5\n\nCreate a 30-second, 1080p, 16:9 ultra-realistic live-action home video of a naturally beautiful adult Korean woman in her early 20s spending a warm late-summer afternoon with her friend in an older Seoul neighborhood.\n\nThe video should feel like a genuine early-2000s consumer DV recording—not a commercial, music video, or staged production. Keep everything simple, attractive, spontaneous, and believable.\n\nMAIN SUBJECT & CONTINUITY\nLong dark-brown hair worn down with a soft natural wave, minimal makeup, realistic skin texture, relaxed expressions. She wears a fitted white short-sleeve top, light-blue straight-leg jeans, white sneakers, a small dark-brown shoulder bag, and a delicate silver necklace. Keep her face, hairstyle, outfit, accessories, body proportions, and the same bottled drink perfectly consistent throughout.\n\nLOCATION\nA quiet older Seoul residential neighborhood: narrow concrete streets, small apartment buildings, brick walls, potted plants, parked bicycles, utility poles, overhead wires, a tiny convenience shop, and shaded walkways. No landmarks, recognizable brands, advertisements, or commercial activity.\n\nVISUAL STYLE\nAuthentic handheld DV footage with natural camera shake, imperfect framing, autofocus breathing, occasional exposure changes, soft digital detail, faded colors, mild video noise, natural motion blur, and occasional accidental zooms. The friend filming should react naturally. No stabilization, drone shots, gimbal movement, slow motion, beauty filters, or polished cinematic look.\n\nSTORY — 30 SECONDS\n\n- 00:00–00:05: She leaves her apartment, adjusts her bag, notices the camera, and smiles. Her friend follows casually.\n- 00:05–00:10: She buys a cold bottled drink, presses it against her cheek, laughs at a camera zoom, and says, “It's so hot today.”\n- 00:10–00:15: They walk down a quieter street. A bicycle passes, she steps aside, then smiles back at the camera as a breeze moves her hair.\n- 00:15–00:20: She sits on a low wall beside an apartment garden. Her friend points out a tiny leaf in her hair. She removes it and laughs.\n- 00:20–00:25: They walk again. She briefly takes the drink from her friend, takes a sip, gives it back, and smiles toward the camera.\n- 00:25–00:30: At her apartment entrance, she waves and says, “See you tomorrow.” She walks inside. The friend keeps filming for one second as the door closes, then the footage abruptly cuts to black.\n\nAUDIO\nNatural location audio only: footsteps, distant traffic, bicycles, summer insects, apartment ambience, shop refrigerator hum, bottle movement, leaves, and quiet neighborhood voices. Natural dialogue only. No music, narration, artificial sound effects, subtitles, captions, logos, watermarks, or random text.\n\nREALISM\nNatural walking, sitting, drinking, hair movement, and hand gestures. No exaggerated acting, identity drift, outfit changes, distorted hands, extra fingers, duplicated people, teleportation, CGI appearance, or impossible physics.\n\nFINAL FEEL\nSimple, pretty, and real. Like a random personal video discovered years later nothing dramatic happened, but it somehow feels like a real memory.",
+               "entity_set": {
+                "urls": []
+               }
+              }
+             }
+            },
+            "views": {
+             "count": "47233",
+             "state": "EnabledWithCount"
+            },
+            "core": {
+             "user_results": {
+              "result": {
+               "core": {
+                "screen_name": "kingofdairyque"
+               },
+               "legacy": {
+                "screen_name": null
+               }
+              }
+             }
+            },
+            "legacy": {
+             "full_text": "AI slop looks generated. Realism feels remembered.\n\nMade with Seedance 2.5\n\nCreate a 30-second, 1080p, 16:9 ultra-realistic live-action home video of a naturally beautiful adult Korean woman in her early 20s spending a warm late-summer afternoon with her friend in an older Seoul https://t.co/9e06O1Txkr",
+             "created_at": "Mon Sep 07 14:03:08 +0000 2026",
+             "extended_entities": {
+              "media": [
+               {
+                "type": "video",
+                "media_url_https": "https://pbs.twimg.com/amplify_video_thumb/2096962408036405248/img/QW95o5_wlXFUBXRK.jpg",
+                "video_info": {
+                 "variants": [
+                  {
+                   "content_type": "application/x-mpegURL",
+                   "url": "https://video.twimg.com/amplify_video/2096962408036405248/pl/RAnLzhmnVnE20Kbf.m3u8?tag=29"
+                  },
+                  {
+                   "bitrate": 256000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2096962408036405248/vid/avc1/480x270/rLtaW85Yl_-LFfvf.mp4?tag=29"
+                  },
+                  {
+                   "bitrate": 832000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2096962408036405248/vid/avc1/640x360/PUI0F-W4oNqoNSOs.mp4?tag=29"
+                  },
+                  {
+                   "bitrate": 2176000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2096962408036405248/vid/avc1/1280x720/krZ11sF-w4tTycb2.mp4?tag=29"
+                  }
+                 ]
+                }
+               }
+              ]
+             },
+             "entities": {
+              "urls": []
+             },
+             "reply_count": 37,
+             "retweet_count": 31,
+             "favorite_count": 301
+            }
+           }
+          }
+         }
+        },
+        "entryId": "tweet-2096962476596175329",
+        "sortIndex": "10"
+       },
+       {
+        "content": {
+         "__typename": "TimelineTimelineItem",
+         "entryType": "TimelineTimelineItem",
+         "itemContent": {
+          "__typename": "TimelineTweet",
+          "itemType": "TimelineTweet",
+          "tweetDisplayType": "Tweet",
+          "tweet_results": {
+           "result": {
+            "__typename": "Tweet",
+            "rest_id": "2096943115131089075",
+            "note_tweet": {
+             "note_tweet_results": {
+              "result": {
+               "text": "ah yes:\n\n30s cute cinematic dog comedy for Seedance 2.5, mid-action quickly after a short visual setup, warm wholesome summer atmosphere, 9 readable shots, expressive realistic canine behavior, clear cause-and-effect progression: discovery → misunderstanding → rescue attempt → complication → determined recovery → false victory → comedic reveal, energetic but easy to follow, no slow motion.\n\nREFERENCE INPUTS:\n\n@GOLDEN_RETRIEVER_REFERENCE = A young adorable Golden Retriever with soft fluffy golden-blonde fur, slightly darker golden ears, large warm dark-brown eyes, black nose, floppy ears, fluffy tail, friendly youthful face, and expressive natural canine body language. Medium-sized healthy body with realistic proportions. No clothes, no collar, no accessories.\n\n@POOL_REFERENCE = A cozy sunny backyard swimming pool surrounded by pale stone tiles, green grass, small shrubs and flowers, a wooden fence, several trees, and a comfortable family house partially visible behind the garden. Clear turquoise-blue water reflects bright warm summer sunlight. Peaceful cheerful afternoon atmosphere.\n\n@YELLOW_DUCK_REFERENCE = A small classic yellow rubber duck with a bright yellow rounded body, tiny wings, orange beak, simple black eyes, and a lightweight floating shape.\n\nSTRICT REFERENCE LOCK:\n\nExactly ONE Golden Retriever matching @GOLDEN_RETRIEVER_REFERENCE throughout the video.\n\nExactly ONE yellow rubber duck matching @YELLOW_DUCK_REFERENCE.\n\nPreserve the Golden Retriever's exact fur color, markings, proportions, facial features, fluffy tail, and visual style throughout.\n\nThe rubber duck remains the SAME physical toy throughout the rescue.\n\nNo duplicate dogs, no duplicate rubber ducks, no costume changes, no unexplained props appearing.\n\nA real small yellow duck is introduced ONLY during the final reveal and must remain visually distinguishable from the rubber duck.\n\nENVIRONMENT LOCK:\n\nUse the SAME backyard and swimming pool established by @POOL_REFERENCE throughout the entire video.\n\nThe rubber duck begins floating near the middle of the pool.\n\nThe Golden Retriever begins on the poolside.\n\nKeep the pool dimensions, garden, house, sunlight direction, water level, and surrounding objects consistent.\n\nGLOBAL CONTINUITY LOCK:\n\nOnce the Golden Retriever enters the pool, its fur becomes visibly wet and remains wet for the rest of the video.\n\nWater dripping from the dog remains physically natural.\n\nThe rubber duck always floats unless physically held in the dog's mouth.\n\nThe rubber duck never moves by itself.\n\nThe dog must reach and physically retrieve the SAME rubber duck.\n\nNo teleportation between the pool and poolside.\n\nSHOT 1 — 0–3s | SOMETHING IS WRONG\n\nThe Golden Retriever is relaxing beside the swimming pool when it suddenly notices the small yellow rubber duck floating alone near the middle of the water.\n\nIts relaxed face instantly changes.\n\nThe dog raises its head → ears perk slightly → body leans forward → eyes lock intensely onto the floating duck.\n\nThe rubber duck gently rocks on the water.\n\nThe Golden looks increasingly concerned.\n\nSHOT 2 — 3–6s | RESCUE MODE\n\nWithout hesitation, the Golden Retriever bolts toward the pool.\n\nIt accelerates across the stone tiles → pushes strongly from its hind legs → leaps into the water with all four legs stretched forward.\n\nSPLASH.\n\nWater bursts outward as the dog disappears briefly beneath the surface.\n\nSHOT 3 — 6–9s | SWIM!\n\nThe Golden Retriever resurfaces and immediately begins paddling toward the rubber duck.\n\nIts front paws paddle rapidly while its rear legs kick underwater.\n\nIts wet ears flatten slightly against its head.\n\nThe dog keeps staring seriously at the rubber duck as if performing an emergency rescue.\n\nSHOT 4 — 9–12s | ALMOST GOT IT\n\nThe Golden reaches the rubber duck and opens its mouth to grab it.\n\nIts nose accidentally nudges the lightweight toy instead.\n\n→ The rubber duck slides farther across the water.\n\nThe Golden freezes for a tiny moment in disbelief.\n\nThen it immediately paddles after it again with even more determination.\n\nSHOT 5 — 12–15s | THE CHASE\n\nThe rubber duck continues drifting from the small waves created by the dog's swimming.\n\nThe Golden paddles faster → reaches forward with its muzzle → accidentally pushes the duck sideways again.\n\nThe dog changes direction sharply, hindquarters swinging through the water as it turns.\n\nIts expression becomes hilariously serious.\n\nSHOT 6 — 15–18s | GOT YOU!\n\nThe Golden finally approaches slowly from behind.\n\nIt carefully opens its mouth → gently grips the rubber duck around its body without crushing it.\n\nThe dog's expression immediately changes from intense concentration to proud satisfaction.\n\nIt turns toward the pool edge with the rubber duck securely held in its mouth.\n\nSHOT 7 — 18–22s | HEROIC RETURN\n\nThe Golden Retriever swims back toward the poolside carrying the rubber duck.\n\nIt reaches the edge → plants both front paws on the tiles → pushes strongly with its rear legs → climbs awkwardly out of the pool.\n\nWater pours from its soaked fur.\n\nThe dog keeps the rubber duck safely in its mouth throughout the climb.\n\nSHOT 8 — 22–26s | MISSION ACCOMPLISHED\n\nThe soaked Golden gently places the rubber duck on the dry poolside.\n\nIt immediately lies down beside it, exhausted.\n\nIts chest rises and falls rapidly while it pants.\n\nThen it looks proudly at the rubber duck.\n\nIts tail begins slowly wagging against the wet tiles.\n\nThe Golden looks extremely satisfied with itself.\n\nSHOT 9 — 26–30s | WRONG DUCK\n\nA REAL small yellow duck quietly waddles into frame from behind the Golden Retriever.\n\nThe real duck stops beside the rescued rubber duck.\n\nIt tilts its head and looks at the toy.\n\nThen it looks at the Golden.\n\nThe Golden notices the real duck.\n\nThe dog slowly looks at the real duck → looks down at the rubber duck → looks back at the real duck.\n\nIts proud expression gradually disappears.\n\nThe Golden lowers its ears slightly and stares at the rubber duck with a completely confused expression.\n\nThe real duck casually pecks the rubber duck once.\n\nSQUEAK.\n\nThe Golden's eyes widen.\n\nHold on the Golden's embarrassed, confused face for the final comedic beat.\n\nMOTION LOCK:\n\nGolden Retriever:\nrelax → notice → alert → sprint → leap → swim → accidentally push duck → chase → carefully retrieve → swim back → climb out → proud recovery → confused realization.\n\nRubber duck:\nfloat calmly → displaced by dog's nose → drift from waves → gently retrieved → carried → placed on poolside → squeak when pecked.\n\nEvery reaction must be physically different and advance the story. Do not repeat identical swimming mistakes. The dog's wet-fur state must persist after entering the water.\n\nCAMERA:\n\nBegin with an intimate dog-level view establishing the Golden and the floating duck. Use a wider view for the sudden leap into the pool, low water-level tracking during the rescue, closer framing for the failed grabs and facial reactions, side tracking for the return swim, and a calm medium composition for the final reveal. Prioritize readable canine body mechanics and facial expressions over excessive camera movement. Preserve spatial direction throughout.\n\nAUDIO:\n\nPeaceful backyard ambience, distant birds, gentle pool water, soft summer breeze. Sudden paw taps on stone followed by a large synchronized splash. Natural swimming and paddling sounds, water dripping from wet fur, soft dog panting, tiny tail taps against the tiles. Light playful instrumental music gradually builds during the rescue and becomes warm and triumphant when the Golden returns, then abruptly pauses when the real duck appears. Final clear rubber-duck \"SQUEAK\" synchronized exactly with the real duck pecking the toy. No dialogue, no narration.",
+               "entity_set": {
+                "urls": []
+               }
+              }
+             }
+            },
+            "views": {
+             "count": "75",
+             "state": "EnabledWithCount"
+            },
+            "core": {
+             "user_results": {
+              "result": {
+               "core": {
+                "screen_name": "shinyitv"
+               },
+               "legacy": {
+                "screen_name": null
+               }
+              }
+             }
+            },
+            "legacy": {
+             "full_text": "@dynamitegeo ah yes:\n\n30s cute cinematic dog comedy for Seedance 2.5, mid-action quickly after a short visual setup, warm wholesome summer atmosphere, 9 readable shots, expressive realistic canine behavior, clear cause-and-effect progression: discovery → misunderstanding → rescue attempt →",
+             "created_at": "Mon Sep 07 12:46:12 +0000 2026",
+             "entities": {
+              "urls": []
+             },
+             "in_reply_to_status_id_str": "2096843057413152877",
+             "reply_count": 1,
+             "retweet_count": 0,
+             "favorite_count": 1
+            }
+           }
+          }
+         }
+        },
+        "entryId": "tweet-2096943115131089075",
+        "sortIndex": "9"
+       },
+       {
+        "content": {
+         "__typename": "TimelineTimelineItem",
+         "entryType": "TimelineTimelineItem",
+         "itemContent": {
+          "__typename": "TimelineTweet",
+          "itemType": "TimelineTweet",
+          "tweetDisplayType": "Tweet",
+          "tweet_results": {
+           "result": {
+            "__typename": "Tweet",
+            "rest_id": "2096842255231279440",
+            "note_tweet": {
+             "note_tweet_results": {
+              "result": {
+               "text": "Prompt:\n\nCreate a premium 15-second vertical 9:16 Cheetos Cheese commercial, featuring 8 cinematic scenes, ultra-realistic 8K, global FMCG advertising quality, intense, crunchy, cheesy, playful and high-energy.\n\nUse the uploaded Cheetos product/packaging as the exact visual reference.\n\nPRODUCT LOCK — CRITICAL\n\nPreserve the exact uploaded packaging throughout the entire video:\n\n- Exact package shape and proportions\n- Exact Cheetos logo\n- Exact typography\n- Exact colors and graphics\n- Exact flavor/variant branding\n- Exact snack appearance\n- Authentic orange color and texture\n- Realistic cheese seasoning\n- Accurate package material and reflections\n\nNo redesign, no altered branding, no misspelled text, no distorted packaging, no duplicate packages, no random logos, no changing product identity.\n\nCONCEPT\n\n“CRUNCH. CHEESE. CHAOS.”\n\nA high-energy cinematic journey where one irresistible Cheetos cheese puff explodes into a world of crunchy texture, intense cheese seasoning, dynamic motion and playful orange energy — ending with a powerful hero packshot.\n\n---\n\n01 | 0–1.8s — THE DROP\n\nExtreme macro shot of a single perfectly textured Cheetos cheese snack suspended in mid-air.\n\nThe snack slowly rotates while tiny cheese seasoning particles float around it.\n\nSuddenly it drops toward a glossy surface.\n\nCamera: 100mm macro, ultra-shallow depth of field, dramatic slow motion.\n\nWarm orange backlight, realistic crumbs and seasoning particles.\n\n---\n\n02 | 1.8–3.5s — CRUNCH IMPACT\n\nThe Cheetos snack hits the surface.\n\nBOOM — cinematic crunch impact.\n\nTiny crumbs and orange cheese particles explode outward in slow motion.\n\nThe camera rapidly pushes through the explosion of seasoning.\n\nHyper-realistic crispy texture, porous cheese-puff surface, realistic physics.\n\nOn-screen text:\n“CRUNCH INTO IT.”\n\n---\n\n03 | 3.5–5.2s — CHEESE STORM\n\nTransition seamlessly through the flying seasoning particles into a swirling cheesy orange vortex.\n\nMultiple Cheetos snacks spin dynamically through the vortex.\n\nMelted cheese ribbons stretch between them before snapping apart into tiny droplets and particles.\n\nIntense orange-gold lighting, high-speed macro photography, dramatic motion blur.\n\n---\n\n04 | 5.2–7s — TEXTURE CLOSE-UP\n\nExtreme macro close-up of the snack.\n\nReveal its crunchy porous surface covered with realistic cheese seasoning.\n\nThe camera glides along the surface as tiny seasoning crystals fall naturally.\n\nA sharp break occurs at the center of the snack, revealing its crispy interior.\n\nAudio feeling: satisfying amplified crunch.\n\nOn-screen text:\n“LOUD CRUNCH.”\n\n---\n\n05 | 7–9s — CHEESE EXPLOSION\n\nThe broken snack suddenly triggers a massive burst of glowing cheese particles.\n\nCheese seasoning, crumbs and tiny orange fragments fly toward the camera.\n\nThe camera spins 180° through the explosion.\n\nUse realistic particle physics, cinematic volumetric lighting and controlled motion blur.\n\nThe entire frame becomes a vibrant orange cheese atmosphere.\n\n---\n\n06 | 9–11s — PACK REVEAL\n\nThe orange particles rapidly clear.\n\nThe exact uploaded Cheetos packaging emerges from the center of the scene.\n\nThe package rotates smoothly into a front-facing position.\n\nCondensation-like micro highlights and realistic packaging reflections create a premium commercial finish.\n\nFresh Cheetos snacks surround the base without covering the branding.\n\nOn-screen text:\n“CHEESY. CRUNCHY. IRRESISTIBLE.”\n\n---\n\n07 | 11–13s — HERO PRODUCT SHOT\n\nSlow cinematic camera orbit around the exact Cheetos package.\n\nSeveral individual Cheetos snacks fall naturally around it in slow motion.\n\nOrange cheese seasoning gently floats through the air.\n\nPremium dark-to-orange gradient environment, glossy reflective surface, dramatic rim lighting.\n\nKeep the entire package perfectly sharp and readable.\n\nNo packaging deformation or branding changes.\n\n---\n\n08 | 13–15s — FINAL CRUNCH HERO\n\nFinal high-impact hero frame.\n\nThe exact Cheetos package stands centered and dominant.",
+               "entity_set": {
+                "urls": []
+               }
+              }
+             }
+            },
+            "views": {
+             "count": "82444",
+             "state": "EnabledWithCount"
+            },
+            "core": {
+             "user_results": {
+              "result": {
+               "core": {
+                "screen_name": "HeyRu0by"
+               },
+               "legacy": {
+                "screen_name": null
+               }
+              }
+             }
+            },
+            "legacy": {
+             "full_text": "Prompt:\n\nCreate a premium 15-second vertical 9:16 Cheetos Cheese commercial, featuring 8 cinematic scenes, ultra-realistic 8K, global FMCG advertising quality, intense, crunchy, cheesy, playful and high-energy.\n\nUse the uploaded Cheetos product/packaging as the exact visual https://t.co/C9HdFFv46B",
+             "created_at": "Mon Sep 07 06:05:25 +0000 2026",
+             "extended_entities": {
+              "media": [
+               {
+                "type": "video",
+                "media_url_https": "https://pbs.twimg.com/amplify_video_thumb/2096842199678046208/img/eHRXTCBFvGF_Z99i.jpg",
+                "video_info": {
+                 "variants": [
+                  {
+                   "content_type": "application/x-mpegURL",
+                   "url": "https://video.twimg.com/amplify_video/2096842199678046208/pl/qEQeVI_bR6YW5apf.m3u8?tag=29&v=cfc"
+                  },
+                  {
+                   "bitrate": 632000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2096842199678046208/vid/avc1/320x568/kAGA5fuj66ID45c9.mp4?tag=29"
+                  },
+                  {
+                   "bitrate": 950000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2096842199678046208/vid/avc1/480x852/AA_C2Kl4la_eKC7R.mp4?tag=29"
+                  },
+                  {
+                   "bitrate": 2176000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2096842199678046208/vid/avc1/720x1280/B-Wcdjo7zioCSxlE.mp4?tag=29"
+                  }
+                 ]
+                }
+               },
+               {
+                "type": "photo",
+                "media_url_https": "https://pbs.twimg.com/media/HRl66OEWUAc_l_8.jpg"
+               }
+              ]
+             },
+             "entities": {
+              "urls": []
+             },
+             "reply_count": 55,
+             "retweet_count": 56,
+             "favorite_count": 382
+            }
+           }
+          }
+         }
+        },
+        "entryId": "tweet-2096842255231279440",
+        "sortIndex": "8"
+       },
+       {
+        "content": {
+         "__typename": "TimelineTimelineItem",
+         "entryType": "TimelineTimelineItem",
+         "itemContent": {
+          "__typename": "TimelineTweet",
+          "itemType": "TimelineTweet",
+          "tweetDisplayType": "Tweet",
+          "tweet_results": {
+           "result": {
+            "__typename": "Tweet",
+            "rest_id": "2089611000857477529",
+            "note_tweet": {
+             "note_tweet_results": {
+              "result": {
+               "text": "畳に座って、のびのび深呼吸。\n朝の光に体も気分もほどけていく☀️🌿🤍\n\n#AIart #AI写真 #朝のストレッチ\n\n【GPT Image2プロンプト】\n\n主題：\n畳で朝のストレッチ\n\n主体：\n障子から朝日が入る明るい和室の畳に座り、両脚を高く持ち上げてストレッチする一人の若い成人女性。人物を画面中央へ大きく置き、正面の顔、折り曲げた両脚、上部左へ揃えた足裏、脚を支える手を主役にする。\n\n人物・表情：\n小さな卵形の顔、明るくなめらかな肌、ダークブラウンの大きな瞳、細い自然な眉、小ぶりな鼻、淡いピンクの唇。顔を正面のカメラへ向け、口を閉じた親しみのある微笑み。長いまつ毛、細いアイライン、両頬のはっきりした桃色の血色。黒に近いダークブラウンの髪を後頭部の高めで無造作なお団子にまとめ、薄い前髪と頬に沿う細い後れ毛を残す。\n\n服装・ポーズ：\nアイボリーの細リブ生地、胸元の小さなレース縁と中央の編み上げリボンがある細肩紐の短丈トップ、黒い柔らかなフレアミニスカート、裸足。畳に腰を下ろし、両膝を深く曲げて胸の前へ高く上げ、両足首を交差させて足裏を画面左上へ向ける。右腕を前から回して左脚の脛へ添え、左手も脚を支え、太腿の間から上半身が見える姿勢。\n\n背景・光：\n画面左に木枠の白い障子、床は緑の縁がある薄茶色の畳。画面右奥に低い木の収納棚、透明な細首花瓶と緑の枝、上に植物画の白い額。画面左の障子から暖かな朝の直射光が斜めに入り、顔、肩、太腿、足裏を柔らかく照らし、畳に窓枠の淡い影を落とす。影側にも白壁からの拡散光を回す。\n\n構図・カメラ：\n縦3:4。畳すれすれの低いカメラから正面を捉えた近距離の全身に近い座りポートレート。腰と曲げた脚を下半分いっぱいに大きく、顔を上半分右寄り、交差した足裏を左上へ収める。スカートの裾は下端近く、足先は上端近くに配置。顔と脚、手足に鮮明に合焦し、和室背景も分かる中程度の被写界深度。\n\n質感・スタイル：\n暖かな朝の自然光で撮影した高精細なフォトリアルの実写写真。肌の自然なきめ、髪の後れ毛、リブトップとレース、黒い布、指と足裏、畳の編み目、障子紙、木、ガラス花瓶を写実的に描く。淡い木色、白、黒の落ち着いた配色で、過度な美肌加工やイラスト調を避ける。\n\nネガティブ：\n交差した脚と足裏・手の支え・顔立ち・お団子髪の改変",
+               "entity_set": {
+                "urls": []
+               }
+              }
+             }
+            },
+            "views": {
+             "count": "414787",
+             "state": "EnabledWithCount"
+            },
+            "core": {
+             "user_results": {
+              "result": {
+               "core": {
+                "screen_name": "CyberTotal2026"
+               },
+               "legacy": {
+                "screen_name": null
+               }
+              }
+             }
+            },
+            "legacy": {
+             "full_text": "畳に座って、のびのび深呼吸。\n朝の光に体も気分もほどけていく☀️🌿🤍\n\n#AIart #AI写真 #朝のストレッチ\n\n【GPT Image2プロンプト】\n\n主題：\n畳で朝のストレッチ\n\n主体： https://t.co/ZGL1NRHq3s",
+             "created_at": "Tue Aug 18 07:11:00 +0000 2026",
+             "extended_entities": {
+              "media": [
+               {
+                "type": "photo",
+                "media_url_https": "https://pbs.twimg.com/media/HPrRanmaIAAzJfW.jpg"
+               }
+              ]
+             },
+             "entities": {
+              "urls": []
+             },
+             "reply_count": 29,
+             "retweet_count": 81,
+             "favorite_count": 2482
+            }
+           }
+          }
+         }
+        },
+        "entryId": "tweet-2089611000857477529",
+        "sortIndex": "7"
+       },
+       {
+        "content": {
+         "__typename": "TimelineTimelineItem",
+         "entryType": "TimelineTimelineItem",
+         "itemContent": {
+          "__typename": "TimelineTweet",
+          "itemType": "TimelineTweet",
+          "tweetDisplayType": "Tweet",
+          "tweet_results": {
+           "result": {
+            "__typename": "Tweet",
+            "rest_id": "2096499066977055209",
+            "note_tweet": {
+             "note_tweet_results": {
+              "result": {
+               "text": "grokで再現してみた　🔽\n\n{\n  \"direction\": \"自宅浴室でシャワー後、髪を乾かす前に本人がスマートフォンで何気なく撮った縦長セルフィー。被写体は架空の20代前半の成人日本人女性。画面内の布は首に掛けた一枚の白いコットンタオルのみ。以前より細幅でコンパクトなタオルにし、肩や脇に近い側面、上背中、上部の体側が広く見える構成。ただし胸部は正面・側面ともタオルによって確実に覆われ、露出しない。入浴後の自然なSNSスマホスナップ。\",\n  \"mood\": \"シャワー直後のリラックスした日常感。作品撮りやグラビアではなく、濡れた髪を触っている途中に何となく撮った一枚。\",\n  \"model\": \"架空の20代前半の成人日本人女性。健康的で自然な成人女性の身体バランス。上半身には自然なボリューム感があるが、身体的特徴そのものを主役にしない。実在人物や有名人には似せない。\",\n  \"face\": \"卵型からやや丸みのある顔、小さめの顎、自然な頬。大きすぎない二重の目、ダークブラウンの瞳、小ぶりな鼻、標準的な唇。歯を見せない薄い微笑み。視線はレンズからほんの少し外れ、作り込んでいない。\",\n  \"hair\": \"ダークブラウンのショートボブからミディアムボブ。濡れて数本ずつ自然な毛束になり、一部が頬、首、肩へ貼りつく。右手で頭頂部から後頭部の髪を持ち上げている途中。毛先には不規則な跳ねを残す。\",\n  \"body\": \"成人女性として自然な骨格と比率。身体をカメラに対して約10〜15度だけ斜めにし、左肩を少し前、右肩を少し後ろへ置く。この角度によって肩から脇の近く、上背中、上部の体側が自然に見える。胸を突き出したり腰を反ったりせず、普通に立つ。\",\n  \"skin\": \"肩、上腕、前腕、首、鎖骨周辺、脇に近い上部の体側、上背中の肌を広く見せる。入浴後らしいごく弱い湿り気、小さな水滴、微細な肌理、自然な色むら。肌を過度に滑らかにしない。\",\n  \"outfit\": \"首に掛けた一枚の白からアイボリー寄りのコットンタオル。一般的な大判バスタオルではなく、細幅で厚みのあるコンパクトなタオル。首の後ろから左右へ縦方向に垂れ、前側で必要な範囲だけ自然に重なる。肩や上腕にはタオルを広げない。胸部は正面だけでなく側面方向から見ても布の内側に収まり、確実に覆われる。布は不透明で、湿っても透けない。腰や下半身に別のタオルは使用しない。\",\n  \"pose\": \"左手でスマートフォンを持ち、左前腕が画面左下からレンズ方向へ大きく伸びる。右肘を高めに曲げ、右手を頭頂部から後頭部へ置いて濡れ髪を軽く持ち上げる。右腕を上げることで右肩、上腕、脇に近い上部の体側、上背中が自然に見える。身体的特徴を見せるためではなく、髪を整える動作として成立させる。\",\n  \"lighting\": \"画面左上から入る柔らかな拡散自然光と弱い浴室照明。肌はわずかに暖色、背景タイルは青緑からシアン寄り。肩、腕、上部の体側には弱いハイライトが入り、濡れた肌の質感が自然に分かる。\",\n  \"camera\": \"縦位置2:3。スマートフォン広角カメラ、24〜28mm相当。顔から約45〜60cmの近距離。顔は中央より少し上。フレーム下端はウエストより十分上で切る。腰や下半身は映さない。左腕の広角遠近を強め、顔、肩、腕、細幅の首掛けタオル、青緑の浴室を一枚に収める。\",\n  \"composition\": \"以前よりタオルの画面占有面積を減らし、白い布の左右に見える肩、腕、上背中、上部の体側の肌面積を増やす。タオルそのものは中央寄りに縦へ細く落ちる。右腕を上げた側は身体の側面が少し多く見える角度にするが、胸部は布の内側に保つ。腰まで引いた構図にはしない。\",\n  \"imperfections\": \"タオルの左右の長さや折り目は完全に揃えない。濡れ髪が数本だけ肩や首へ貼りつく。スマホ構図は1〜2度ほどわずかに傾く。ガラスには水滴と拭き跡、タイルには小さな色むら。暗部には弱いスマートフォンノイズ。\",\n  \"background\": \"少し古い日本の住宅またはマンションの浴室。淡いミントグリーンから水色寄りの四角タイル、クロームのシャワーヘッド、曇った半透明ガラス、浴室ラック、ラベルの読めない日用品。高級ホテルのように整えすぎない。\",\n  \"atmosphere\": \"シャワーを終えて数分以内の湿った空気。濃い湯気ではなく、濡れ髪、ガラスの曇り、小さな水滴、少し湿ったタオルによって入浴後らしさを表現する。\",\n  \"negative\": \"胸部の露出、側面からの胸部露出、透けるタオル、極端に細すぎて覆いが不足する布、タオルの不自然なずれ、腰巻きタオル、二枚目のタオル、バスローブ、身体の特定部位だけを狙った接写、グラビア的ポーズ、極端な身体誇張、過度な肌光沢、過剰な美肌、人形のような顔、実在人物に似た顔、強すぎる背景ボケ、スタジオ照明、文字、ロゴ、UI\"\n}",
+               "entity_set": {
+                "urls": []
+               }
+              }
+             }
+            },
+            "views": {
+             "count": "97801",
+             "state": "EnabledWithCount"
+            },
+            "core": {
+             "user_results": {
+              "result": {
+               "core": {
+                "screen_name": "Live_life_style"
+               },
+               "legacy": {
+                "screen_name": null
+               }
+              }
+             }
+            },
+            "quoted_status_result": {
+             "result": {
+              "rest_id": "2096419970351800709"
+             }
+            },
+            "legacy": {
+             "full_text": "grokで再現してみた　🔽\n\n{\n  \"direction\": https://t.co/P8RNAbHu0m",
+             "created_at": "Sun Sep 06 07:21:43 +0000 2026",
+             "extended_entities": {
+              "media": [
+               {
+                "type": "photo",
+                "media_url_https": "https://pbs.twimg.com/media/HRhCyFmaoAAJret.jpg"
+               }
+              ]
+             },
+             "entities": {
+              "urls": []
+             },
+             "quoted_status_id_str": "2096419970351800709",
+             "reply_count": 8,
+             "retweet_count": 60,
+             "favorite_count": 1159
+            }
+           }
+          }
+         }
+        },
+        "entryId": "tweet-2096499066977055209",
+        "sortIndex": "6"
+       },
+       {
+        "content": {
+         "__typename": "TimelineTimelineItem",
+         "entryType": "TimelineTimelineItem",
+         "itemContent": {
+          "__typename": "TimelineTweet",
+          "itemType": "TimelineTweet",
+          "tweetDisplayType": "Tweet",
+          "tweet_results": {
+           "result": {
+            "__typename": "Tweet",
+            "rest_id": "2096552328736505901",
+            "note_tweet": {
+             "note_tweet_results": {
+              "result": {
+               "text": "Grok Imagine prompt:\n\n10-second Douyin/TikTok style high-energy beat-synced dance video. Fixed lock-off camera, stable frame. The woman starts exactly from the reference pose and immediately launches into confident sexy dance: sharp hip pops and large left-right swings, fluid body rolls and S-wave isolations, hands going to hair then opening wide, head tilts and hair flips, strong eye contact with seductive cool expression. Every move hits precisely on the beat with clear freezes and accents (踩点). High BPM EDM / Deep House / trap beat with heavy bass drops and crisp snare hits, pure music driven, low-end boosted, no dialogue no text. Photoreal, glamorous, vertical short-video aesthetic, keep exact face identity outfit and soft natural lighting of the first frame.",
+               "entity_set": {
+                "urls": []
+               }
+              }
+             }
+            },
+            "views": {
+             "count": "13970",
+             "state": "EnabledWithCount"
+            },
+            "core": {
+             "user_results": {
+              "result": {
+               "core": {
+                "screen_name": "maplejohn01"
+               },
+               "legacy": {
+                "screen_name": null
+               }
+              }
+             }
+            },
+            "quoted_status_result": {
+             "result": {
+              "rest_id": "2095547451637891548"
+             }
+            },
+            "legacy": {
+             "full_text": "Grok Imagine prompt:\n\n10-second Douyin/TikTok style high-energy beat-synced dance video. Fixed lock-off camera, stable frame. The woman starts exactly from the reference pose and immediately launches into confident sexy dance: sharp hip pops and large left-right swings, fluid https://t.co/TPV7OKs6Yl",
+             "created_at": "Sun Sep 06 10:53:21 +0000 2026",
+             "extended_entities": {
+              "media": [
+               {
+                "type": "video",
+                "media_url_https": "https://pbs.twimg.com/amplify_video_thumb/2096552280933957632/img/MlwDhMJlfsyb3tQy.jpg",
+                "video_info": {
+                 "variants": [
+                  {
+                   "content_type": "application/x-mpegURL",
+                   "url": "https://video.twimg.com/amplify_video/2096552280933957632/pl/q3U6oQ0C0Mdx82C9.m3u8?tag=25"
+                  },
+                  {
+                   "bitrate": 800000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2096552280933957632/vid/avc1/320x432/JcMiA9zK91xVz-Sg.mp4?tag=25"
+                  },
+                  {
+                   "bitrate": 5184000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2096552280933957632/vid/avc1/480x648/jiwWdLcVRrvWsqHy.mp4?tag=25"
+                  },
+                  {
+                   "bitrate": 12128000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2096552280933957632/vid/avc1/816x1104/axKpj_7EaMh03iwe.mp4?tag=25"
+                  }
+                 ]
+                }
+               }
+              ]
+             },
+             "entities": {
+              "urls": []
+             },
+             "quoted_status_id_str": "2095547451637891548",
+             "reply_count": 2,
+             "retweet_count": 7,
+             "favorite_count": 131
+            }
+           }
+          }
+         }
+        },
+        "entryId": "tweet-2096552328736505901",
+        "sortIndex": "5"
+       },
+       {
+        "content": {
+         "__typename": "TimelineTimelineItem",
+         "entryType": "TimelineTimelineItem",
+         "itemContent": {
+          "__typename": "TimelineTweet",
+          "itemType": "TimelineTweet",
+          "tweetDisplayType": "Tweet",
+          "tweet_results": {
+           "result": {
+            "__typename": "Tweet",
+            "rest_id": "2096579231560167711",
+            "views": {
+             "count": "311021",
+             "state": "EnabledWithCount"
+            },
+            "core": {
+             "user_results": {
+              "result": {
+               "core": {
+                "screen_name": "zhang_baoqing"
+               },
+               "legacy": {
+                "screen_name": null
+               }
+              }
+             }
+            },
+            "quoted_status_result": {
+             "result": {
+              "rest_id": "2096556697355690066"
+             }
+            },
+            "legacy": {
+             "full_text": "左GPT，又Grok\n\n改提示词真的太累了\n\ngemini 3.8flash改的\n\n所以美国豆包还是有用的 https://t.co/8I9T0tosvV",
+             "created_at": "Sun Sep 06 12:40:16 +0000 2026",
+             "extended_entities": {
+              "media": [
+               {
+                "type": "photo",
+                "media_url_https": "https://pbs.twimg.com/media/HRiLZkhbcAAr8OS.jpg"
+               },
+               {
+                "type": "photo",
+                "media_url_https": "https://pbs.twimg.com/media/HRiLdGXagAAY6T_.jpg"
+               }
+              ]
+             },
+             "entities": {
+              "urls": []
+             },
+             "quoted_status_id_str": "2096556697355690066",
+             "reply_count": 188,
+             "retweet_count": 26,
+             "favorite_count": 544
+            }
+           }
+          }
+         }
+        },
+        "entryId": "tweet-2096579231560167711",
+        "sortIndex": "4"
+       },
+       {
+        "content": {
+         "__typename": "TimelineTimelineItem",
+         "entryType": "TimelineTimelineItem",
+         "itemContent": {
+          "__typename": "TimelineTweet",
+          "itemType": "TimelineTweet",
+          "tweetDisplayType": "Tweet",
+          "tweet_results": {
+           "result": {
+            "__typename": "Tweet",
+            "rest_id": "2096582603633516675",
+            "note_tweet": {
+             "note_tweet_results": {
+              "result": {
+               "text": "🤯 With Image2, food can interact with typography in surprisingly physical ways!\n\nPasta weaves through letters, glass refracts type, pizza opens up negative space, and a cookie becomes the letter itself.\n\n1. Lemon Butter Tagliatelle\n2. White Peach Soda\n3. Mushroom Bianca\n4. Miso Caramel Cookie\n\n🌟 Great for food branding, café campaigns, menus and editorial posters!\n\nPrompts below 👇",
+               "entity_set": {
+                "urls": []
+               }
+              }
+             }
+            },
+            "views": {
+             "count": "162013",
+             "state": "EnabledWithCount"
+            },
+            "core": {
+             "user_results": {
+              "result": {
+               "core": {
+                "screen_name": "MrLarus"
+               },
+               "legacy": {
+                "screen_name": null
+               }
+              }
+             }
+            },
+            "quoted_status_result": {
+             "result": {
+              "rest_id": "2096105230303641778"
+             }
+            },
+            "legacy": {
+             "full_text": "🤯 With Image2, food can interact with typography in surprisingly physical ways!\n\nPasta weaves through letters, glass refracts type, pizza opens up negative space, and a cookie becomes the letter itself.\n\n1. Lemon Butter Tagliatelle\n2. White Peach Soda\n3. Mushroom Bianca\n4. Miso https://t.co/YIrG941eR2",
+             "created_at": "Sun Sep 06 12:53:39 +0000 2026",
+             "extended_entities": {
+              "media": [
+               {
+                "type": "photo",
+                "media_url_https": "https://pbs.twimg.com/media/HRiOvaxawAAdjrY.jpg"
+               },
+               {
+                "type": "photo",
+                "media_url_https": "https://pbs.twimg.com/media/HRiOvambEAAkZm3.jpg"
+               },
+               {
+                "type": "photo",
+                "media_url_https": "https://pbs.twimg.com/media/HRiOwFzXYAMtaME.jpg"
+               },
+               {
+                "type": "photo",
+                "media_url_https": "https://pbs.twimg.com/media/HRiOwX4WsAAPogK.jpg"
+               }
+              ]
+             },
+             "entities": {
+              "urls": []
+             },
+             "quoted_status_id_str": "2096105230303641778",
+             "reply_count": 37,
+             "retweet_count": 164,
+             "favorite_count": 1942
+            }
+           }
+          }
+         }
+        },
+        "entryId": "tweet-2096582603633516675",
+        "sortIndex": "3"
+       },
+       {
+        "content": {
+         "__typename": "TimelineTimelineItem",
+         "entryType": "TimelineTimelineItem",
+         "itemContent": {
+          "__typename": "TimelineTweet",
+          "itemType": "TimelineTweet",
+          "tweetDisplayType": "Tweet",
+          "tweet_results": {
+           "result": {
+            "__typename": "Tweet",
+            "rest_id": "2096514613362008320",
+            "note_tweet": {
+             "note_tweet_results": {
+              "result": {
+               "text": "You get free generations every day, give it a try\n\nprompt：https://t.co/Hwg4QdDD18\n\ncreate an authentic, natural indoor window-side portrait of an explicitly adult woman aged 25+, seated on a warm brown wooden floor and leaning into the curtains and a long cylindrical bolster cushion with a cream background and muted green, yellow and brown botanical floral print.\n\nShe has long natural black hair with a loose center part. Most of the hair falls over her shoulders and toward frame-right, with slightly lifted roots, a few stray strands near the face, and subtle compression and disorder where the hair rests against the curtain. Keep the hair smooth but believable rather than perfectly silky.\n\nShe wears a minimal white spaghetti-strap cropped cotton camisole that fully covers the breasts, ending around the upper abdomen and exposing the clavicles, shoulders, arms, waist, stomach and navel. She also wears cream-white or pale beige low-rise cotton bikini underwear with tiny scattered floral motifs in muted blue-green, brown-yellow and dusty pink, fully covering the central pelvic area. Keep a slim yet believable adult body with real soft-tissue weight and gravity. Do not exaggerate the breasts, hips or waist. Her abdomen is relaxed, with only subtle contour changes caused by the seated twist.\n\nThe pose is loose and asymmetric. Her upper body reclines backward while her body forms a diagonal through the vertical frame. The leg on frame-right is bent and raised very close to the camera, creating natural perspective enlargement of the thigh. The other leg folds across the wooden floor toward the lower-left. One arm reaches toward frame-left while holding an already opened traditional folding fan with pale bamboo or wood ribs and a thin white fan surface; the ribs create a strong radial pattern. The other hand is raised into the upper-right area, casually touching the back of her head and hair. Do not horizontally mirror the composition.\n\nHer head tilts slightly back and turns toward the upper-left. She does not look into the camera; her gaze drifts toward the bright window. Her lips are softly parted. The expression is quiet, absent-minded and faintly introspective, neither smiling nor deliberately seductive.\n\nUse soft East-Asian beauty-editorial makeup styling without implying ethnicity or replacing her identity: clean semi-matte complexion with believable skin texture, relatively straight dark brows, fine black upper eyeliner hugging the lash line with a subtle outer extension, naturally defined lashes, extremely soft taupe-brown eye shading, minimal blush, and muted dusty-rose lips with a faint moisturized sheen. Preserve the original facial proportions, jawline, eye spacing and natural facial asymmetry. Do not turn her into a celebrity face or an overly perfected influencer face.\n\nHer visible skin includes the face, neck, clavicles and upper chest, shoulders, arms, areas near the underarms, full midriff and navel, outer hip edges, thighs, knees, lower legs, ankles and feet. Use a light neutral ivory skin tone. In the strongest window light it becomes softly milky, while shadowed areas shift toward extremely subtle warm gray and beige-pink. The skin should look as though it would feel warm, soft, smooth and faintly velvety, retaining tiny pores, slight tonal variation, natural darkness around joints and believable soft-tissue compression. Avoid plastic, waxy or porcelain skin.\n\nThe dominant physical light source is a huge bright window behind and to frame-left. Natural daylight passes through a translucent white sheer curtain, turning the entire window into a giant soft diffused source. Broad soft highlights fall across the window-facing cheek, shoulder, clavicle, arm and legs with very gradual transitions. The opposite side receives only passive bounce from pale walls, beige curtains and the wooden floor. Do not use obvious frontal flash or an artificial studio rim light. Allow the sheer curtain and the brightest window-adjacent highlights to clip slightly into white with subtle natural blooming.\n\nOn frame-right, include a heavier beige-gray curtain with subdued gold-brown botanical embroidery or floral detailing. Keep the overall room palette restrained to soft white, pale beige, warm gray and natural wood. The outdoor view should be completely obscured by the glowing sheer curtain.\n\nPhotograph it like a real full-frame mirrorless or DSLR image using roughly a 35-50mm prime lens, preferably around a 40mm full-frame field of view, approximately f/2.8-f/4, ISO 200-500 and around 1/125s. Place the camera at seated waist-to-knee height, slightly below chest level, shooting from slightly frame-left. This should produce a mild upward perspective and a believable near-large/far-small effect on the raised foreground thigh.\n\nUse a 3:4 vertical composition. Let the subject nearly fill the frame. Do not perfectly center or symmetrize the body. Allow limbs to approach the frame edges, preserve minor accidental-looking cropping and uneven visual weight. The opened fan on frame-left counterbalances the large foreground leg on frame-right.\n\nUse moderately shallow depth of field rather than extreme bokeh. Keep the face, torso and major areas of the legs readable and detailed, while the curtains and floral bolster soften only slightly and still retain visible texture. Preserve subtle digital grain, restrained sharpness, tiny amounts of shadow noise and slight highlight clipping. Avoid HDR, aggressive clarity and flawless commercial retouching.\n\nShe had already been sitting beside the window for a while. Afternoon light had been drifting through the sheer curtain. Now she is looking upward toward the window, the opened fan still resting in her hand; a moment later, she may begin moving it again. The final image should carry low energy, warmth, stillness and the residue of an unspoken thought — as though the photographer were sitting nearby on the same floor and happened to capture this moment, rather than directing a perfectly controlled studio pose.",
+               "entity_set": {
+                "urls": [
+                 {
+                  "display_url": "promptsref.com/tool/AI-Image-…",
+                  "expanded_url": "https://promptsref.com/tool/AI-Image-Generator/share/c393d91a591da27afd7df23cb2f7b148",
+                  "indices": [
+                   58,
+                   81
+                  ],
+                  "url": "https://t.co/Hwg4QdDD18"
+                 }
+                ]
+               }
+              }
+             }
+            },
+            "views": {
+             "count": "93465",
+             "state": "EnabledWithCount"
+            },
+            "core": {
+             "user_results": {
+              "result": {
+               "core": {
+                "screen_name": "underwoodxie96"
+               },
+               "legacy": {
+                "screen_name": null
+               }
+              }
+             }
+            },
+            "quoted_status_result": {
+             "result": {
+              "rest_id": "2096487583610220697"
+             }
+            },
+            "legacy": {
+             "full_text": "You get free generations every day, give it a try\n\nprompt：https://t.co/5bECiemxaL\n\ncreate an authentic, natural indoor window-side portrait of an explicitly adult woman aged 25+, seated on a warm brown wooden floor and leaning into the curtains and a long cylindrical bolster https://t.co/iltnZVsFSz",
+             "created_at": "Sun Sep 06 08:23:29 +0000 2026",
+             "extended_entities": {
+              "media": [
+               {
+                "type": "photo",
+                "media_url_https": "https://pbs.twimg.com/media/HRhQqY2bAAElR2Z.jpg"
+               }
+              ]
+             },
+             "entities": {
+              "urls": [
+               {
+                "display_url": "promptsref.com/tool/AI-Image-…",
+                "expanded_url": "https://promptsref.com/tool/AI-Image-Generator/share/c393d91a591da27afd7df23cb2f7b148",
+                "indices": [
+                 58,
+                 81
+                ],
+                "url": "https://t.co/5bECiemxaL"
+               }
+              ]
+             },
+             "quoted_status_id_str": "2096487583610220697",
+             "reply_count": 20,
+             "retweet_count": 50,
+             "favorite_count": 668
+            }
+           }
+          }
+         }
+        },
+        "entryId": "tweet-2096514613362008320",
+        "sortIndex": "2"
+       },
+       {
+        "content": {
+         "__typename": "TimelineTimelineItem",
+         "entryType": "TimelineTimelineItem",
+         "itemContent": {
+          "__typename": "TimelineTweet",
+          "itemType": "TimelineTweet",
+          "tweetDisplayType": "Tweet",
+          "tweet_results": {
+           "result": {
+            "__typename": "Tweet",
+            "rest_id": "2096178219733102698",
+            "note_tweet": {
+             "note_tweet_results": {
+              "result": {
+               "text": "Made with MiniMax-H3\n\n🏖️“The Beach”\nH3 really is the best value-for-money image-to-video tool—and most importantly, it can create a cinematic feel.\n\nMiniMax-H3 prompt👇\nFor the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.\n\nintegrated_multimodal_description: [Shot 1] Cinematic, ultra-realistic 16:9 beach-fashion film. The adult woman fully matches <Picture 1>: same face, hair, body proportions, silver-gray bikini, wooden boardwalk, railings, beach bar, tropical shadows, white umbrellas, sea, lounge chairs, afternoon sunlight, and refined resort atmosphere. Preserve the original composition, spatial layout, and light direction. Low-angle camera tracks backward at slow speed with slight lateral drift as she walks forward with calm assured weight transfer. Both hands lower naturally from her hair. A few loose strands move in the sea wind. Her eyes look past the camera toward the water, then briefly pass the lens edge. Tree shadows move across her shoulders, waist, arms, and the wood underfoot. [Shot 2] At 00:02.400, the camera cuts to a close side-front pass motivated by her movement. She passes the lens without stopping to pose. The camera glides with her shoulder line, waist, back contour, and legs. Hair strands, bikini straps, skin highlights, and tropical shadows shift naturally with wind and walking. She looks ahead along the boardwalk and blinks once naturally. Beach bar, railings, umbrellas, sea, and lounge chairs move in parallax behind her. [Shot 3] At 00:05.000, the camera cuts to a front-side half-arc motivated by her shoulder turn. Shoulder turns first, then waist, then face. She lifts one hand to organize windblown hair. Her eyes pause beside the lens, then slowly meet it. The eyes brighten first, then a minimal confident non-toothed smile appears. Natural breathing is visible in the collarbone, torso, and waist. [Shot 4] At 00:08.000, the camera cuts to a side-rear tracking shot along the railing, then transitions smoothly into a side-front receiving shot as she keeps walking. One hand glides lightly over the railing. Ocean reflections, umbrellas, lounge chairs, distant resort visitors, and tropical shade flow continuously behind her. When loose hair crosses one eye, she makes one small head adjustment and one natural blink. Walking mechanics stay connected through footfalls, shoulders, hips, and torso. [Shot 5] At 00:11.800, the camera cuts to a moving close medium frame under the strongest shifting tree-shadow pattern. This is a brief cover-image beat lasting under one second, never frozen. She looks below the lens, then raises her eyes toward it. One hand rests lightly near her neck or hair. The opposite shoulder opens naturally. Her mouth keeps only a minimal non-toothed curve. Hair, thin bikini straps, breathing, sea breeze, and moving shadows stay alive. She immediately resumes walking. [Shot 6] At 00:13.600, the camera cuts to a low-angle fashion view tracking backward as she takes two steps toward the open shoreline. Shoulder turns first and face returns last. Her gaze passes sunlight and ocean before landing lightly on the lens. She gives a very subtle non-toothed smile while still moving forward. Keep bright water, white umbrellas, and tropical shade behind her. End at 15.00 seconds with her still in gentle forward motion inside the resort landscape. No dialogue, no subtitles, no watermarks, no fixed camera, no prolonged frontal lock-off, no random cuts, no selfie behavior, no vulgar posing, no exaggerated flirtation, no glassy eyes, no empty stare, no mechanical blinking, no puckered lips, no rigid hair mass, no plastic skin, no anatomy distortion, no malformed hands.\n\noverall_soundscape: Natural surf, sea wind, soft boardwalk footsteps, distant beach guests, and quiet beach-bar ambience. Leaves shift above the boardwalk and wind moves hair and fabric subtly. No dialogue.\n\nnon_diegetic_music: Refined summer fashion score with sparse hand percussion, muted bass, clean guitar accents, and light airy synth texture at a relaxed mid-tempo pulse, fading gently into the final shot.",
+               "entity_set": {
+                "urls": []
+               }
+              }
+             }
+            },
+            "views": {
+             "count": "9484",
+             "state": "EnabledWithCount"
+            },
+            "core": {
+             "user_results": {
+              "result": {
+               "core": {
+                "screen_name": "ou_zhen599"
+               },
+               "legacy": {
+                "screen_name": null
+               }
+              }
+             }
+            },
+            "legacy": {
+             "full_text": "Made with MiniMax-H3\n\n🏖️“The Beach”\nH3 really is the best value-for-money image-to-video tool—and most importantly, it can create a cinematic feel.\n\nMiniMax-H3 prompt👇\nFor the target video, at 0.00 seconds into the target video, &lt;Picture 1&gt; (from [Shot 1]) is fully referenced. https://t.co/oXhQiwwgjR",
+             "created_at": "Sat Sep 05 10:06:47 +0000 2026",
+             "extended_entities": {
+              "media": [
+               {
+                "type": "video",
+                "media_url_https": "https://pbs.twimg.com/amplify_video_thumb/2096175441463980032/img/3CjK9euVXxdvoDX1.jpg",
+                "video_info": {
+                 "variants": [
+                  {
+                   "content_type": "application/x-mpegURL",
+                   "url": "https://video.twimg.com/amplify_video/2096175441463980032/pl/1AjpB9BUW26sagFo.m3u8?tag=29&v=cfc"
+                  },
+                  {
+                   "bitrate": 256000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2096175441463980032/vid/avc1/480x270/56CVjNxhRXnK4RnM.mp4?tag=29"
+                  },
+                  {
+                   "bitrate": 832000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2096175441463980032/vid/avc1/640x360/MTmaEuxUi5tsEVVI.mp4?tag=29"
+                  },
+                  {
+                   "bitrate": 2176000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2096175441463980032/vid/avc1/1280x720/UTwGViSkhxGVTOr7.mp4?tag=29"
+                  },
+                  {
+                   "bitrate": 10368000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2096175441463980032/vid/avc1/1920x1080/Hh6j9Tl7gmDJYmuj.mp4?tag=29"
+                  },
+                  {
+                   "bitrate": 25128000,
+                   "content_type": "video/mp4",
+                   "url": "https://video.twimg.com/amplify_video/2096175441463980032/vid/avc1/3840x2160/MR62ag6Dmu4qGlDd.mp4?tag=29"
+                  }
+                 ]
+                }
+               }
+              ]
+             },
+             "entities": {
+              "urls": []
+             },
+             "reply_count": 4,
+             "retweet_count": 9,
+             "favorite_count": 142
+            }
+           }
+          }
+         }
+        },
+        "entryId": "tweet-2096178219733102698",
+        "sortIndex": "1"
+       },
+       {
+        "content": {
+         "__typename": "TimelineTimelineCursor",
+         "cursorType": "Bottom",
+         "entryType": "TimelineTimelineCursor",
+         "value": "-1788657394899"
+        },
+        "entryId": "cursor-bottom--1788657394899",
+        "sortIndex": "0"
+       }
+      ],
+      "type": "TimelineAddEntries"
+     }
+    ]
+   }
+  }
+ }
+}
